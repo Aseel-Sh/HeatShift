@@ -9,7 +9,7 @@ export type HydrationPlan =
   | { kind: "minimum" | "range"; minimumLiters: number; maximumLiters: number | null; wordingEn: string; wordingAr: string; detailsEn: string; detailsAr: string };
 
 export function buildHydrationPlan(plan: ShiftPlan, result: ScheduleResult): HydrationPlan {
-  const outdoor = result.blocks.filter((block) => block.type === "work" && block.environment !== "indoor");
+  const outdoor = result.blocks.filter((block) => block.type === "work" && block.environment !== "conditioned_indoor");
   const hasUnspecifiedGuidance = outdoor.some((block) => result.metrics.hydrationPlanning[block.workload as Workload].kind === "preliminary");
   if (result.isPreliminary || outdoor.length === 0 || hasUnspecifiedGuidance) return {
     kind: "preliminary", minimumLiters: null, maximumLiters: null,
@@ -36,7 +36,7 @@ export function buildHydrationPlan(plan: ShiftPlan, result: ScheduleResult): Hyd
     ? `خطط لما لا يقل عن ${minimumLiters} لتر للفريق خلال التعرض المجدول، مع ضرورة التعديل في الموقع.`
     : `خطط لنطاق ${minimumLiters}–${maximumLiters} لتر للفريق خلال التعرض المجدول، مع ضرورة التعديل في الموقع.`;
   return { kind: maximumLiters === null ? "minimum" : "range", minimumLiters, maximumLiters, wordingEn, wordingAr,
-    detailsEn: `Calculated per scheduled outdoor work block: exposure hours × ${plan.crewSize} workers × the applicable planning rate. Rest and indoor blocks are excluded. This is planning guidance, not an exact medical prescription.`,
+    detailsEn: `Calculated per scheduled outdoor work block: exposure hours × ${plan.crewSize} workers × the applicable planning rate. Rest and cooled indoor blocks are excluded. This is planning guidance, not an exact medical prescription.`,
     detailsAr: `يُحسب لكل فترة عمل خارجية مجدولة: ساعات التعرض × ${plan.crewSize} عمال × معدل التخطيط المطبق. تُستبعد فترات الراحة والعمل الداخلي. هذه إرشادات تخطيط وليست وصفة طبية دقيقة.` };
 }
 

@@ -48,3 +48,7 @@ npm run build
 - `docs/` — product scope, architecture, decisions, and progress
 
 See [Product scope](docs/PRODUCT_SCOPE.md), [Architecture](docs/ARCHITECTURE.md), [Scheduler](docs/SCHEDULER.md), [Integrations](docs/INTEGRATIONS.md), and [Progress](docs/PROGRESS.md).
+
+## Verification integrity
+
+Task verification uses a separate draft model: absent AI duration, workload, environment, or splittability remains visibly unknown and blocks scheduling until supplied. Optional requested task times are retained so original-plan findings remain separate from generated-schedule capacity and worker-readiness findings. “Indoor / cooled area” means a conditioned area only; heat-exposed indoor work requires a separate site assessment.

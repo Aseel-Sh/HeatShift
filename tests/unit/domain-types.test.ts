@@ -94,7 +94,7 @@ describe("domain boundary schemas", () => {
           nameAr: "فحص المعدات",
           durationMinutes: 7,
           workload: "light",
-          environment: "indoor",
+          environment: "conditioned_indoor",
           splittable: true,
         },
       ],

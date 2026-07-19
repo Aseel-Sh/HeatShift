@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
-const timeSchema = z
+export const timeSchema = z
   .string()
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, "Expected time in HH:mm format")
   .refine((time) => Number(time.slice(3)) % 5 === 0, {
@@ -23,7 +23,7 @@ export type Workload = z.infer<typeof workloadSchema>;
 export const workEnvironmentSchema = z.enum([
   "direct_sun",
   "shaded_outdoor",
-  "indoor",
+  "conditioned_indoor",
 ]);
 export type WorkEnvironment = z.infer<typeof workEnvironmentSchema>;
 
@@ -47,6 +47,8 @@ export const workTaskSchema = z.object({
   workload: workloadSchema,
   environment: workEnvironmentSchema,
   splittable: z.boolean(),
+  requestedStart: timeSchema.optional(),
+  requestedEnd: timeSchema.optional(),
 });
 export type WorkTask = z.infer<typeof workTaskSchema>;
 

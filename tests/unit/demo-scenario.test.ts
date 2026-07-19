@@ -11,7 +11,7 @@ describe("deterministic demo scenario", () => {
     expect(first).not.toBe(second);
     expect(first).toMatchObject({
       isDemo: true,
-      label: "Demo data — Riyadh July heat-planning scenario",
+      label: "Sample data — no live AI or weather request",
       shiftPlan: {
         city: "riyadh",
         shiftStart: "06:30",
@@ -31,7 +31,7 @@ describe("deterministic demo scenario", () => {
     expect(first.shiftPlan.tasks.map((task) => task.nameEn)).toEqual([
       "Heavy trenching",
       "Contiguous concrete placement",
-      "Indoor equipment preparation",
+      "Cooled indoor equipment preparation",
       "Shaded material inspection",
       "Direct-sun cleanup",
     ]);

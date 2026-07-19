@@ -12,7 +12,7 @@ const validPlan = {
   shiftEnd: "16:30",
   crewSize: 8,
   nonAcclimatizedWorkers: 2,
-  tasks: [{ nameEn: "Trenching", nameAr: "حفر الخندق", durationMinutes: 120, workload: "heavy", environment: "direct_sun", splittable: true }],
+  tasks: [{ nameEn: "Trenching", nameAr: "حفر الخندق", durationMinutes: 120, workload: "heavy", environment: "direct_sun", splittable: true, requestedStart:"11:30", requestedEnd:"13:30" }],
   assumptions: ["Trenching was interpreted as heavy work."],
   missingInformation: [],
 };
@@ -25,6 +25,7 @@ describe("AI plan extraction", () => {
     });
 
     expect(result.city).toBe("riyadh");
+    expect(result.tasks[0]).toMatchObject({ requestedStart:"11:30", requestedEnd:"13:30" });
     expect(complete).toHaveBeenCalledWith(expect.objectContaining({
       model: "openrouter/free",
       responseFormat: expect.objectContaining({ type: "json_schema" }),

@@ -38,7 +38,7 @@ describe("Saudi midday direct-sun restriction", () => {
       evaluateMiddayRestriction({
         date: "2026-07-18",
         time: "12:00",
-        environment: "indoor",
+        environment: "conditioned_indoor",
       }).status,
     ).toBe("permitted");
   });

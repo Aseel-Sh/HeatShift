@@ -10,7 +10,7 @@ export interface DemoScenario {
 
 export const DEMO_SCENARIO: DemoScenario = {
   isDemo: true,
-  label: "Demo data — Riyadh July heat-planning scenario",
+  label: "Sample data — no live AI or weather request",
   shiftPlan: {
     siteName: "Riyadh North Utilities Demonstration Site",
     city: "riyadh",
@@ -28,6 +28,8 @@ export const DEMO_SCENARIO: DemoScenario = {
         workload: "heavy",
         environment: "direct_sun",
         splittable: true,
+        requestedStart: "11:30",
+        requestedEnd: "13:30",
       },
       {
         id: "demo-contiguous-placement",
@@ -37,15 +39,19 @@ export const DEMO_SCENARIO: DemoScenario = {
         workload: "heavy",
         environment: "direct_sun",
         splittable: false,
+        requestedStart: "09:30",
+        requestedEnd: "10:00",
       },
       {
         id: "demo-equipment-preparation",
-        nameEn: "Indoor equipment preparation",
+        nameEn: "Cooled indoor equipment preparation",
         nameAr: "تجهيز المعدات داخليًا",
         durationMinutes: 45,
         workload: "light",
-        environment: "indoor",
+        environment: "conditioned_indoor",
         splittable: false,
+        requestedStart: "12:00",
+        requestedEnd: "12:45",
       },
       {
         id: "demo-material-inspection",
@@ -55,6 +61,8 @@ export const DEMO_SCENARIO: DemoScenario = {
         workload: "light",
         environment: "shaded_outdoor",
         splittable: false,
+        requestedStart: "10:30",
+        requestedEnd: "11:15",
       },
       {
         id: "demo-cleanup",
@@ -64,6 +72,8 @@ export const DEMO_SCENARIO: DemoScenario = {
         workload: "light",
         environment: "direct_sun",
         splittable: true,
+        requestedStart: "14:30",
+        requestedEnd: "14:50",
       },
     ],
   },

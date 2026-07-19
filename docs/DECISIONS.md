@@ -19,7 +19,7 @@
 | End-exclusive midday time boundary | The restricted interval is represented as 12:00 inclusive to 15:00 exclusive, matching the requirement that work at 15:00 is permitted. |
 | Five-minute discrete scheduler | Every current time and cycle rule divides into five-minute units, enabling exact capacity and overlap accounting. |
 | Stable greedy scheduling | Fixed task priority, stable input-order ties, cooler-temperature ranking, and chronological final ties make results reproducible without an optimizer. |
-| Separate restriction and crew occupancy masks | Direct-sun restrictions can overlap indoor work while crew work and rest remain mutually exclusive. |
+| Separate restriction and crew occupancy masks | Direct-sun restrictions can overlap conditioned-indoor work while crew work and rest remain mutually exclusive. |
 | Provider-neutral extraction boundary | Business logic depends on a small chat-completions interface rather than a provider SDK. |
 | OpenRouter free router by default | `openrouter/free` avoids paid-model defaults and routes to available free models supporting requested capabilities. |
 | Double validation for AI output | Provider structured output constrains generation, while local Zod parsing remains the trusted boundary. |
@@ -38,3 +38,13 @@ The shell uses a warm neutral background, deep navy text, and amber emphasis. Re
 ## Deferred decisions
 
 Production hosting remains deferred. The current scheduler intentionally remains a bounded single-crew greedy strategy rather than a general optimization framework.
+
+## Correctness decisions
+
+| Decision | Rationale |
+| --- | --- |
+| Separate draft and domain tasks | Missing AI safety fields remain unknown and scheduling is blocked until verification. |
+| Separate original-plan findings | Original requested-plan conflicts are not scheduler capacity or worker-readiness findings. |
+| Conditioned indoor only | Cooled indoor work does not receive outdoor TWL cycles; heat-exposed indoor work needs separate assessment. |
+| Reducer-owned monotonic IDs | Add/delete/add operations cannot reuse IDs or corrupt task/block mappings. |
+| Invalidate derived sample state | Material edits clear sample forecast, sample conditions, and prior results before continuation. |

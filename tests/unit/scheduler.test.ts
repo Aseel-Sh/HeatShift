@@ -88,7 +88,7 @@ describe("deterministic scheduler", () => {
             nameAr: "تجهيز المعدات",
             durationMinutes: 60,
             workload: "light",
-            environment: "indoor",
+            environment: "conditioned_indoor",
           }),
         ],
       }),
@@ -105,6 +105,16 @@ describe("deterministic scheduler", () => {
     expect(
       indoorBlocks.every((block) => overlaps(block.start, block.end, "12:00", "15:00")),
     ).toBe(true);
+  });
+
+  it("does not apply outdoor TWL recovery cycles to a cooled indoor area", () => {
+    const result = generateSchedule(
+      plan({ tasks:[task({id:"cooled",environment:"conditioned_indoor",workload:"heavy",durationMinutes:60})] }),
+      { ...defaultConditions, twlZone:"high" },
+      [],
+    );
+    expect(result.blocks.filter((block)=>block.taskId==="cooled"&&block.type==="rest")).toHaveLength(0);
+    expect(result.blocks.find((block)=>block.taskId==="cooled"&&block.type==="work")).toMatchObject({taskId:"cooled"});
   });
 
   it("packages 60 minutes of high-TWL heavy work as 20/40 cycles without a final rest", () => {
@@ -313,10 +323,10 @@ describe("deterministic scheduler", () => {
 
   it("uses the required environment and workload priority order", () => {
     const tasks: WorkTask[] = [
-      task({ id: "indoor-light", durationMinutes: 5, environment: "indoor", workload: "light" }),
+      task({ id: "indoor-light", durationMinutes: 5, environment: "conditioned_indoor", workload: "light" }),
       task({ id: "shaded-light", durationMinutes: 5, environment: "shaded_outdoor", workload: "light" }),
       task({ id: "sun-light", durationMinutes: 5, environment: "direct_sun", workload: "light" }),
-      task({ id: "indoor-heavy", durationMinutes: 5, environment: "indoor", workload: "heavy" }),
+      task({ id: "indoor-heavy", durationMinutes: 5, environment: "conditioned_indoor", workload: "heavy" }),
       task({ id: "shaded-heavy", durationMinutes: 5, environment: "shaded_outdoor", workload: "heavy" }),
       task({ id: "sun-heavy", durationMinutes: 5, environment: "direct_sun", workload: "heavy" }),
     ];
@@ -373,7 +383,7 @@ describe("deterministic scheduler", () => {
     );
     const indoorOnly = generateSchedule(
       plan({
-        tasks: [task({ environment: "indoor" })],
+        tasks: [task({ environment: "conditioned_indoor" })],
       }),
       defaultConditions,
       [],
@@ -445,7 +455,7 @@ describe("deterministic scheduler", () => {
             id: "indoor",
             nameEn: "Indoor inspection",
             nameAr: "فحص داخلي",
-            environment: "indoor",
+            environment: "conditioned_indoor",
             workload: "light",
             durationMinutes: 60,
             splittable: false,

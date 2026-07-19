@@ -5,6 +5,7 @@ import { extractedPlanJsonSchema, extractedPlanSchema, type ExtractedPlan } from
 const SYSTEM_INSTRUCTION = `You extract structured work-plan facts only.
 - Never invent a regulation or determine whether the plan is safe.
 - Never invent absent dates, times, durations, crew counts, or locations.
+- Extract each task's requestedStart and requestedEnd only when the plan states them.
 - Put uncertain or absent information in missingInformation.
 - Put interpretation decisions in assumptions.
 - Translate task names into concise Arabic.

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getDemoScenario } from "../../lib/demo/get-demo-scenario";
+import { generateSchedule } from "../../lib/domain/scheduler";
+import { toWorkTasks } from "../../lib/workflow/draft-task";
 import {
   createInitialWorkflowState,
   validatePlanDetails,
@@ -72,7 +74,7 @@ describe("workflow state", () => {
           nameAr: "مهمة",
           durationMinutes: 7,
           workload: "light",
-          environment: "indoor",
+          environment: "conditioned_indoor",
           splittable: false,
         },
       ]),
@@ -93,9 +95,45 @@ describe("workflow state", () => {
 
     expect(state.plan.shiftStart).toBe("07:00");
     expect(state.plan.shiftEnd).toBe("15:00");
-    expect(state.tasks[0].durationMinutes).toBe(0);
+    expect(state.tasks[0].durationMinutes).toBeNull();
     expect(validateVerifiedPlan(state.plan, state.tasks)).toHaveProperty(
       "task-extracted-task-1-durationMinutes",
     );
+  });
+
+  it("preserves every unknown extracted safety field instead of defaulting it", () => {
+    const state = workflowReducer(createInitialWorkflowState(), { type:"applyExtraction", extraction:{ tasks:[{nameEn:"Unknown",nameAr:"غير محدد"}], assumptions:[], missingInformation:[] } });
+    expect(state.tasks[0]).toMatchObject({ durationMinutes:null, workload:"", environment:"", splittable:null });
+    const errors=validateVerifiedPlan({...state.plan,siteName:"Site",city:"riyadh",shiftDate:"2026-07-20",shiftStart:"06:30",shiftEnd:"16:30",crewSize:"8",nonAcclimatizedWorkers:"0"},state.tasks);
+    expect(errors).toMatchObject({[`task-${state.tasks[0].id}-workload`]:expect.any(String),[`task-${state.tasks[0].id}-environment`]:expect.any(String),[`task-${state.tasks[0].id}-splittable`]:expect.any(String)});
+  });
+
+  it("lets explicit manual zero win while populating an untouched blank new-worker count", () => {
+    const initial=createInitialWorkflowState();
+    const populated=workflowReducer(initial,{type:"applyExtraction",extraction:{nonAcclimatizedWorkers:2,tasks:[],assumptions:[],missingInformation:[]}});
+    expect(populated.plan.nonAcclimatizedWorkers).toBe("2");
+    const touched=workflowReducer(initial,{type:"setPlanField",field:"nonAcclimatizedWorkers",value:"0"});
+    const preserved=workflowReducer(touched,{type:"applyExtraction",extraction:{nonAcclimatizedWorkers:2,tasks:[],assumptions:[],missingInformation:[]}});
+    expect(preserved.plan.nonAcclimatizedWorkers).toBe("0");
+  });
+
+  it("invalidates sample-derived forecast, conditions, and result after material edits", () => {
+    const loaded=workflowReducer(createInitialWorkflowState(),{type:"loadDemo",demo:getDemoScenario()});
+    const edited=workflowReducer(loaded,{type:"setPlanField",field:"city",value:"jeddah"});
+    expect(edited).toMatchObject({isDemo:false,planSource:"manual",forecast:[],forecastSource:"none",weatherStatus:"idle",weatherError:null,scheduleResult:null,conditions:{measurementMode:"forecast",twlZone:"none"}});
+  });
+
+  it("never reuses task IDs after deletion", () => {
+    let state=createInitialWorkflowState();
+    state=workflowReducer(state,{type:"addTask"});state=workflowReducer(state,{type:"addTask"});state=workflowReducer(state,{type:"addTask"});
+    const middle=state.tasks[1].id;state=workflowReducer(state,{type:"removeTask",id:middle});state=workflowReducer(state,{type:"addTask"});
+    expect(new Set(state.tasks.map(task=>task.id)).size).toBe(state.tasks.length);
+    expect(state.tasks.at(-1)?.id).toBe("manual-task-4");
+    const firstName=state.tasks[0].nameEn;const newest=state.tasks.at(-1)!;
+    state=workflowReducer(state,{type:"updateTask",id:newest.id,field:"nameEn",value:"Newest"});
+    expect(state.tasks[0].nameEn).toBe(firstName);expect(state.tasks.at(-1)?.nameEn).toBe("Newest");
+    state={...state,tasks:state.tasks.map(task=>({...task,nameEn:task.nameEn||task.id,nameAr:task.nameAr||task.id,durationMinutes:5,workload:"light",environment:"shaded_outdoor",splittable:false}))};
+    const result=generateSchedule({siteName:"Site",city:"riyadh",shiftDate:"2026-10-01",shiftStart:"06:30",shiftEnd:"07:00",crewSize:2,nonAcclimatizedWorkers:0,tasks:toWorkTasks(state.tasks)},{measurementMode:"forecast",twlZone:"none"},[]);
+    expect(new Set(result.blocks.filter(block=>block.type==="work").map(block=>block.taskId))).toEqual(new Set(state.tasks.map(task=>task.id)));
   });
 });

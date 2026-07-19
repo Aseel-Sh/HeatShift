@@ -17,7 +17,7 @@ Implemented:
 
 - Zod schemas and inferred types for cities, tasks, plans, site conditions, forecast hours, and conflicts
 - Stable metadata records for the 2026 Saudi midday restriction and NCOSH temperature/TWL guidance
-- Pure seasonal midday restriction evaluation with direct-sun, shaded outdoor, and indoor outcomes
+- Pure seasonal midday restriction evaluation with direct-sun, shaded outdoor, and conditioned-indoor outcomes
 - Pure forecast temperature categorization at every requested boundary
 - Pure TWL work/rest guidance for every zone and workload combination
 - Hydration planning results that distinguish ranges, minimums, and preliminary guidance
@@ -43,6 +43,20 @@ Deferred by that iteration's scope:
 - Deterministic demo fixture
 
 Blockers: none.
+
+## Correctness and product-integrity repair
+
+- Added nullable/blank `DraftWorkTask` safety fields with validation-gated `WorkTask` conversion.
+- Retained optional original requested task times through extraction, editing, fixtures, evaluation, and reporting.
+- Added pure original-plan evaluation and separated its findings from capacity, readiness, and rules applied.
+- Preserved explicitly entered zero values while allowing untouched blanks to receive AI-extracted values.
+- Invalidated sample-derived weather, conditions, and results on material edits; edited city/date drives the next request.
+- Added monotonic task IDs and regression coverage for add/delete/add mapping integrity.
+- Renamed the environment to `conditioned_indoor`, added bilingual clarification, and excluded it from outdoor TWL cycles.
+- Replaced misleading “Conflicts resolved” and stale deferred-results wording; sample/live/manual/AI/TWL provenance is visible.
+- Expanded unit and Playwright regression coverage for every repair above.
+
+Final acceptance: lint passed; strict typecheck passed; 104 unit tests across 16 files passed; 35 Playwright tests passed; production build passed. Blockers: none.
 
 ## Describe, verify, and conditions workflow iteration
 
@@ -83,10 +97,10 @@ Implemented:
 
 - Zod-validated schedule blocks, unscheduled tasks, metrics, hydration planning, and schedule results
 - Five-minute same-day shift slots with validation for slot-aligned inputs
-- Seasonal midday direct-sun restriction masks that still allow indoor and shaded work
+- Seasonal midday direct-sun restriction masks that still allow conditioned-indoor and shaded work
 - Stable six-level task priority and input-order tie breaking
 - Cooler forecast-hour preference for direct-sun work
-- Midday preference for indoor work during the active restriction season
+- Midday preference for conditioned-indoor work during the active restriction season
 - Contiguous non-splittable tasks and divisible splittable tasks
 - Deterministic TWL work/rest packages with one-crew rest occupancy
 - Cross-task outdoor rest continuity and no unnecessary final rest
@@ -168,7 +182,7 @@ Implemented:
 - Official source references without endorsement language
 - Edit, conditions, recalculate, start-over, and browser-print actions
 - Print stylesheet retaining warnings, sources, schedule, hydration details, and briefing in black and white
-- Demo fixture coverage for the midday restriction, cooler heavy work, 20/40 cycles, indoor midday placement, new-worker warning, and unscheduled capacity
+- Sample fixture coverage for the midday restriction, cooler heavy work, 20/40 cycles, conditioned-indoor midday placement, new-worker warning, and unscheduled capacity
 
 Validation:
 

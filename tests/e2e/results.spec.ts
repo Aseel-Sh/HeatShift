@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function openDemoResults(page: Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Load demo scenario" }).click();
+  await page.getByRole("button", { name: "Load sample shift" }).click();
   await page.getByRole("button", { name: "Continue to conditions" }).click();
   await page.getByRole("button", { name: "Generate safer shift" }).click();
   await expect(page.getByRole("heading", { name: "Safer shift generated" })).toBeVisible();
@@ -65,7 +65,7 @@ test("print report control and printable layout are present", async ({ page }) =
 
 test("Arabic mode shows the deterministic Arabic briefing", async ({ page }) => {
   await page.goto("/"); await page.getByRole("button", { name: "العربية" }).click();
-  await page.getByRole("button", { name: "تحميل السيناريو التجريبي" }).click();
+  await page.getByRole("button", { name: "تحميل وردية نموذجية" }).click();
   await page.getByRole("button", { name: "متابعة إلى الظروف" }).click();
   await page.getByRole("button", { name: "إنشاء وردية أكثر أمانًا" }).click();
   await expect(page.getByRole("heading", { name: "إحاطة المشرف" })).toBeVisible();

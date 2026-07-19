@@ -18,8 +18,8 @@ const priorityByTask: Record<`${WorkTask["environment"]}_${WorkTask["workload"]}
   direct_sun_light: 1,
   shaded_outdoor_heavy: 2,
   shaded_outdoor_light: 3,
-  indoor_heavy: 4,
-  indoor_light: 5,
+  conditioned_indoor_heavy: 4,
+  conditioned_indoor_light: 5,
 };
 
 function timeToMinutes(time: string): number {
@@ -57,8 +57,8 @@ function workReasonCodes(
   if (restrictionActive && task.environment === "direct_sun") {
     codes.push("MIDDAY_RESTRICTION_AVOIDED");
   }
-  if (restrictionActive && task.environment === "indoor") {
-    codes.push("INDOOR_MIDDAY_PREFERENCE");
+  if (restrictionActive && task.environment === "conditioned_indoor") {
+    codes.push("CONDITIONED_INDOOR_MIDDAY_PREFERENCE");
   }
   if (forecastAvailable && task.environment === "direct_sun") {
     codes.push("COOLER_FORECAST_SLOT");
@@ -148,7 +148,7 @@ function buildWorkBlocks(
     const reasonCodes = isRest
       ? ["CREW_REST", cycleReasonCode(task, twlZone)]
       : workReasonCodes(task, restrictionActive, forecastAvailable);
-    if (!isRest && getWorkRestGuidance(twlZone, task.workload).kind === "cycle") {
+    if (!isRest && task.environment !== "conditioned_indoor" && getWorkRestGuidance(twlZone, task.workload).kind === "cycle") {
       reasonCodes.push(cycleReasonCode(task, twlZone));
     }
     blocks.push({
@@ -231,19 +231,18 @@ export function generateSchedule(
       !slot.restForTaskId &&
       !(task.environment === "direct_sun" && restrictedSlots.has(index));
     let scheduledSlots = 0;
-    const workRestGuidance = getWorkRestGuidance(
-      siteConditions.twlZone,
-      task.workload,
-    );
+    const workRestGuidance = task.environment === "conditioned_indoor"
+      ? ({ kind: "continuous" } as const)
+      : getWorkRestGuidance(siteConditions.twlZone, task.workload);
 
     if (workRestGuidance.kind === "cycle") {
       const maximumWorkSlots = workRestGuidance.workMinutes / SLOT_MINUTES;
       const restSlots = workRestGuidance.restMinutes / SLOT_MINUTES;
       const hasFurtherOutdoorWork =
-        task.environment !== "indoor" &&
+        task.environment !== "conditioned_indoor" &&
         tasks
           .slice(taskOrderIndex + 1)
-          .some(({ task: laterTask }) => laterTask.environment !== "indoor");
+          .some(({ task: laterTask }) => laterTask.environment !== "conditioned_indoor");
       const minimumCandidateSlots = task.splittable ? 1 : requiredSlots;
 
       for (
@@ -262,7 +261,7 @@ export function generateSchedule(
           .map((_, index) => index)
           .filter((index) => index + pattern.length <= slots.length)
           .sort((left, right) => {
-            if (restrictionActive && task.environment === "indoor") {
+            if (restrictionActive && task.environment === "conditioned_indoor") {
               const middayWorkSlots = (startIndex: number) => pattern.reduce(
                 (count, type, offset) => count + (type === "work" && restrictedSlots.has(startIndex + offset) ? 1 : 0),
                 0,
@@ -327,7 +326,7 @@ export function generateSchedule(
         .map((_, index) => index)
         .filter((index) => isValidSlot(slots[index], index))
         .sort((left, right) => {
-          if (restrictionActive && task.environment === "indoor") {
+          if (restrictionActive && task.environment === "conditioned_indoor") {
             const leftIsMidday = restrictedSlots.has(left);
             const rightIsMidday = restrictedSlots.has(right);
             if (leftIsMidday !== rightIsMidday) return leftIsMidday ? -1 : 1;
@@ -350,7 +349,7 @@ export function generateSchedule(
         .map((_, index) => index)
         .filter((index) => index + requiredSlots <= slots.length)
         .sort((left, right) => {
-          if (restrictionActive && task.environment === "indoor") {
+          if (restrictionActive && task.environment === "conditioned_indoor") {
             const middaySlots = (startIndex: number) => {
               let count = 0;
               for (let offset = 0; offset < requiredSlots; offset += 1) {

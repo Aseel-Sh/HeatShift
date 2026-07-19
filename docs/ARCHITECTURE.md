@@ -51,7 +51,7 @@ HeatShift provides planning guidance. It must never claim to guarantee safety or
 
 The public domain entry point is `lib/domain/index.ts`. Current pure functions cover:
 
-- seasonal and time-window evaluation for direct-sun, shaded outdoor, and indoor work;
+- seasonal and time-window evaluation for direct-sun, shaded outdoor, and conditioned-indoor work;
 - forecast temperature categorization;
 - TWL work/rest planning guidance;
 - hydration planning as either a range, a minimum, or preliminary guidance;
@@ -70,3 +70,7 @@ The scheduler uses the existing rule functions rather than duplicating policy th
 ## Client workflow
 
 One typed React reducer owns plan fields, verified tasks, extraction notes, conditions, forecast status, language, and the basic result invocation. Manual values already entered by the supervisor take precedence over overlapping extracted values. Demo loading bypasses both APIs, and only the local deterministic scheduler is called by Generate.
+
+## Verification and provenance boundaries
+
+`DraftWorkTask` is intentionally distinct from validated `WorkTask`. Drafts can retain unknown AI fields and optional original requested times; conversion occurs only after form validation. `evaluateOriginalPlan` is a pure evaluator whose `OriginalPlanConflict[]` never contains scheduler-capacity or worker-readiness findings. Sample plan, sample forecast, live forecast, AI-extracted, manual, and supervisor-entered TWL provenance are tracked explicitly. Material sample edits invalidate sample-derived forecast, conditions, and results.

@@ -15,6 +15,10 @@ async function addManualTask(page: import("@playwright/test").Page, name = "Manu
   await page.getByRole("button", { name: "Add task" }).click();
   await page.getByLabel("English name").fill(name);
   await page.getByLabel("Arabic name").fill("فحص يدوي طويل للاختبار");
+  await page.getByLabel("Duration (minutes)").fill("30");
+  await page.getByLabel("Workload").selectOption("light");
+  await page.getByLabel("Environment").selectOption("shaded_outdoor");
+  await page.getByLabel("May this task be split?").selectOption("false");
 }
 
 test("AI can extract a text-first plan without duplicate requests", async ({ page }) => {
@@ -49,7 +53,7 @@ test("demo is console-clean, network-clean, and stable under duplicate Generate"
   page.on("pageerror", error => pageErrors.push(error.message));
   page.on("requestfailed", request => failedRequests.push(`${request.method()} ${request.url()}`));
   await page.goto("/");
-  await page.getByRole("button", { name: "Load demo scenario" }).click();
+  await page.getByRole("button", { name: "Load sample shift" }).click();
   await page.getByRole("button", { name: "Continue to conditions" }).click();
   await page.getByRole("button", { name: "Generate safer shift" }).dblclick();
   await expect(page.getByRole("heading", { name: "Safer shift generated" })).toBeVisible();
@@ -96,7 +100,7 @@ for (const failure of ["timeout", "invalid response", "unsupported date", "empty
 test("abusive form values and task data are announced and block progress", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Create tasks manually" }).click();
-  await expect(page.getByRole("alert")).toHaveCount(7);
+  await expect(page.locator("section").getByRole("alert")).toHaveCount(7);
   await expect(page.getByLabel(/^Site name/)).toHaveAttribute("aria-invalid", "true");
   await fillManualPlan(page, { crew: "0", newWorkers: "-1", start: "16:00", end: "06:00" });
   await page.getByRole("button", { name: "Create tasks manually" }).click();
@@ -119,7 +123,7 @@ test("responsive layouts, long bilingual names, headings, and keyboard focus rem
   await page.keyboard.press("Tab"); await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
   const headingLevels = await page.locator("h1,h2,h3,h4").evaluateAll(elements => elements.map(element => Number(element.tagName.slice(1))));
   expect(headingLevels[0]).toBe(1); expect(headingLevels.some((level, index) => index > 0 && level - headingLevels[index - 1] > 1)).toBe(false);
-  await page.getByRole("button", { name: "Load demo scenario" }).click();
+  await page.getByRole("button", { name: "Load sample shift" }).click();
   await page.getByLabel("English name").first().fill("L".repeat(240)); await page.getByLabel("Arabic name").first().fill("م".repeat(240));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.setViewportSize({ width: 768, height: 1024 }); expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -127,11 +131,11 @@ test("responsive layouts, long bilingual names, headings, and keyboard focus rem
 });
 
 test("refresh behavior is explicit at every in-progress step", async ({ page }) => {
-  await page.goto("/"); await page.getByRole("button", { name: "Load demo scenario" }).click();
+  await page.goto("/"); await page.getByRole("button", { name: "Load sample shift" }).click();
   await page.reload(); await expect(page.getByRole("heading", { name: "Describe plan" })).toBeVisible();
-  await page.getByRole("button", { name: "Load demo scenario" }).click(); await page.getByRole("button", { name: "Continue to conditions" }).click();
+  await page.getByRole("button", { name: "Load sample shift" }).click(); await page.getByRole("button", { name: "Continue to conditions" }).click();
   await page.reload(); await expect(page.getByRole("heading", { name: "Describe plan" })).toBeVisible();
-  await page.getByRole("button", { name: "Load demo scenario" }).click(); await page.getByRole("button", { name: "Continue to conditions" }).click(); await page.getByRole("button", { name: "Generate safer shift" }).click();
+  await page.getByRole("button", { name: "Load sample shift" }).click(); await page.getByRole("button", { name: "Continue to conditions" }).click(); await page.getByRole("button", { name: "Generate safer shift" }).click();
   await page.reload(); await expect(page.getByRole("heading", { name: "Describe plan" })).toBeVisible();
 });
 
@@ -139,7 +143,7 @@ test("keyboard-only activation and plan length limits remain usable", async ({ p
   await page.goto("/");
   await page.getByLabel("Natural-language work plan").fill("x".repeat(5001));
   expect((await page.getByLabel("Natural-language work plan").inputValue()).length).toBe(5000);
-  await page.getByRole("button", { name: "Load demo scenario" }).focus();
+  await page.getByRole("button", { name: "Load sample shift" }).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Verify and edit every task" })).toBeVisible();
   await page.getByRole("button", { name: "Continue to conditions" }).focus();

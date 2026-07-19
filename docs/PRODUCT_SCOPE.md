@@ -40,7 +40,7 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - High-TWL non-acclimatized-worker conflicts
 - Intermediate/high-TWL outdoor lone-work warnings
 - Deterministic five-minute, single-crew schedule generation
-- Priority-based placement, forecast temperature preference, indoor midday preference, and contiguous non-splittable tasks
+- Priority-based placement, forecast temperature preference, conditioned-indoor midday preference, and contiguous non-splittable tasks
 - TWL work/rest packages, exact unscheduled capacity, schedule metrics, and preliminary results
 - Server-only OpenRouter structured plan extraction behind a provider-neutral interface with local schema validation
 - Open-Meteo hourly forecast retrieval for five supported Saudi cities
@@ -53,3 +53,10 @@ These pure modules evaluate supplied inputs only. They do not fetch conditions, 
 ## Safety language
 
 User-facing content must use qualified terms such as “safer shift” and “planning guidance.” It must instruct supervisors to verify conditions through qualified on-site safety procedures and must not promise safety, legal compliance, or regulatory compliance.
+
+## Correctness boundaries
+
+- Original requested task times may be checked for restriction overlap, shift boundaries, single-crew overlap, insufficient intervals, total shift capacity, and selected TWL-cycle compatibility.
+- Original-plan findings, generated-schedule capacity, worker readiness, and applied rules are separate concepts.
+- `conditioned_indoor` means a cooled area outside the direct-heat/TWL cycle model. Heat-exposed indoor environments require a separate site assessment.
+- Missing AI safety fields are not defaulted; verification must complete them before scheduling.

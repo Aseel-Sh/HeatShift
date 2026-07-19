@@ -28,10 +28,10 @@ Tasks are considered in this fixed order, retaining input order when two tasks h
 The scheduler follows these deterministic steps:
 
 1. Create every five-minute slot from shift start, inclusive, to shift end, exclusive.
-2. When the date is inside the seasonal restriction and the plan contains direct-sun work, create a 12:00–15:00 direct-sun restriction mask clipped to the shift. This mask does not consume crew capacity, so indoor and shaded work may still use those slots.
+2. When the date is inside the seasonal restriction and the plan contains direct-sun work, create a 12:00–15:00 direct-sun restriction mask clipped to the shift. This mask does not consume crew capacity, so conditioned-indoor and shaded work may still use those slots.
 3. Sort tasks by the fixed priority order.
 4. For direct-sun work with forecast records, rank valid candidates by lower forecast temperature and then earlier time.
-5. For indoor work during an active seasonal restriction, rank midday candidates before other times.
+5. For conditioned-indoor work during an active seasonal restriction, rank midday candidates before other times. Conditioned-indoor work does not receive outdoor TWL recovery cycles.
 6. Keep non-splittable work contiguous. Splittable work may occupy multiple blocks.
 7. Convert TWL cycle guidance into contiguous work/rest packages. Rest consumes the one crew's capacity. A final rest is omitted only when no further outdoor work follows.
 8. If a full splittable cycle package cannot fit, use the largest valid partial package and report the exact remaining minutes. A non-splittable task is either scheduled in full or left unscheduled.

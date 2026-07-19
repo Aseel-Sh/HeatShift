@@ -25,6 +25,8 @@ export const extractedTaskSchema = z
     workload: workloadSchema.optional(),
     environment: workEnvironmentSchema.optional(),
     splittable: z.boolean().optional(),
+    requestedStart: timeSchema.optional(),
+    requestedEnd: timeSchema.optional(),
   })
   .strict();
 
@@ -71,9 +73,11 @@ export const extractedPlanJsonSchema = {
           workload: { type: "string", enum: ["light", "heavy"] },
           environment: {
             type: "string",
-            enum: ["direct_sun", "shaded_outdoor", "indoor"],
+            enum: ["direct_sun", "shaded_outdoor", "conditioned_indoor"],
           },
           splittable: { type: "boolean" },
+          requestedStart: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$" },
+          requestedEnd: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$" },
         },
       },
     },

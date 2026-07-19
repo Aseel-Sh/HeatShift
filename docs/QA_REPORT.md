@@ -95,7 +95,7 @@ OpenRouter free routing and Open-Meteo can be unavailable or rate limited. All t
 
 ### A. Happy path
 
-Passed: demo load, task verification, high TWL, results, changed conditions, recalculation, and print-media layout. Duplicate Generate is stable. The demo produces restriction, 20/40 cycles, indoor midday work, new-worker warning, and unscheduled capacity.
+Passed: sample load, task verification, high TWL, results, changed conditions, recalculation, and print-media layout. Duplicate Generate is stable. The sample produces restriction, 20/40 cycles, conditioned-indoor midday work, new-worker warning, and unscheduled capacity.
 
 ### B. Manual path
 
@@ -115,7 +115,7 @@ Passed: empty fields, crew size zero, negative new-worker count, new workers abo
 
 ### F. Scheduling edges
 
-Passed through existing and added unit coverage: 11:55/12:00/15:00 boundaries, non-splittable noon crossing, multiple high-TWL heavy tasks, no indoor task, an entirely restricted shift, total capacity exhaustion, no forecast, no TWL, low/intermediate/high TWL, and June 14/15 plus September 15/16 boundaries. Work/rest and work blocks remain mutually exclusive.
+Passed through existing and added unit coverage: 11:55/12:00/15:00 boundaries, non-splittable noon crossing, multiple high-TWL heavy tasks, no conditioned-indoor task, an entirely restricted shift, total capacity exhaustion, no forecast, no TWL, low/intermediate/high TWL, and June 14/15 plus September 15/16 boundaries. Work/rest and work blocks remain mutually exclusive.
 
 ### G. UI and reliability
 
