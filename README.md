@@ -49,7 +49,7 @@ npm run build
 - `tests/` — Vitest unit tests and Playwright end-to-end tests
 - `docs/` — product scope, architecture, decisions, and progress
 
-See [Product scope](docs/PRODUCT_SCOPE.md), [Architecture](docs/ARCHITECTURE.md), [Scheduler](docs/SCHEDULER.md), [Integrations](docs/INTEGRATIONS.md), and [Progress](docs/PROGRESS.md).
+See [Product scope](docs/PRODUCT_SCOPE.md), [Architecture](docs/ARCHITECTURE.md), [Design system](docs/DESIGN_SYSTEM.md), [Scheduler](docs/SCHEDULER.md), [Integrations](docs/INTEGRATIONS.md), and [Progress](docs/PROGRESS.md).
 
 The configured midday restriction applies only from 2026-06-15 through 2026-09-15. HeatShift does not silently extend that source-backed configuration to another year; unsupported years remain available for preliminary ordinary scheduling with an explicit warning.
 

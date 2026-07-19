@@ -46,7 +46,7 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - Open-Meteo hourly forecast retrieval for five supported Saudi cities
 - Explicitly labeled deterministic Riyadh demo data available without network calls
 - English/Arabic Describe, Verify, Conditions, results, briefing, and print workflow
-- Deterministic crew hydration planning totals derived from scheduled outdoor exposure
+- Deterministic per-worker/per-hour hydration planning guidance without an unsupported exact crew total
 
 These pure modules evaluate supplied inputs only. They do not fetch conditions, assign individual workers, or model parallel crews.
 

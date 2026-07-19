@@ -120,7 +120,19 @@ describe("workflow state", () => {
   it("invalidates sample-derived forecast, conditions, and result after material edits", () => {
     const loaded=workflowReducer(createInitialWorkflowState(),{type:"loadDemo",demo:getDemoScenario()});
     const edited=workflowReducer(loaded,{type:"setPlanField",field:"city",value:"jeddah"});
-    expect(edited).toMatchObject({isDemo:false,planSource:"manual",forecast:[],forecastSource:"none",weatherMetadata:null,weatherStatus:"idle",weatherError:null,scheduleResult:null,conditions:{measurementMode:"forecast",twlZone:"none"}});
+    expect(edited).toMatchObject({isDemo:false,planSource:"manual",forecast:[],forecastSource:"none",weatherMetadata:null,weatherStatus:"idle",weatherError:null,scheduleResult:null,derivedDataInvalidated:true,conditions:{measurementMode:"forecast",twlZone:"none"}});
+  });
+
+  it("clears stale live weather when city or date changes", () => {
+    const initial = createInitialWorkflowState();
+    const withWeather = workflowReducer(initial, {
+      type: "weatherSuccess",
+      forecast: getDemoScenario().forecastHours,
+      metadata: { city: "riyadh", date: "2026-07-20", retrievedAt: "2026-07-19T09:00:00Z" },
+    });
+    const changed = workflowReducer(withWeather, { type: "setPlanField", field: "shiftDate", value: "2026-07-21" });
+
+    expect(changed).toMatchObject({ forecast: [], forecastSource: "none", weatherMetadata: null, weatherStatus: "idle" });
   });
 
   it("never reuses task IDs after deletion", () => {

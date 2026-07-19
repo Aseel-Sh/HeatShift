@@ -254,3 +254,29 @@ Final status:
 - One medium limitation remains documented: local reducer state resets on browser refresh
 
 Blockers: none.
+
+## Field operations board redesign
+
+Status: complete on 2026-07-19.
+
+Implemented:
+
+- Reframed the existing workflow as a compact field-operations planning board without changing deterministic domain behavior
+- Operational header with live site, date, crew, workflow status, and bilingual controls
+- Structured shift setup workspace with a concise summary rail and subdued plan-import assistance
+- Desktop task operations table that becomes accessible stacked task panels on tablet and phone widths
+- Separate forecast context and supervisor-entered TWL controls, including translated temperature-risk categories
+- Aligned requested-versus-safer time board with a shared ruler, background restriction bands, scheduled work, recovery, indoor work, and unscheduled capacity
+- Clickable schedule-block details with plain-language bilingual rule explanations and source references instead of internal reason codes
+- Compact results metrics, critical operational warnings, responsive containment, Arabic RTL layout with LTR chronology, and black-and-white print rules
+- A documented visual system in `docs/DESIGN_SYSTEM.md`
+- Production browser review artifacts for 390x844, 768x1024, and 1440x900 layouts under `artifacts/ui-review/`
+
+Regression coverage:
+
+- Restriction bands are verified as visual constraints rather than sequential schedule blocks
+- Internal reason codes are verified absent from operator-facing details
+- City/date changes clear stale weather metadata
+- Responsive workflow, bilingual mode, deterministic scheduling, failure paths, and print layout remain covered by the existing suites
+
+Blockers: none. Live AI extraction remains optional and requires a server-only `OPENROUTER_API_KEY`; the sample and manual workflows require no key.

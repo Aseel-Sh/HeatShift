@@ -13,7 +13,7 @@ The intended future request flow is:
 5. A deterministic domain engine applies restrictions and work/rest rules.
 6. The UI presents a safer shift plan and a planning report with clear limitations.
 
-The boundary schemas, source metadata, deterministic heat-planning rules, pure five-minute scheduler, server integrations, offline demo data, and Describe → Verify → Conditions workflow now exist. The polished results/report UI remains deferred.
+The boundary schemas, source metadata, deterministic heat-planning rules, pure five-minute scheduler, server integrations, offline demo data, four-step workflow, and field-operations results board now exist.
 
 ## Directory boundaries
 

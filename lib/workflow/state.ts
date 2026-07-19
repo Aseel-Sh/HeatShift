@@ -23,7 +23,7 @@ export interface WorkflowState {
   weatherStatus: "idle" | "loading" | "success" | "error"; weatherError: string | null;
   aiStatus: "idle" | "loading" | "error"; aiError: string | null; errors: FormErrors;
   aiModel: string | null;
-  isDemo: boolean; planSource: PlanSource; scheduleResult: ScheduleResult | null;
+  isDemo: boolean; planSource: PlanSource; scheduleResult: ScheduleResult | null; derivedDataInvalidated: boolean;
 }
 export type WorkflowAction =
   | { type: "setLanguage"; language: Language }
@@ -44,7 +44,7 @@ export type WorkflowAction =
   | { type: "startOver" };
 
 export function createInitialWorkflowState(): WorkflowState {
-  return { language:"en", step:"describe", plan:{siteName:"",city:"",shiftDate:"",shiftStart:"",shiftEnd:"",crewSize:"",nonAcclimatizedWorkers:"",planText:""}, touchedPlanFields:{}, tasks:[], nextTaskId:1, assumptions:[], missingInformation:[], conditions:{measurementMode:"forecast",twlZone:"none"}, forecast:[], forecastSource:"none", weatherMetadata:null, weatherStatus:"idle", weatherError:null, aiStatus:"idle", aiError:null, aiModel:null, errors:{}, isDemo:false, planSource:"manual", scheduleResult:null };
+  return { language:"en", step:"describe", plan:{siteName:"",city:"",shiftDate:"",shiftStart:"",shiftEnd:"",crewSize:"",nonAcclimatizedWorkers:"",planText:""}, touchedPlanFields:{}, tasks:[], nextTaskId:1, assumptions:[], missingInformation:[], conditions:{measurementMode:"forecast",twlZone:"none"}, forecast:[], forecastSource:"none", weatherMetadata:null, weatherStatus:"idle", weatherError:null, aiStatus:"idle", aiError:null, aiModel:null, errors:{}, isDemo:false, planSource:"manual", scheduleResult:null, derivedDataInvalidated:false };
 }
 
 function extractedValue(state: WorkflowState, field: keyof PlanForm, value: string | number | undefined): string {
@@ -52,14 +52,20 @@ function extractedValue(state: WorkflowState, field: keyof PlanForm, value: stri
   return value === undefined ? state.plan[field] : String(value);
 }
 function invalidateSample(state: WorkflowState): Partial<WorkflowState> {
-  if (!state.isDemo) return { scheduleResult: null };
-  return { isDemo:false, planSource:"manual", forecast:[], forecastSource:"none", weatherMetadata:null, weatherStatus:"idle", weatherError:null, conditions:{measurementMode:"forecast",twlZone:"none"}, scheduleResult:null };
+  if (!state.isDemo) return { scheduleResult: null, derivedDataInvalidated:state.derivedDataInvalidated || state.scheduleResult !== null };
+  return { isDemo:false, planSource:"manual", forecast:[], forecastSource:"none", weatherMetadata:null, weatherStatus:"idle", weatherError:null, conditions:{measurementMode:"forecast",twlZone:"none"}, scheduleResult:null, derivedDataInvalidated:true };
 }
 
 export function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
   switch (action.type) {
     case "setLanguage": return {...state,language:action.language};
-    case "setPlanField": return {...state,...(action.field === "planText" ? {scheduleResult:null} : invalidateSample(state)),plan:{...state.plan,[action.field]:action.value},touchedPlanFields:{...state.touchedPlanFields,[action.field]:true},errors:{...state.errors,[action.field]:""}};
+    case "setPlanField": {
+      const locationChanged = (action.field === "city" || action.field === "shiftDate") && state.plan[action.field] !== action.value;
+      const invalidated = action.field === "planText"
+        ? {scheduleResult:null,derivedDataInvalidated:state.derivedDataInvalidated || state.scheduleResult !== null}
+        : invalidateSample(state);
+      return {...state,...invalidated,...(locationChanged?{forecast:[],forecastSource:"none" as const,weatherMetadata:null,weatherStatus:"idle" as const,weatherError:null}:{}),plan:{...state.plan,[action.field]:action.value},touchedPlanFields:{...state.touchedPlanFields,[action.field]:true},errors:{...state.errors,[action.field]:""}};
+    }
     case "setStep": return {...state,step:action.step,errors:{}};
     case "setErrors": return {...state,errors:action.errors};
     case "setAiStatus": return {...state,aiStatus:action.status,aiError:action.error??null};
@@ -69,15 +75,15 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
       return {...state,...invalidateSample(state),step:"verify",aiStatus:"idle",aiError:null,aiModel:action.actualModel??null,planSource:"ai",nextTaskId:next,
         plan:{...state.plan,siteName:extractedValue(state,"siteName",action.extraction.siteName),city:extractedValue(state,"city",action.extraction.city) as PlanForm["city"],shiftDate:extractedValue(state,"shiftDate",action.extraction.shiftDate),shiftStart:extractedValue(state,"shiftStart",action.extraction.shiftStart),shiftEnd:extractedValue(state,"shiftEnd",action.extraction.shiftEnd),crewSize:extractedValue(state,"crewSize",action.extraction.crewSize),nonAcclimatizedWorkers:extractedValue(state,"nonAcclimatizedWorkers",action.extraction.nonAcclimatizedWorkers)},tasks,assumptions:action.extraction.assumptions,missingInformation:action.extraction.missingInformation};
     }
-    case "loadDemo": return {...state,step:"verify",plan:{siteName:action.demo.shiftPlan.siteName,city:action.demo.shiftPlan.city,shiftDate:action.demo.shiftPlan.shiftDate,shiftStart:action.demo.shiftPlan.shiftStart,shiftEnd:action.demo.shiftPlan.shiftEnd,crewSize:String(action.demo.shiftPlan.crewSize),nonAcclimatizedWorkers:String(action.demo.shiftPlan.nonAcclimatizedWorkers),planText:""},touchedPlanFields:{},tasks:action.demo.shiftPlan.tasks.map(fromWorkTask),conditions:structuredClone(action.demo.siteConditions),forecast:structuredClone(action.demo.forecastHours),forecastSource:"sample",weatherMetadata:structuredClone(action.demo.weatherMetadata),weatherStatus:"success",weatherError:null,isDemo:true,planSource:"sample",errors:{},scheduleResult:null};
+    case "loadDemo": return {...state,step:"verify",plan:{siteName:action.demo.shiftPlan.siteName,city:action.demo.shiftPlan.city,shiftDate:action.demo.shiftPlan.shiftDate,shiftStart:action.demo.shiftPlan.shiftStart,shiftEnd:action.demo.shiftPlan.shiftEnd,crewSize:String(action.demo.shiftPlan.crewSize),nonAcclimatizedWorkers:String(action.demo.shiftPlan.nonAcclimatizedWorkers),planText:""},touchedPlanFields:{},tasks:action.demo.shiftPlan.tasks.map(fromWorkTask),conditions:structuredClone(action.demo.siteConditions),forecast:structuredClone(action.demo.forecastHours),forecastSource:"sample",weatherMetadata:structuredClone(action.demo.weatherMetadata),weatherStatus:"success",weatherError:null,isDemo:true,planSource:"sample",errors:{},scheduleResult:null,derivedDataInvalidated:false};
     case "addTask": { const task:DraftWorkTask={id:`manual-task-${state.nextTaskId}`,nameEn:"",nameAr:"",durationMinutes:null,workload:"",environment:"",splittable:null}; return {...state,...invalidateSample(state),tasks:[...state.tasks,task],nextTaskId:state.nextTaskId+1}; }
     case "updateTask": return {...state,...invalidateSample(state),tasks:state.tasks.map(task=>task.id===action.id?{...task,[action.field]:action.value}:task),errors:{...state.errors,[`task-${action.id}-${action.field}`]:""}};
     case "removeTask": return {...state,...invalidateSample(state),tasks:state.tasks.filter(task=>task.id!==action.id)};
     case "setConditions": return {...state,...(state.isDemo?{isDemo:false,planSource:"manual",forecast:[],forecastSource:"none",weatherMetadata:null,weatherStatus:"idle",weatherError:null}:{}),conditions:action.conditions,scheduleResult:null};
     case "weatherLoading": return {...state,weatherStatus:"loading",weatherError:null,forecast:[],forecastSource:"none",weatherMetadata:null};
-    case "weatherSuccess": return {...state,weatherStatus:"success",weatherError:null,forecast:action.forecast,forecastSource:"live",weatherMetadata:action.metadata};
-    case "weatherError": return {...state,weatherStatus:"error",weatherError:action.error,forecast:[],forecastSource:"none",weatherMetadata:null};
-    case "setScheduleResult": return {...state,step:"results",scheduleResult:action.result};
+    case "weatherSuccess": return {...state,weatherStatus:"success",weatherError:null,forecast:action.forecast,forecastSource:"live",weatherMetadata:action.metadata,derivedDataInvalidated:false};
+    case "weatherError": return {...state,weatherStatus:"error",weatherError:action.error,forecast:[],forecastSource:"none",weatherMetadata:null,derivedDataInvalidated:false};
+    case "setScheduleResult": return {...state,step:"results",scheduleResult:action.result,derivedDataInvalidated:false};
     case "startOver": return {...createInitialWorkflowState(),language:state.language};
   }
 }
