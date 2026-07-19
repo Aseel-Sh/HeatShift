@@ -14,6 +14,9 @@
 | Forecast and site-verified TWL are separate | Forecasts support advance planning; site-verified readings represent observed local conditions. |
 | Built-in deterministic demo required | The core experience must remain demonstrable without Gemini, weather services, or secrets. |
 | Qualified safety language only | The product provides guidance and cannot guarantee safety or regulatory compliance. |
+| Discriminated guidance results | Hydration output distinguishes a planning range, a minimum, and preliminary guidance; work/rest output distinguishes continuous work, cycles, and preliminary guidance. |
+| Stable source IDs in rule output | Rule results remain compact and deterministic while UI layers can resolve human-readable official source metadata separately. |
+| End-exclusive midday time boundary | The restricted interval is represented as 12:00 inclusive to 15:00 exclusive, matching the requirement that work at 15:00 is permitted. |
 
 ## Visual system
 
@@ -21,4 +24,4 @@ The shell uses a warm neutral background, deep navy text, and amber emphasis. Re
 
 ## Deferred decisions
 
-Provider contracts, domain entities, Saudi rule sources, schedule algorithms, localization strategy, and production hosting will be decided in later iterations. No placeholder implementation in this foundation should constrain those choices.
+Provider contracts, schedule algorithms, localization strategy, and production hosting will be decided in later iterations. No current rule implementation performs scheduling or constrains those future choices.

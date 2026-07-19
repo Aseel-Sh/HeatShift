@@ -28,13 +28,23 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 
 ## Out of scope for this iteration
 
-- Scheduling and work/rest engine
-- Saudi restriction rule implementation
+- Task sequencing and schedule generation
 - Gemini integration or prompts
 - Weather API integration
 - Functional language switching
 - Plan entry, verification, conditions, schedule, and report workflows
 - Production deployment
+
+## Implemented domain scope
+
+- Strongly typed and Zod-validated plan, task, condition, forecast, and conflict models
+- Saudi seasonal midday direct-sun restriction evaluation
+- Forecast temperature indicators
+- Site-verified TWL work/rest and hydration planning guidance
+- High-TWL non-acclimatized-worker conflicts
+- Intermediate/high-TWL outdoor lone-work warnings
+
+These pure rules evaluate supplied inputs only. They do not fetch conditions, assign workers, or place tasks on a schedule.
 
 ## Safety language
 

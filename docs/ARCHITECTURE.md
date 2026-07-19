@@ -13,7 +13,7 @@ The intended future request flow is:
 5. A deterministic domain engine applies restrictions and work/rest rules.
 6. The UI presents a safer shift plan and a planning report with clear limitations.
 
-Only the application shell and module boundaries exist in this foundation iteration.
+The application shell, boundary schemas, source metadata, and deterministic heat-planning rules now exist. Plan sequencing and task placement remain deferred to the scheduler iteration.
 
 ## Directory boundaries
 
@@ -24,10 +24,10 @@ Only the application shell and module boundaries exist in this foundation iterat
 - `components/schedule/`: future generated schedule UI
 - `components/report/`: future planning report UI
 - `lib/ai/`: future Gemini structured-extraction adapter
-- `lib/domain/`: deterministic policy, scheduling rules, and shared schemas
+- `lib/domain/`: Zod boundary schemas and pure deterministic heat-planning rules
 - `lib/weather/`: future weather-provider adapter
 - `lib/i18n/`: future English and Arabic message handling
-- `data/`: versioned deterministic demo fixtures
+- `data/`: official source metadata and future versioned deterministic demo fixtures
 - `tests/unit/`: fast deterministic tests
 - `tests/e2e/`: browser-level user-flow tests
 
@@ -42,3 +42,16 @@ No data is persisted server-side. The product handles one crew without worker na
 Gemini is limited to structured plan extraction. Forecast data informs advance planning, while manually verified on-site TWL data represents site conditions; the product must never collapse them into one concept. All restrictions, work/rest decisions, and schedule changes are deterministic and testable.
 
 HeatShift provides planning guidance. It must never claim to guarantee safety or regulatory compliance.
+
+## Domain rule API
+
+The public domain entry point is `lib/domain/index.ts`. Current pure functions cover:
+
+- seasonal and time-window evaluation for direct-sun, shaded outdoor, and indoor work;
+- forecast temperature categorization;
+- TWL work/rest planning guidance;
+- hydration planning as either a range, a minimum, or preliminary guidance;
+- critical high-TWL conflicts for non-acclimatized workers; and
+- intermediate/high-TWL lone-work warnings.
+
+Every rule result contains a stable source ID. Human-readable source metadata is stored separately in `data/official-sources.ts`; domain functions make no network calls.

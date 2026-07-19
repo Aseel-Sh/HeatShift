@@ -1,3 +1,3 @@
 # Data fixtures
 
-This directory is reserved for the built-in deterministic demo scenario. The fixture will be added with the scheduling domain in a later iteration; no engine or integration data is implemented in the foundation release.
+This directory contains human-readable official source metadata used by deterministic rule results. It is also reserved for the built-in deterministic demo scenario, which will be added with the scheduler in a later iteration.
