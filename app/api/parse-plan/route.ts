@@ -7,7 +7,7 @@ import {
 import { getServerEnvironment } from "../../../lib/server/environment";
 
 const MAX_BODY_BYTES = 10_240;
-const REQUEST_TIMEOUT_MS = 12_000;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 export async function POST(request: Request): Promise<Response> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {

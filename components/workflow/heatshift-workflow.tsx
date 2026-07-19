@@ -45,7 +45,7 @@ const copy = {
   en: {
     steps: ["Shift setup", "Task plan", "Conditions", "Safer shift"],
     setupTitle: "Shift setup",
-    setupIntro: "Define where, when, who, and the work requested for this crew.",
+    setupIntro: "Turn an outdoor work plan into a safer shift. Enter details manually or import a plan, then verify every field.",
     details: "Shift details",
     site: "Site name",
     city: "City",
@@ -131,7 +131,7 @@ const copy = {
   ar: {
     steps: ["إعداد الوردية", "خطة المهام", "الظروف", "الوردية الأكثر أمانًا"],
     setupTitle: "إعداد الوردية",
-    setupIntro: "حدد الموقع والوقت والفريق والعمل المطلوب لهذه الوردية.",
+    setupIntro: "حوّل خطة العمل الخارجي إلى وردية أكثر أمانًا. أدخل التفاصيل يدويًا أو استورد خطة، ثم تحقق من كل حقل.",
     details: "تفاصيل الوردية",
     site: "اسم الموقع",
     city: "المدينة",

@@ -280,3 +280,18 @@ Regression coverage:
 - Responsive workflow, bilingual mode, deterministic scheduling, failure paths, and print layout remain covered by the existing suites
 
 Blockers: none. Live AI extraction remains optional and requires a server-only `OPENROUTER_API_KEY`; the sample and manual workflows require no key.
+
+## Manual release ownership review
+
+Status: completed on 2026-07-19 for the local production build.
+
+- Completed real-browser release journeys before automated regression and recorded evidence in `artifacts/manual-qa/`
+- Verified live Open-Meteo data for all five cities and exact upstream parity for Riyadh and Jeddah
+- Identified free-router latency and hallucinated absent facts during live OpenRouter testing
+- Increased the provider timeout to 30 seconds, strengthened extraction instructions, and added a conservative source-evidence guard
+- Revised first-time setup copy to state the product outcome and manual/import paths immediately
+- Removed fixable dependency advisories; two moderate Next.js/PostCSS advisories remain without a safe non-breaking npm resolution
+- Added `docs/MANUAL_QA_REPORT.md` with manual/automated evidence kept separate
+- Final regression: lint, strict typecheck, 126 unit tests, 36 browser tests, and production build pass
+
+Release note: the deterministic sample demo is suitable for local recording. Live AI remains too variable for the recorded demo, and no deployed application was tested.

@@ -56,10 +56,10 @@ export const extractedPlanJsonSchema = {
       enum: ["riyadh", "jeddah", "dammam", "mecca", "medina"],
     },
     shiftDate: { type: "string", format: "date" },
-    shiftStart: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$" },
-    shiftEnd: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$" },
-    crewSize: { type: "integer", minimum: 1 },
-    nonAcclimatizedWorkers: { type: "integer", minimum: 0 },
+    shiftStart: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$", description: "Overall crew shift start; never use as a task start unless explicitly stated for that task." },
+    shiftEnd: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$", description: "Overall crew shift end; never use as a task end unless explicitly stated for that task." },
+    crewSize: { type: "integer", minimum: 1, description: "Total crew size explicitly stated in the plan." },
+    nonAcclimatizedWorkers: { type: "integer", minimum: 0, description: "Explicit count of new or non-acclimatized workers." },
     tasks: {
       type: "array",
       items: {
@@ -69,15 +69,15 @@ export const extractedPlanJsonSchema = {
         properties: {
           nameEn: { type: "string" },
           nameAr: { type: "string" },
-          durationMinutes: { type: "integer", minimum: 1 },
+          durationMinutes: { type: "integer", minimum: 1, description: "Task duration explicitly stated in minutes; independent of any requested time window." },
           workload: { type: "string", enum: ["light", "heavy"] },
           environment: {
             type: "string",
             enum: ["direct_sun", "shaded_outdoor", "conditioned_indoor"],
           },
           splittable: { type: "boolean" },
-          requestedStart: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$" },
-          requestedEnd: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$" },
+          requestedStart: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$", description: "Only a time explicitly tied to this task; never default to shiftStart." },
+          requestedEnd: { type: "string", pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$", description: "Only a time explicitly tied to this task; never default to shiftEnd." },
         },
       },
     },

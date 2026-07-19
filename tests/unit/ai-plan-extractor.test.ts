@@ -20,7 +20,7 @@ const validPlan = {
 describe("AI plan extraction", () => {
   it("uses an OpenAI-compatible provider and validates structured output", async () => {
     const complete = vi.fn().mockResolvedValue({ content: JSON.stringify(validPlan), model:"google/gemma-free" });
-    const result = await extractPlan("Eight workers will trench in Riyadh.", {
+    const result = await extractPlan("Riyadh north yard site: eight workers, two new, work 2026-07-20 from 06:30 to 16:30. Heavy direct-sun trenching from 11:30 to 13:30 takes 120 minutes and may be split.", {
       apiKey: "test-key", model: "openrouter/free", client: { complete },
     });
 
@@ -31,6 +31,17 @@ describe("AI plan extraction", () => {
       model: "openrouter/free",
       responseFormat: expect.objectContaining({ type: "json_schema" }),
     }));
+  });
+
+  it("removes model facts that have no evidence in the source text", async () => {
+    const invented = { ...validPlan, shiftDate:"2025-08-27", crewSize:5, tasks:validPlan.tasks.map(task=>({...task,durationMinutes:45,requestedStart:"09:00",requestedEnd:"09:45"})) };
+    const complete = vi.fn().mockResolvedValue({ content: JSON.stringify(invented), model:"free-router-model" });
+    const result = await extractPlan("Riyadh crew working tomorrow. Trenching is planned, but duration and shift times are not known.", { apiKey:"key", model:"openrouter/free", client:{complete} });
+    expect(result.plan).not.toHaveProperty("shiftDate");
+    expect(result.plan).not.toHaveProperty("crewSize");
+    expect(result.plan.tasks[0]).not.toHaveProperty("durationMinutes");
+    expect(result.plan.tasks[0]).not.toHaveProperty("requestedStart");
+    expect(result.plan.tasks[0]).not.toHaveProperty("requestedEnd");
   });
 
   it("retries exactly once after an invalid structured response",async()=>{

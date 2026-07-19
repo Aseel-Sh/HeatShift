@@ -75,6 +75,7 @@ test("print report control and printable layout are present", async ({ page }) =
   await expect(page.getByRole("navigation", { name: "Planning progress" })).toBeHidden();
   await expect(page.getByRole("heading", { name: "Safer shift generated" })).toBeVisible();
   await page.screenshot({ path: "artifacts/ui-review/print-preview-1440x900.png", fullPage: false });
+  await page.screenshot({ path: "artifacts/manual-qa/28-print-preview-english.png", fullPage: false });
 });
 
 test("Arabic mode shows the deterministic Arabic briefing", async ({ page }) => {
@@ -84,6 +85,9 @@ test("Arabic mode shows the deterministic Arabic briefing", async ({ page }) => 
   await page.getByRole("button", { name: "إنشاء وردية أكثر أمانًا" }).click();
   await expect(page.getByRole("heading", { name: "إحاطة المشرف" })).toBeVisible();
   await expect(page.getByText(/تذكير بالتصعيد في حالات الطوارئ/)).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ media: "print" });
+  await page.screenshot({ path: "artifacts/manual-qa/29-print-preview-arabic.png", fullPage: false });
 });
 
 test("start over resets the workflow", async ({ page }) => {
