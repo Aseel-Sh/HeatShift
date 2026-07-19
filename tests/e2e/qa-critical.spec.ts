@@ -35,7 +35,7 @@ test("AI can extract a text-first plan without duplicate requests", async ({ pag
         nonAcclimatizedWorkers: 0,
         tasks: [{ nameEn: "Inspection", nameAr: "فحص", durationMinutes: 30, workload: "light", environment: "shaded_outdoor", splittable: false }],
         assumptions: [], missingInformation: [],
-      } }),
+      }, metadata:{actualModel:"google/gemma-test:free"} }),
     });
   });
   await page.goto("/");
@@ -44,6 +44,7 @@ test("AI can extract a text-first plan without duplicate requests", async ({ pag
 
   await expect(page.getByRole("heading", { name: "Verify and edit every task" })).toBeVisible();
   await expect(page.getByLabel("English name")).toHaveValue("Inspection");
+  await expect(page.getByText("Plan structured using google/gemma-test:free. Review required.")).toBeVisible();
   expect(requests).toBe(1);
 });
 
@@ -61,7 +62,7 @@ test("demo is console-clean, network-clean, and stable under duplicate Generate"
 });
 
 test("manual entry completes without AI and renders user text safely", async ({ page }) => {
-  await page.route("**/api/weather?*", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { city: "riyadh", date: "2026-07-20", hours: [{ time:"06:30",temperatureCelsius:30,apparentTemperatureCelsius:31,relativeHumidityPercent:25,windSpeedKph:8 }] } }) }));
+  await page.route("**/api/weather?*", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { city: "riyadh", date: "2026-07-20", retrievedAt:"2026-07-19T09:00:00Z", hours: [{ time:"06:30",temperatureCelsius:30,apparentTemperatureCelsius:31,relativeHumidityPercent:25,windSpeedKph:8 }] } }) }));
   await page.goto("/"); await fillManualPlan(page); await addManualTask(page, '<img src=x onerror="window.__qaXss=1">');
   await page.getByRole("button", { name: "Continue to conditions" }).click();
   await page.getByRole("button", { name: "Generate safer shift" }).click();

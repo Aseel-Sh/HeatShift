@@ -7,17 +7,19 @@ describe("results report model", () => {
   const demo = getDemoScenario();
   const result = generateSchedule(demo.shiftPlan, demo.siteConditions, demo.forecastHours);
 
-  it("turns scheduled outdoor exposure into a qualified crew hydration minimum", () => {
+  it("presents source-supported hydration as per-worker hourly guidance", () => {
     const hydration = buildHydrationPlan(demo.shiftPlan, result);
-    expect(hydration.kind).toBe("minimum");
-    expect(hydration.minimumLiters).toBeGreaterThan(0);
-    expect(hydration.wordingEn).toContain("at least");
-    expect(hydration.wordingEn).toContain("on-site adjustment required");
+    expect(hydration.kind).toBe("rates");
+    expect(hydration.wordingEn).toContain("at least 1.2 L per worker per hour");
+    expect(hydration.wordingEn).toContain("personal two-liter bottle warning");
+    expect(hydration.wordingEn).not.toContain("across the crew");
   });
 
   it("does not understate a crew total when any scheduled exposure lacks specified hydration guidance", () => {
     const lowResult = generateSchedule(demo.shiftPlan, { measurementMode: "onsite_twl", twlZone: "low" }, demo.forecastHours);
-    expect(buildHydrationPlan(demo.shiftPlan, lowResult).kind).toBe("preliminary");
+    const hydration=buildHydrationPlan(demo.shiftPlan, lowResult);
+    expect(hydration.wordingEn).toContain("0.6–1.0 L per worker per hour");
+    expect(hydration.wordingEn).toContain("No configured heavy-work rate");
   });
 
   it("builds deterministic bilingual supervisor briefings", () => {

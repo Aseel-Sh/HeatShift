@@ -18,16 +18,14 @@ describe("TWL crew conflicts", () => {
   });
 
   it.each([
-    ["high", 0],
-    ["intermediate", 2],
-    ["low", 2],
-    ["none", 2],
-  ] as const)(
-    "does not create a non-acclimatized conflict for %s TWL and %d workers",
-    (twlZone, workerCount) => {
-      expect(getNonAcclimatizedConflict(twlZone, workerCount)).toBeNull();
-    },
-  );
+    ["none",0,null],["none",1,null],["none",3,null],
+    ["low",0,null],["low",1,null],["low",3,null],
+    ["intermediate",0,null],["intermediate",1,"warning"],["intermediate",3,"warning"],
+    ["high",0,null],["high",1,"critical"],["high",3,"critical"],
+  ] as const)("classifies %s TWL with %d non-acclimatized workers",(twlZone,count,severity)=>{
+    const conflict=getNonAcclimatizedConflict(twlZone,count);
+    if(severity===null)expect(conflict).toBeNull();else expect(conflict).toMatchObject({severity,sourceId:SOURCE_IDS.twlGuidance});
+  });
 
   it.each(["intermediate", "high"] as const)(
     "warns against lone outdoor work at %s TWL",

@@ -306,7 +306,7 @@ describe("deterministic scheduler", () => {
     );
   });
 
-  it("marks a schedule without site-verified TWL as preliminary", () => {
+  it("marks a schedule without a supervisor-entered TWL zone as preliminary", () => {
     const result = generateSchedule(
       plan({ shiftStart: "06:00", shiftEnd: "08:00" }),
       { measurementMode: "forecast", twlZone: "none" },
@@ -397,6 +397,13 @@ describe("deterministic scheduler", () => {
     );
   });
 
+  it("keeps ordinary scheduling but marks 2027 regulatory guidance unavailable",()=>{
+    const result=generateSchedule(plan({shiftDate:"2027-07-20",shiftStart:"12:00",shiftEnd:"13:00",tasks:[task({durationMinutes:60})]}),defaultConditions,[]);
+    expect(result.blocks.some(block=>block.type==="restriction")).toBe(false);
+    expect(result.metrics.scheduledWorkMinutes).toBe(60);
+    expect(result).toMatchObject({regulatoryGuidanceAvailable:false,isPreliminary:true});
+  });
+
   it("returns a valid result with non-overlapping crew work and rest blocks", () => {
     const shiftPlan = plan({
       shiftStart: "06:00",
@@ -441,6 +448,18 @@ describe("deterministic scheduler", () => {
     expect(result.metrics.restMinutes).toBe(40);
     expect(result.unscheduled).toEqual([
       expect.objectContaining({ taskId: "task-1", unscheduledMinutes: 20 }),
+    ]);
+  });
+
+  it("schedules a splittable cyclic task across separate safe windows",()=>{
+    const result=generateSchedule(plan({shiftStart:"11:00",shiftEnd:"16:00",tasks:[task({durationMinutes:40})]}),{measurementMode:"onsite_twl",twlZone:"high"},[]);
+    expect(result.metrics.scheduledWorkMinutes).toBe(40);
+    expect(result.unscheduled).toEqual([]);
+    expect(result.conflicts.some(conflict=>conflict.code==="INSUFFICIENT_SAFE_CAPACITY")).toBe(false);
+    expect(result.blocks.filter(block=>block.taskId==="task-1").map(({type,start,end})=>({type,start,end}))).toEqual([
+      {type:"work",start:"11:00",end:"11:20"},
+      {type:"rest",start:"11:20",end:"12:00"},
+      {type:"work",start:"15:00",end:"15:20"},
     ]);
   });
 

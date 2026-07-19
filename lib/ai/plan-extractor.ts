@@ -13,6 +13,7 @@ const SYSTEM_INSTRUCTION = `You extract structured work-plan facts only.
 
 export type { ChatCompletionsClient } from "./provider";
 export interface ExtractionOptions { apiKey: string; model: string; signal?: AbortSignal; client?: ChatCompletionsClient }
+export interface PlanExtractionResult { plan: ExtractedPlan; metadata: { actualModel: string | null } }
 
 function classifyProviderError(error: unknown): IntegrationError {
   if (error instanceof IntegrationError) return error;
@@ -24,21 +25,29 @@ function classifyProviderError(error: unknown): IntegrationError {
   return new IntegrationError("AI_UNAVAILABLE", "Plan extraction is temporarily unavailable. Create tasks manually or try again later.", 503);
 }
 
-export async function extractPlan(text: string, options: ExtractionOptions): Promise<ExtractedPlan> {
+export async function extractPlan(text: string, options: ExtractionOptions): Promise<PlanExtractionResult> {
   const client = options.client ?? new OpenRouterClient(options.apiKey);
   try {
-    const response = await client.complete({
-      model: options.model,
-      system: SYSTEM_INSTRUCTION,
-      user: text,
-      responseFormat: { type: "json_schema", json_schema: { name: "heatshift_plan", strict: true, schema: extractedPlanJsonSchema } },
-      signal: options.signal,
-    });
-    let decoded: unknown;
-    try { decoded = JSON.parse(response.content); }
-    catch { throw new IntegrationError("AI_INVALID_RESPONSE", "Plan extraction returned an invalid response.", 502); }
-    const parsed = extractedPlanSchema.safeParse(decoded);
-    if (!parsed.success) throw new IntegrationError("AI_INVALID_RESPONSE", "Plan extraction returned an invalid response.", 502);
-    return parsed.data;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const response = await client.complete({
+          model: options.model,
+          system: SYSTEM_INSTRUCTION,
+          user: text,
+          responseFormat: { type: "json_schema", json_schema: { name: "heatshift_plan", strict: true, schema: extractedPlanJsonSchema } },
+          signal: options.signal,
+        });
+        let decoded: unknown;
+        try { decoded = JSON.parse(response.content); }
+        catch { throw new IntegrationError("AI_INVALID_RESPONSE", "Plan extraction returned an invalid response.", 502); }
+        const parsed = extractedPlanSchema.safeParse(decoded);
+        if (!parsed.success) throw new IntegrationError("AI_INVALID_RESPONSE", "Plan extraction returned an invalid response.", 502);
+        return { plan: parsed.data, metadata: { actualModel: response.model ?? null } };
+      } catch (error) {
+        if (attempt === 0 && error instanceof IntegrationError && error.code === "AI_INVALID_RESPONSE") continue;
+        throw error;
+      }
+    }
+    throw new IntegrationError("AI_INVALID_RESPONSE", "Plan extraction returned an invalid response.", 502);
   } catch (error) { throw classifyProviderError(error); }
 }

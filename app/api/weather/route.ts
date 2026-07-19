@@ -21,7 +21,7 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const hours = await fetchCityWeather(query.data.city, query.data.date);
     return Response.json({
-      data: { city: query.data.city, date: query.data.date, hours },
+      data: { city: query.data.city, date: query.data.date, retrievedAt: new Date().toISOString(), hours },
     });
   } catch (error) {
     const integrationError =

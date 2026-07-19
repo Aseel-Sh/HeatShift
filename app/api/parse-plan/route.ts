@@ -59,12 +59,12 @@ export async function POST(request: Request): Promise<Response> {
   });
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const plan = await extractPlan(input.data.text, {
+    const extraction = await extractPlan(input.data.text, {
       apiKey: environment.ai.apiKey,
       model: environment.ai.model,
       signal: controller.signal,
     });
-    return Response.json({ data: plan });
+    return Response.json({ data: extraction.plan, metadata: extraction.metadata });
   } catch (error) {
     const integrationError =
       error instanceof IntegrationError

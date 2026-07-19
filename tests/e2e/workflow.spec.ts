@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function mockIntegrations(page: Page, weatherOk = true) {
   await page.route("**/api/parse-plan", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { tasks: [{ nameEn: "Pipe inspection", nameAr: "فحص الأنابيب", durationMinutes: 30, workload: "light", environment: "shaded_outdoor", splittable: false }], assumptions: [], missingInformation: [] } }) }));
-  await page.route("**/api/weather?*", (route) => route.fulfill({ status: weatherOk ? 200 : 502, contentType: "application/json", body: weatherOk ? JSON.stringify({ data: { city: "riyadh", date: "2026-07-20", hours: [{ time:"06:30",temperatureCelsius:31,apparentTemperatureCelsius:33,relativeHumidityPercent:25,windSpeedKph:8 },{ time:"12:30",temperatureCelsius:44,apparentTemperatureCelsius:47,relativeHumidityPercent:18,windSpeedKph:10 }] } }) : JSON.stringify({ error: { code:"WEATHER_UNAVAILABLE",message:"Forecast service unavailable for test." } }) }));
+  await page.route("**/api/weather?*", (route) => route.fulfill({ status: weatherOk ? 200 : 502, contentType: "application/json", body: weatherOk ? JSON.stringify({ data: { city: "riyadh", date: "2026-07-20", retrievedAt:"2026-07-19T09:00:00Z", hours: [{ time:"06:30",temperatureCelsius:31,apparentTemperatureCelsius:33,relativeHumidityPercent:25,windSpeedKph:8 },{ time:"12:30",temperatureCelsius:44,apparentTemperatureCelsius:47,relativeHumidityPercent:18,windSpeedKph:10 }] } }) : JSON.stringify({ error: { code:"WEATHER_UNAVAILABLE",message:"Forecast service unavailable for test." } }) }));
 }
 
 async function fillPlan(page: Page, overrides: { start?: string; end?: string; crew?: string; newWorkers?: string } = {}) {
@@ -81,7 +81,7 @@ test("missing AI safety fields remain blank and block scheduling", async ({ page
 test("editing a sample invalidates it and requests weather for the edited city", async ({ page }) => {
   let weatherUrl="";
   await page.unroute("**/api/weather?*");
-  await page.route("**/api/weather?*",route=>{weatherUrl=route.request().url();return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({data:{hours:[{time:"06:30",temperatureCelsius:32,apparentTemperatureCelsius:34,relativeHumidityPercent:40,windSpeedKph:8}]}})});});
+  await page.route("**/api/weather?*",route=>{weatherUrl=route.request().url();return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({data:{city:"jeddah",date:"2026-07-20",retrievedAt:"2026-07-19T09:00:00Z",hours:[{time:"06:30",temperatureCelsius:32,apparentTemperatureCelsius:34,relativeHumidityPercent:40,windSpeedKph:8}]}})});});
   await page.getByRole("button",{name:"Load sample shift"}).click();
   await page.getByRole("button",{name:"Back"}).click();
   await page.getByLabel("City").selectOption("jeddah");
@@ -90,4 +90,6 @@ test("editing a sample invalidates it and requests weather for the edited city",
   await page.getByRole("button",{name:"Continue to conditions"}).click();
   expect(weatherUrl).toContain("city=jeddah");
   await expect(page.getByText("46.7°")).toHaveCount(0);
+  await expect(page.getByText("City-center model forecast — preliminary planning only.")).toBeVisible();
+  await expect(page.getByText(/City: jeddah/)).toBeVisible();
 });

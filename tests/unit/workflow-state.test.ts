@@ -120,7 +120,7 @@ describe("workflow state", () => {
   it("invalidates sample-derived forecast, conditions, and result after material edits", () => {
     const loaded=workflowReducer(createInitialWorkflowState(),{type:"loadDemo",demo:getDemoScenario()});
     const edited=workflowReducer(loaded,{type:"setPlanField",field:"city",value:"jeddah"});
-    expect(edited).toMatchObject({isDemo:false,planSource:"manual",forecast:[],forecastSource:"none",weatherStatus:"idle",weatherError:null,scheduleResult:null,conditions:{measurementMode:"forecast",twlZone:"none"}});
+    expect(edited).toMatchObject({isDemo:false,planSource:"manual",forecast:[],forecastSource:"none",weatherMetadata:null,weatherStatus:"idle",weatherError:null,scheduleResult:null,conditions:{measurementMode:"forecast",twlZone:"none"}});
   });
 
   it("never reuses task IDs after deletion", () => {

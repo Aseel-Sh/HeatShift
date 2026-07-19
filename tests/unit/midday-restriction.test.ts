@@ -4,18 +4,23 @@ import { evaluateMiddayRestriction } from "../../lib/domain/midday-restriction";
 
 describe("Saudi midday direct-sun restriction", () => {
   it.each([
-    ["2026-06-14", false],
-    ["2026-06-15", true],
-    ["2026-09-15", true],
-    ["2026-09-16", false],
-  ] as const)("reports seasonal status for %s", (date, seasonActive) => {
+    ["2026-06-14", false, true],
+    ["2026-06-15", true, true],
+    ["2026-09-15", true, true],
+    ["2026-09-16", false, true],
+    ["2027-07-20", false, false],
+  ] as const)("reports configured status for %s", (date, seasonActive, regulatoryGuidanceAvailable) => {
     expect(
       evaluateMiddayRestriction({
         date,
         time: "12:00",
         environment: "direct_sun",
-      }).seasonActive,
-    ).toBe(seasonActive);
+      }),
+    ).toMatchObject({seasonActive,regulatoryGuidanceAvailable});
+  });
+
+  it("does not reuse the source-backed 2026 restriction in 2027",()=>{
+    expect(evaluateMiddayRestriction({date:"2027-07-20",time:"12:00",environment:"direct_sun"})).toMatchObject({status:"permitted",regulatoryGuidanceAvailable:false,guidanceMessage:"No verified HeatShift restriction configuration is available for this date."});
   });
 
   it.each([

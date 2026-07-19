@@ -5,7 +5,20 @@ export function getNonAcclimatizedConflict(
   twlZone: TwlZone,
   nonAcclimatizedWorkers: number,
 ): Conflict | null {
-  if (twlZone !== "high" || nonAcclimatizedWorkers === 0) return null;
+  if ((twlZone !== "intermediate" && twlZone !== "high") || nonAcclimatizedWorkers === 0) return null;
+
+  if (twlZone === "intermediate") {
+    return {
+      id: "intermediate-twl-non-acclimatized-workers",
+      severity: "warning",
+      code: "INTERMEDIATE_TWL_NON_ACCLIMATIZED_WORKERS",
+      titleEn: "Intermediate TWL with non-acclimatized workers",
+      titleAr: "نطاق TWL متوسط مع عمال غير متأقلمين",
+      descriptionEn: `${nonAcclimatizedWorkers} non-acclimatized worker(s) require supervisor review or reassignment before outdoor work. This is planning guidance, not an individualized medical plan.`,
+      descriptionAr: `يحتاج ${nonAcclimatizedWorkers} من العمال غير المتأقلمين إلى مراجعة المشرف أو إعادة التوزيع قبل العمل الخارجي. هذه إرشادات تخطيط وليست خطة طبية فردية.`,
+      sourceId: SOURCE_IDS.twlGuidance,
+    };
+  }
 
   return {
     id: "high-twl-non-acclimatized-workers",
@@ -14,9 +27,9 @@ export function getNonAcclimatizedConflict(
     titleEn: "High TWL with non-acclimatized workers",
     titleAr: "مؤشر TWL مرتفع مع عمال غير متأقلمين",
     descriptionEn:
-      "Site-verified high TWL and non-acclimatized workers require the supervisor to revise the safer plan before outdoor work.",
+      `${nonAcclimatizedWorkers} non-acclimatized worker(s) at the supervisor-entered high TWL zone require reassignment or supervisor intervention before outdoor work.`,
     descriptionAr:
-      "يتطلب مؤشر TWL المرتفع المتحقق منه في الموقع مع وجود عمال غير متأقلمين مراجعة المشرف للخطة الأكثر أمانًا قبل العمل الخارجي.",
+      `يحتاج ${nonAcclimatizedWorkers} من العمال غير المتأقلمين عند نطاق TWL المرتفع الذي أدخله المشرف إلى إعادة التوزيع أو تدخل المشرف قبل العمل الخارجي.`,
     sourceId: SOURCE_IDS.twlGuidance,
   };
 }

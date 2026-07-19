@@ -11,7 +11,7 @@
 | No database or authentication | The MVP plans one crew and does not need accounts or server persistence. |
 | AI only extracts structured plan data | Probabilistic output is isolated from safety decisions. |
 | Deterministic safety engine | Restrictions and work/rest decisions must be explainable, reproducible, and testable. |
-| Forecast and site-verified TWL are separate | Forecasts support advance planning; site-verified readings represent observed local conditions. |
+| Forecast and supervisor-entered TWL are separate | City-center forecasts support preliminary advance planning; a supervisor-entered zone comes from a separate appropriate on-site assessment. HeatShift does not measure or verify TWL. |
 | Built-in deterministic demo required | The core experience must remain demonstrable without AI, weather services, or secrets. |
 | Qualified safety language only | The product provides guidance and cannot guarantee safety or regulatory compliance. |
 | Discriminated guidance results | Hydration output distinguishes a planning range, a minimum, and preliminary guidance; work/rest output distinguishes continuous work, cycles, and preliminary guidance. |
@@ -25,11 +25,15 @@
 | Double validation for AI output | Provider structured output constrains generation, while local Zod parsing remains the trusted boundary. |
 | Fixed Open-Meteo city coordinates | Five supported city IDs resolve deterministically without maps, geocoding, or user-location tracking. |
 | No weather fallback values | Empty, unavailable, malformed, or timed-out forecasts return typed errors instead of invented data. |
+| Versioned restriction configuration | The source-backed midday restriction is represented with full 2026 effective dates and is not silently reused for a later year. Unsupported years keep ordinary scheduling but are marked preliminary with regulatory guidance unavailable. |
+| Rate-first hydration guidance | The UI presents the configured range or minimum per worker per hour; it does not imply an exact medical prescription or extrapolate an unsupported crew total. |
+| Shift-scoped forecast summaries | Peak temperature, apparent-temperature maximum, and temperature-risk category use forecast points inside the selected shift only. |
+| One invalid-output retry | A malformed structured response may be retried once; rate limits, authentication failures, cancellation, and timeout are not automatically retried. |
 | Network-free demo service | The core scenario remains repeatable when provider access, credentials, or connectivity are unavailable. |
 | Typed local workflow reducer | Explicit transitions keep the first workflow testable without a global state dependency. |
 | Manual values take precedence | AI extraction fills gaps without silently replacing supervisor-entered plan details. |
 | Internal bilingual dictionary | English/Arabic labels and RTL behavior work without an external translation service. |
-| Weather failure remains preliminary | The UI offers forecast-only preliminary guidance or site-verified TWL entry without inventing weather. |
+| Weather failure remains preliminary | The UI offers preliminary manual planning or supervisor-entered TWL entry without inventing weather. |
 
 ## Visual system
 

@@ -190,18 +190,23 @@ export function generateSchedule(
 ): ScheduleResult {
   const shiftStart = timeToMinutes(shiftPlan.shiftStart);
   const shiftEnd = timeToMinutes(shiftPlan.shiftEnd);
-  const sortedForecast = [...forecastHours].sort(
+  const shiftForecast = forecastHours.filter((hour) => {
+    const minute = timeToMinutes(hour.time);
+    return minute >= shiftStart && minute < shiftEnd;
+  });
+  const sortedForecast = [...shiftForecast].sort(
     (left, right) => timeToMinutes(left.time) - timeToMinutes(right.time),
   );
   const slots = buildSlots(shiftStart, shiftEnd);
   const hasDirectSunWork = shiftPlan.tasks.some(
     (task) => task.environment === "direct_sun",
   );
-  const seasonActive = evaluateMiddayRestriction({
+  const restrictionEvaluation = evaluateMiddayRestriction({
     date: shiftPlan.shiftDate,
     time: "12:00",
     environment: "direct_sun",
-  }).seasonActive;
+  });
+  const seasonActive = restrictionEvaluation.seasonActive;
   const restrictionActive = seasonActive && hasDirectSunWork;
   const restrictedSlots = new Set<number>();
 
@@ -244,18 +249,20 @@ export function generateSchedule(
           .slice(taskOrderIndex + 1)
           .some(({ task: laterTask }) => laterTask.environment !== "conditioned_indoor");
       const minimumCandidateSlots = task.splittable ? 1 : requiredSlots;
-
-      for (
-        let candidateWorkSlots = requiredSlots;
-        candidateWorkSlots >= minimumCandidateSlots && scheduledSlots === 0;
-        candidateWorkSlots -= 1
-      ) {
-        if (!task.splittable && candidateWorkSlots > maximumWorkSlots) break;
+      while (scheduledSlots < requiredSlots) {
+        const scheduledBeforeSearch = scheduledSlots;
+        const remainingWorkSlots = requiredSlots - scheduledSlots;
+        for (
+          let candidateWorkSlots = Math.min(remainingWorkSlots, maximumWorkSlots);
+          candidateWorkSlots >= minimumCandidateSlots && scheduledSlots === scheduledBeforeSearch;
+          candidateWorkSlots -= 1
+        ) {
         const pattern = buildWorkRestPattern(
           candidateWorkSlots,
           maximumWorkSlots,
           restSlots,
-          hasFurtherOutdoorWork,
+          remainingWorkSlots > candidateWorkSlots ||
+            (remainingWorkSlots === candidateWorkSlots && hasFurtherOutdoorWork),
         );
         const startIndices = slots
           .map((_, index) => index)
@@ -320,6 +327,26 @@ export function generateSchedule(
           });
           break;
         }
+        }
+        if (scheduledSlots === scheduledBeforeSearch && task.splittable && !hasFurtherOutdoorWork) {
+          const remainingWorkSlots = requiredSlots - scheduledSlots;
+          let placedFinalPartial = false;
+          for (let candidateWorkSlots = Math.min(remainingWorkSlots, maximumWorkSlots); candidateWorkSlots >= 1 && !placedFinalPartial; candidateWorkSlots -= 1) {
+            const startIndices = slots.map((_, index) => index).filter((index) => index + candidateWorkSlots <= slots.length).sort((left, right) => {
+              if (task.environment !== "direct_sun" || sortedForecast.length === 0) return left - right;
+              return forecastTemperatureAt(slots[left].startMinutes, sortedForecast) - forecastTemperatureAt(slots[right].startMinutes, sortedForecast) || left - right;
+            });
+            for (const startIndex of startIndices) {
+              const candidate = slots.slice(startIndex, startIndex + candidateWorkSlots);
+              if (!candidate.every((slot, offset) => isValidSlot(slot, startIndex + offset))) continue;
+              candidate.forEach((slot) => { slot.occupiedByTaskId = task.id; scheduledSlots += 1; });
+              placedFinalPartial = true;
+              break;
+            }
+          }
+          break;
+        }
+        if (scheduledSlots === scheduledBeforeSearch) break;
       }
     } else if (task.splittable) {
       const candidateIndices = slots
@@ -435,8 +462,11 @@ export function generateSchedule(
   ].filter((conflict): conflict is Conflict => conflict !== null);
   const scheduledWorkMinutes = slots.filter((slot) => slot.occupiedByTaskId).length * SLOT_MINUTES;
   const restMinutes = slots.filter((slot) => slot.restForTaskId).length * SLOT_MINUTES;
-  const peakForecastTemperature = forecastHours.length
-    ? Math.max(...forecastHours.map((hour) => hour.temperatureCelsius))
+  const peakForecastTemperature = shiftForecast.length
+    ? Math.max(...shiftForecast.map((hour) => hour.temperatureCelsius))
+    : null;
+  const peakApparentTemperature = shiftForecast.length
+    ? Math.max(...shiftForecast.map((hour) => hour.apparentTemperatureCelsius))
     : null;
 
   return {
@@ -453,6 +483,7 @@ export function generateSchedule(
         0,
       ),
       peakForecastTemperature,
+      peakApparentTemperature,
       hydrationPlanning: {
         twlZone: siteConditions.twlZone,
         light: getHydrationGuidance(siteConditions.twlZone, "light"),
@@ -460,6 +491,7 @@ export function generateSchedule(
       },
     },
     explanationSummary: `${scheduledWorkMinutes} work minutes scheduled in five-minute slots; ${unscheduled.reduce((total, task) => total + task.unscheduledMinutes, 0)} minutes remain unscheduled.`,
-    isPreliminary: siteConditions.twlZone === "none",
+    isPreliminary: siteConditions.twlZone === "none" || !restrictionEvaluation.regulatoryGuidanceAvailable,
+    regulatoryGuidanceAvailable: restrictionEvaluation.regulatoryGuidanceAvailable,
   };
 }

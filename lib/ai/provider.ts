@@ -14,13 +14,13 @@ export interface ChatCompletionRequest {
 }
 
 export interface ChatCompletionsClient {
-  complete(request: ChatCompletionRequest): Promise<{ content: string }>;
+  complete(request: ChatCompletionRequest): Promise<{ content: string; model?: string }>;
 }
 
 export class OpenRouterClient implements ChatCompletionsClient {
   constructor(private readonly apiKey: string, private readonly fetchImpl: typeof fetch = fetch) {}
 
-  async complete(request: ChatCompletionRequest): Promise<{ content: string }> {
+  async complete(request: ChatCompletionRequest): Promise<{ content: string; model?: string }> {
     const response = await this.fetchImpl("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
@@ -29,6 +29,7 @@ export class OpenRouterClient implements ChatCompletionsClient {
         messages: [{ role: "system", content: request.system }, { role: "user", content: request.user }],
         response_format: request.responseFormat,
         temperature: 0,
+        provider: { require_parameters: true },
       }),
       signal: request.signal,
     });
@@ -37,11 +38,11 @@ export class OpenRouterClient implements ChatCompletionsClient {
       error.status = response.status;
       throw error;
     }
-    const payload = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
+    const payload = await response.json() as { model?: unknown; choices?: Array<{ message?: { content?: unknown } }> };
     const content = payload.choices?.[0]?.message?.content;
     if (typeof content !== "string" || !content.trim()) {
       throw new IntegrationError("AI_INVALID_RESPONSE", "Plan extraction returned an invalid response.", 502);
     }
-    return { content };
+    return { content, model: typeof payload.model === "string" ? payload.model : undefined };
   }
 }

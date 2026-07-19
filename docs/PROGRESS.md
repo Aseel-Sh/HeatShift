@@ -68,7 +68,7 @@ Implemented:
 - Responsive Describe form with inline validation, AI loading/errors, manual task creation, and deterministic demo loading
 - AI extraction through `/api/parse-plan` while preserving already-entered manual fields
 - Editable bilingual task cards with duration, workload, environment, split, add, and delete controls
-- Conditions screen with hourly forecast, peak/category summary, explicit failure path, and site-verified TWL selection
+- Conditions screen with hourly forecast, peak/category summary, explicit failure path, and supervisor-entered TWL selection
 - Local deterministic scheduler invocation with a deliberately basic completion summary
 - Functional English/Arabic dictionary toggle and document-level RTL direction
 - Accessible labels, associated errors, visible focus, and loading/disabled controls
@@ -106,7 +106,7 @@ Implemented:
 - Cross-task outdoor rest continuity and no unnecessary final rest
 - Exact partial-capacity and unscheduled-minute reporting
 - Critical `INSUFFICIENT_SAFE_CAPACITY` conflicts
-- Preliminary results when no site-verified TWL zone is selected
+- Preliminary results when no supervisor-entered TWL zone is selected
 - Schedule metrics, hydration planning, reason codes, and deterministic explanations
 - Algorithm documentation in `docs/SCHEDULER.md`
 
@@ -129,6 +129,39 @@ Deferred by that iteration's scope:
 - Deterministic demo fixture
 
 Blockers: none.
+
+## Product-integrity release controls iteration
+
+Status: complete on 2026-07-19.
+
+Implemented:
+
+- Versioned the Saudi midday restriction with full 2026 effective dates; other years retain ordinary scheduling but show regulatory guidance unavailable and preliminary.
+- Replaced verification claims with “Supervisor-entered TWL zone” and an explicit statement that HeatShift neither measures nor verifies TWL.
+- Added intermediate warnings and high critical findings for non-acclimatized workers, with zero/one/multiple-worker coverage in every TWL zone.
+- Replaced exact-looking crew hydration totals with configured per-worker/per-hour ranges or minimums.
+- Repeated cyclic package placement across separate safe windows with exact partial-capacity accounting.
+- Scoped forecast maxima and risk categories to the selected shift and added city-center forecast provenance metadata.
+- Enforced OpenRouter provider parameters, captured the actual returned model for a neutral review notice, and limited retry to one invalid structured response.
+- Added push/pull-request CI, failure-safe Playwright execution, a CI badge, and ignored TypeScript incremental build state.
+
+Focused source audit:
+
+- `saudi-midday-work-ban-2026` supports only the configured 2026 seasonal dates and midday direct-sun restriction; it is not used as evidence for 2027.
+- `ncosh-outdoor-temperature-indicator` supports only the configured outdoor-temperature categories.
+- `ncosh-twl-work-rest-hydration` supports only the configured TWL cycles and rate-based hydration guidance.
+- No new regulation, endorsement, or medical claim was introduced.
+
+Validation:
+
+- `npm run lint` — passed
+- `npm run typecheck` — passed
+- `npm run test` — passed, 124 tests across 18 files
+- `npm run test:e2e` — passed, 35 browser tests
+- `npm run build` — passed, including both dynamic API routes
+- Focused terminology, source-metadata, generated-file, and diff audits — passed
+
+Blockers: none. `OPENROUTER_API_KEY` remains optional and is needed only for live plan extraction; demo and manual planning require no key.
 
 ## Server integrations and demo iteration
 
@@ -176,7 +209,7 @@ Implemented:
 - Polished Before/After results report using only deterministic scheduler output
 - Chronological work, recovery, restriction, and unscheduled timeline with visible reason details
 - Capacity and non-acclimatized-worker critical warnings
-- Forecast-only versus site-verified TWL/cycle distinction
+- Forecast-only versus supervisor-entered TWL/cycle distinction
 - Crew hydration minimum/range derived from scheduled outdoor exposure without turning minimum guidance into an exact prescription
 - Deterministic English and Arabic supervisor briefings
 - Official source references without endorsement language

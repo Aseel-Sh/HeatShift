@@ -9,7 +9,7 @@ The intended future request flow is:
 1. A supervisor describes one crew's plan.
 2. A swappable AI provider extracts that text into a strictly validated structure; it does not make safety decisions.
 3. The supervisor verifies the extracted tasks and manually entered site information.
-4. Forecast conditions and site-verified TWL information remain visibly separate inputs.
+4. City-center forecast data and the supervisor-entered TWL zone remain visibly separate inputs.
 5. A deterministic domain engine applies restrictions and work/rest rules.
 6. The UI presents a safer shift plan and a planning report with clear limitations.
 
@@ -21,7 +21,7 @@ The boundary schemas, source metadata, deterministic heat-planning rules, pure f
 - `components/layout/`: shared application framing
 - `components/workflow/`: the client-side Describe, Verify, and Conditions workflow
 - `components/plan/`: future plan description and verification UI
-- `components/conditions/`: future forecast and site-verified TWL UI
+- `components/conditions/`: forecast and supervisor-entered TWL UI
 - `components/schedule/`: future generated schedule UI
 - `components/report/`: future planning report UI
 - `lib/ai/`: provider-neutral extraction service, OpenRouter adapter, and extraction schemas
@@ -43,7 +43,7 @@ No data is persisted server-side. The product handles one crew without worker na
 
 ## Safety model
 
-AI is limited to structured plan extraction. Forecast data informs advance planning, while manually verified on-site TWL data represents site conditions; the product must never collapse them into one concept. All restrictions, work/rest decisions, schedule changes, hydration totals, and briefings are deterministic and testable.
+AI is limited to structured plan extraction. City-center forecast data informs advance planning, while a supervisor-entered TWL zone comes from a separate appropriate on-site assessment; HeatShift neither measures nor verifies TWL and must never collapse these concepts. All restrictions, work/rest decisions, schedule changes, hydration guidance, and briefings are deterministic and testable.
 
 HeatShift provides planning guidance. It must never claim to guarantee safety or regulatory compliance.
 

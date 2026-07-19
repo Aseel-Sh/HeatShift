@@ -6,6 +6,7 @@ export interface DemoScenario {
   shiftPlan: ShiftPlan;
   siteConditions: SiteConditions;
   forecastHours: ForecastHour[];
+  weatherMetadata: { city: "riyadh"; date: string; retrievedAt: string };
 }
 
 export const DEMO_SCENARIO: DemoScenario = {
@@ -82,6 +83,7 @@ export const DEMO_SCENARIO: DemoScenario = {
     twlZone: "high",
     manualTemperatureCelsius: 44.6,
   },
+  weatherMetadata: { city:"riyadh", date:"2026-07-20", retrievedAt:"2026-07-19T12:00:00+03:00" },
   forecastHours: [
     { time: "06:30", temperatureCelsius: 30.5, apparentTemperatureCelsius: 32.1, relativeHumidityPercent: 31, windSpeedKph: 7.8 },
     { time: "07:30", temperatureCelsius: 32.2, apparentTemperatureCelsius: 34.1, relativeHumidityPercent: 29, windSpeedKph: 8.1 },

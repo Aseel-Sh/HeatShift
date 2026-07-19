@@ -1,4 +1,5 @@
 import { SOURCE_IDS } from "../../data/official-sources";
+import { SAUDI_MIDDAY_RESTRICTION_2026, UNAVAILABLE_RESTRICTION_MESSAGE } from "../../data/saudi-restriction-rule";
 import type { WorkEnvironment } from "./types";
 
 export type MiddayRestrictionStatus =
@@ -16,22 +17,28 @@ export interface MiddayRestrictionResult {
   seasonActive: boolean;
   restrictedWindowActive: boolean;
   status: MiddayRestrictionStatus;
+  regulatoryGuidanceAvailable: boolean;
+  guidanceMessage?: string;
   sourceId: typeof SOURCE_IDS.middayRestriction;
 }
 
+function isConfigurationAvailable(date: string): boolean {
+  return date.startsWith("2026-");
+}
+
 function isSeasonActive(date: string): boolean {
-  const monthAndDay = date.slice(5);
-  return monthAndDay >= "06-15" && monthAndDay <= "09-15";
+  return date >= SAUDI_MIDDAY_RESTRICTION_2026.effectiveStart && date <= SAUDI_MIDDAY_RESTRICTION_2026.effectiveEnd;
 }
 
 function isRestrictedWindow(time: string): boolean {
-  return time >= "12:00" && time < "15:00";
+  return time >= SAUDI_MIDDAY_RESTRICTION_2026.restrictedStart && time < SAUDI_MIDDAY_RESTRICTION_2026.restrictedEnd;
 }
 
 export function evaluateMiddayRestriction(
   input: MiddayRestrictionInput,
 ): MiddayRestrictionResult {
-  const seasonActive = isSeasonActive(input.date);
+  const regulatoryGuidanceAvailable = isConfigurationAvailable(input.date);
+  const seasonActive = regulatoryGuidanceAvailable && isSeasonActive(input.date);
   const restrictedWindowActive = seasonActive && isRestrictedWindow(input.time);
 
   let status: MiddayRestrictionStatus = "permitted";
@@ -48,6 +55,8 @@ export function evaluateMiddayRestriction(
     seasonActive,
     restrictedWindowActive,
     status,
+    regulatoryGuidanceAvailable,
+    guidanceMessage: regulatoryGuidanceAvailable ? undefined : UNAVAILABLE_RESTRICTION_MESSAGE,
     sourceId: SOURCE_IDS.middayRestriction,
   };
 }

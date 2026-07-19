@@ -33,10 +33,10 @@ describe("TWL work/rest planning guidance", () => {
     },
   );
 
-  it("marks missing site-verified TWL guidance as preliminary", () => {
+  it("marks missing supervisor-entered TWL guidance as preliminary", () => {
     expect(getWorkRestGuidance("none", "heavy")).toEqual({
       kind: "preliminary",
-      reason: "site_verified_twl_required",
+      reason: "supervisor_entered_twl_required",
       sourceId: SOURCE_IDS.twlGuidance,
     });
   });

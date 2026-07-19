@@ -107,7 +107,7 @@ Passed with mocked responses: missing key, timeout, rate limit, invalid response
 
 ### D. Weather failures
 
-Passed with mocked responses: timeout, invalid response, unsupported date, and empty hourly data. Every case exposes forecast unavailability, states that no weather was invented, and keeps preliminary/site-verified paths available.
+Passed with mocked responses: timeout, invalid response, unsupported date, and empty hourly data. Every case exposes forecast unavailability, states that no weather was invented, and keeps preliminary/supervisor-entered TWL paths available.
 
 ### E. Form abuse
 

@@ -16,7 +16,7 @@ export type WorkRestGuidance =
     }
   | {
       kind: "preliminary";
-      reason: "site_verified_twl_required";
+      reason: "supervisor_entered_twl_required";
       sourceId: TwlGuidanceSourceId;
     };
 
@@ -35,7 +35,7 @@ export type HydrationGuidance =
     }
   | {
       kind: "preliminary";
-      reason: "site_verified_twl_required" | "guidance_not_specified";
+      reason: "supervisor_entered_twl_required" | "guidance_not_specified";
       sourceId: TwlGuidanceSourceId;
     };
 
@@ -46,7 +46,7 @@ export function getWorkRestGuidance(
   const sourceId = SOURCE_IDS.twlGuidance;
 
   if (twlZone === "none") {
-    return { kind: "preliminary", reason: "site_verified_twl_required", sourceId };
+    return { kind: "preliminary", reason: "supervisor_entered_twl_required", sourceId };
   }
   if (twlZone === "low" || (twlZone === "intermediate" && workload === "light")) {
     return { kind: "continuous", sourceId };
@@ -99,7 +99,7 @@ export function getHydrationGuidance(
     kind: "preliminary",
     reason:
       twlZone === "none"
-        ? "site_verified_twl_required"
+        ? "supervisor_entered_twl_required"
         : "guidance_not_specified",
     sourceId,
   };

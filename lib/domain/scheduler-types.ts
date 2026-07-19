@@ -46,7 +46,7 @@ const hydrationGuidanceSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("preliminary"),
-    reason: z.enum(["site_verified_twl_required", "guidance_not_specified"]),
+    reason: z.enum(["supervisor_entered_twl_required", "guidance_not_specified"]),
     sourceId: z.string().min(1),
   }),
 ]);
@@ -65,6 +65,7 @@ export const scheduleMetricsSchema = z.object({
   restrictionMinutes: z.number().int().nonnegative(),
   unscheduledMinutes: z.number().int().nonnegative(),
   peakForecastTemperature: z.number().nullable(),
+  peakApparentTemperature: z.number().nullable(),
   hydrationPlanning: hydrationPlanningSchema,
 });
 export type ScheduleMetrics = z.infer<typeof scheduleMetricsSchema>;
@@ -76,5 +77,6 @@ export const scheduleResultSchema = z.object({
   metrics: scheduleMetricsSchema,
   explanationSummary: z.string().min(1),
   isPreliminary: z.boolean(),
+  regulatoryGuidanceAvailable: z.boolean(),
 });
 export type ScheduleResult = z.infer<typeof scheduleResultSchema>;

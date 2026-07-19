@@ -6,7 +6,7 @@ HeatShift helps an outdoor crew supervisor turn an unstructured daily plan into 
 
 ## Core MVP
 
-The core MVP will support one supervisor planning one crew's shift. It will provide structured plan entry and verification, clearly separated forecast and site-verified condition concepts, deterministic schedule generation, and a planning report. A built-in deterministic demo scenario must allow the complete experience to work without external services.
+The core MVP will support one supervisor planning one crew's shift. It will provide structured plan entry and verification, clearly separated city-center forecast and supervisor-entered TWL concepts, deterministic schedule generation, and a planning report. A built-in deterministic demo scenario must allow the complete experience to work without external services.
 
 ## Non-negotiable boundaries
 
@@ -22,7 +22,7 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - No voice or image upload in the core MVP
 - AI is used only for structured plan extraction
 - Safety decisions are deterministic
-- Forecast planning and site-verified TWL planning are shown as separate concepts
+- City-center forecast planning and supervisor-entered TWL planning are shown as separate concepts
 - The app works with a built-in deterministic demo scenario
 - The app never describes itself as guaranteeing safety or regulatory compliance
 
@@ -36,7 +36,7 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - Strongly typed and Zod-validated plan, task, condition, forecast, and conflict models
 - Saudi seasonal midday direct-sun restriction evaluation
 - Forecast temperature indicators
-- Site-verified TWL work/rest and hydration planning guidance
+- Supervisor-entered TWL work/rest and hydration planning guidance
 - High-TWL non-acclimatized-worker conflicts
 - Intermediate/high-TWL outdoor lone-work warnings
 - Deterministic five-minute, single-crew schedule generation

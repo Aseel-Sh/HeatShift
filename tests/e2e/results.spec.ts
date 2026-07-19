@@ -10,7 +10,7 @@ async function openDemoResults(page: Page) {
 
 test("completes the demo scenario through results", async ({ page }) => {
   await openDemoResults(page);
-  await expect(page.getByText("Site-verified TWL input", { exact: true })).toBeVisible();
+  await expect(page.getByText("Supervisor-entered TWL zone", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Before: requested plan" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "After: planned timeline" })).toBeVisible();
 });
