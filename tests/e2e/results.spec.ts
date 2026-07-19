@@ -15,7 +15,7 @@ test("completes the demo scenario through results", async ({ page }) => {
   await expect(page.getByTestId("shift-board")).toBeVisible();
   await expect(page.getByTestId("shift-board").getByText("Requested plan", { exact: true })).toBeVisible();
   await expect(page.getByTestId("shift-board").getByText("Selected safer schedule", { exact: true })).toBeVisible();
-  await expect(page.getByText("Selected from 6 deterministic candidate schedules.", { exact:false }).first()).toBeVisible();
+  await expect(page.locator(".result-selection")).toHaveText("HeatShift compared 6 deterministic schedule options and selected the valid option that best preserved required work, dependencies, and requested timing.");
   await expect(page.locator(".restriction-top-label")).toHaveCount(1);
   expect(await page.locator(".restriction-band").count()).toBeGreaterThan(1);
   await expect(page.locator('[data-block-type="restriction"]')).toHaveCount(0);

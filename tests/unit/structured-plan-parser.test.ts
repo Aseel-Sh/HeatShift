@@ -45,6 +45,13 @@ describe("structured work-plan rows", () => {
       evidence: "12:00-2:30 Concrete pour",
       source: "deterministic_parser",
     });
+    expect(result.activities[5].evidence.mustSchedule).toMatchObject({
+      value: true,
+      evidence: "Need concrete completed today.",
+      source: "deterministic_parser",
+    });
+    expect(result.activities[5].requestedStart).toBe("12:00");
+    expect(result.activities[5].requestedEnd).toBe("14:30");
   });
 
   it.each([

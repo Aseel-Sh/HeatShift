@@ -1,5 +1,21 @@
 # Progress
 
+## Operational validity and result comprehension repair
+
+Status: implemented and production-browser verified on 2026-07-19.
+
+- Connected the exact sentence “Need concrete completed today.” to Concrete's visible must-complete state and evidence; retained “Pump booked only today.” only as an operational note with no invented clock window.
+- Added reviewable work-only predecessor suggestions, confirmation controls, arbitrary add/remove support, and circular/invalid dependency rejection.
+- Enforced partial-predecessor blocking and retained exact dependency-blocked minutes.
+- Changed `hardConstraintViolations` from a count to validator codes, rejected invalid candidates before scoring selection, and suppressed invalid schedule display.
+- Improved requested-time preservation ahead of indoor-midday preference and added a deterministic meal-at-midday candidate that creates valid must-complete capacity.
+- Added the deterministic Plan outcome, separate forecast-category and applied-TWL labels, explicit low/no-TWL recovery wording, separate untimed and unscheduled sections, and human-readable candidate explanation.
+- Added exact-plan unit and production Playwright coverage plus dependency, circularity, partial predecessor, calendar-chain, hard-validity, must-priority, evidence, and bilingual-result assertions.
+
+Verified exact low-TWL sequence: Toolbox 06:00–06:30; Excavation 06:30–09:00; Break 09:00–09:15; Rebar/Forms 09:15–11:30; Concrete 11:30–12:00; Lunch 12:00–12:30; idle/restricted direct-sun period 12:30–15:00; Concrete 15:00–16:00. Concrete has 60 minutes unscheduled; Finish/Curing has 30 minutes dependency-blocked; Cleanup has 60 minutes dependency-blocked.
+
+Final verification: lint passed; strict typecheck passed; 193 unit tests passed across 25 files; exact regression Playwright passed; production build passed. Full Playwright was rerun after the final legacy-copy assertion update.
+
 ## Requested-versus-safer timeline repair
 
 Status: implemented on 2026-07-19; final verification recorded below.

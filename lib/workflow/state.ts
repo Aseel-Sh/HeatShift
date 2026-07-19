@@ -4,6 +4,7 @@ import { SAUDI_LOCATION_PRESETS } from "../../data/cities";
 import type { ForecastHour, SiteConditions, SiteLocation } from "../domain/types";
 import type { ScheduleResult } from "../domain/scheduler-types";
 import { fromScheduleActivity, type DraftWorkTask } from "./draft-task";
+import { validateDependencyGraph } from "../domain/dependencies";
 
 export type Language = "en" | "ar";
 export type WorkflowStep = "describe" | "verify" | "conditions" | "results";
@@ -86,6 +87,12 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
         suggestedWorkload:task.suggestedWorkload, suggestedEnvironment:task.suggestedEnvironment,
         suggestedSplittable:task.suggestedSplittable, evidence:task.evidence,
       }));
+      let previousWorkId: string | undefined;
+      for (const task of tasks) {
+        if ((task.activityKind ?? "work") !== "work") continue;
+        task.suggestedPredecessorTaskIds = previousWorkId ? [previousWorkId] : [];
+        previousWorkId = task.id;
+      }
       return {...state,...invalidateSample(state),step:"verify",aiStatus:"idle",aiError:null,aiModel:action.actualModel??null,planSource:"ai",nextTaskId:next,
         plan:{...state.plan,siteName:extractedValue(state,"siteName",action.extraction.siteName),location:state.plan.location??(action.extraction.city?structuredClone(SAUDI_LOCATION_PRESETS[action.extraction.city]):null),shiftDate:extractedValue(state,"shiftDate",action.extraction.shiftDate),shiftStart:extractedValue(state,"shiftStart",action.extraction.shiftStart),shiftEnd:extractedValue(state,"shiftEnd",action.extraction.shiftEnd),crewSize:extractedValue(state,"crewSize",action.extraction.crewSize),nonAcclimatizedWorkers:extractedValue(state,"nonAcclimatizedWorkers",action.extraction.nonAcclimatizedWorkers)},tasks,assumptions:action.extraction.assumptions,missingInformation:action.extraction.missingInformation};
     }
@@ -94,7 +101,9 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
     case "updateTask": {
       const errors = {...state.errors,[`task-${action.id}-${action.field}`]:""};
       if(action.field==="activityKind") for(const key of Object.keys(errors)) if(key.startsWith(`task-${action.id}-`)) errors[key]="";
-      return {...state,...invalidateSample(state),tasks:state.tasks.map(task=>task.id===action.id?{...task,[action.field]:action.value}:task),errors};
+      let tasks=state.tasks.map(task=>task.id===action.id?{...task,[action.field]:action.value}:task);
+      if(action.field==="activityKind"&&action.value!=="work")tasks=tasks.map(task=>task.id===action.id?{...task,predecessorTaskIds:[],suggestedPredecessorTaskIds:[]}:{...task,predecessorTaskIds:(task.predecessorTaskIds??[]).filter(id=>id!==action.id),suggestedPredecessorTaskIds:(task.suggestedPredecessorTaskIds??[]).filter(id=>id!==action.id)});
+      return {...state,...invalidateSample(state),tasks,errors};
     }
     case "removeTask": return {...state,...invalidateSample(state),tasks:state.tasks.filter(task=>task.id!==action.id).map(task=>({...task,predecessorTaskIds:(task.predecessorTaskIds??[]).filter(id=>id!==action.id)}))};
     case "setConditions": return {...state,...(state.isDemo?{isDemo:false,planSource:"manual",forecast:[],forecastSource:"none",weatherMetadata:null,weatherStatus:"idle",weatherError:null}:{}),conditions:action.conditions,scheduleResult:null};
@@ -110,4 +119,4 @@ export function validatePlanDetails(plan: PlanForm): FormErrors {
   const errors:FormErrors={}; if(!plan.siteName.trim())errors.siteName="Site name is required.";if(!plan.location)errors.location="Select a Saudi location.";if(!/^\d{4}-\d{2}-\d{2}$/.test(plan.shiftDate))errors.shiftDate="Select a shift date.";if(!/^\d{2}:\d{2}$/.test(plan.shiftStart))errors.shiftStart="Enter a start time.";if(!/^\d{2}:\d{2}$/.test(plan.shiftEnd))errors.shiftEnd="Enter an end time.";if(plan.shiftStart&&plan.shiftEnd&&plan.shiftEnd<=plan.shiftStart)errors.shiftEnd="Shift end must be after shift start; overnight shifts are not supported.";
   const crew=Number(plan.crewSize),newWorkers=Number(plan.nonAcclimatizedWorkers);if(plan.crewSize.trim()===""||!Number.isInteger(crew)||crew<=0)errors.crewSize="Crew size must be a positive whole number.";if(plan.nonAcclimatizedWorkers.trim()===""||!Number.isInteger(newWorkers)||newWorkers<0)errors.nonAcclimatizedWorkers="New workers must be zero or a positive whole number.";else if(Number.isInteger(crew)&&newWorkers>crew)errors.nonAcclimatizedWorkers="New workers cannot exceed crew size.";return errors;
 }
-export function validateVerifiedPlan(plan: PlanForm,tasks:DraftWorkTask[]):FormErrors { const errors=validatePlanDetails(plan);if(!tasks.length)errors.tasks="Add at least one task before continuing.";else if(!tasks.some(task=>(task.activityKind??"work")==="work"))errors.tasks="Add at least one work activity before continuing.";for(const task of tasks){if(!task.nameEn.trim())errors[`task-${task.id}-nameEn`]="English name is required.";if(!task.nameAr.trim())errors[`task-${task.id}-nameAr`]="Arabic name is required.";if(task.durationMinutes===null||!Number.isInteger(task.durationMinutes)||task.durationMinutes<=0||task.durationMinutes%5!==0)errors[`task-${task.id}-durationMinutes`]="Duration must be a positive multiple of five minutes.";if((task.activityKind??"work")==="work"){if(!task.workload)errors[`task-${task.id}-workload`]="Select a workload.";if(!task.environment)errors[`task-${task.id}-environment`]="Select an environment.";if(task.splittable===null)errors[`task-${task.id}-splittable`]="Select whether the task may be split.";}if((task.requestedStart&&!task.requestedEnd)||(!task.requestedStart&&task.requestedEnd))errors[`task-${task.id}-requestedTime`]="Enter both requested times or leave both blank.";}return errors; }
+export function validateVerifiedPlan(plan: PlanForm,tasks:DraftWorkTask[]):FormErrors { const errors=validatePlanDetails(plan);if(!tasks.length)errors.tasks="Add at least one task before continuing.";else if(!tasks.some(task=>(task.activityKind??"work")==="work"))errors.tasks="Add at least one work activity before continuing.";for(const task of tasks){if(!task.nameEn.trim())errors[`task-${task.id}-nameEn`]="English name is required.";if(!task.nameAr.trim())errors[`task-${task.id}-nameAr`]="Arabic name is required.";if(task.durationMinutes===null||!Number.isInteger(task.durationMinutes)||task.durationMinutes<=0||task.durationMinutes%5!==0)errors[`task-${task.id}-durationMinutes`]="Duration must be a positive multiple of five minutes.";if((task.activityKind??"work")==="work"){if(!task.workload)errors[`task-${task.id}-workload`]="Select a workload.";if(!task.environment)errors[`task-${task.id}-environment`]="Select an environment.";if(task.splittable===null)errors[`task-${task.id}-splittable`]="Select whether the task may be split.";}if((task.requestedStart&&!task.requestedEnd)||(!task.requestedStart&&task.requestedEnd))errors[`task-${task.id}-requestedTime`]="Enter both requested times or leave both blank.";}for(const issue of validateDependencyGraph(tasks)){const key=`task-${issue.taskId}-dependencies`;errors[key]=issue.code==="CIRCULAR_DEPENDENCY"?"Remove the circular dependency before continuing.":"Select only an existing work activity as a predecessor.";}return errors; }

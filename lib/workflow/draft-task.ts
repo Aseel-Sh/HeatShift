@@ -17,6 +17,7 @@ export interface DraftWorkTask {
   operationalNotes?: string[];
   timingPreference?: TimingPreference;
   predecessorTaskIds?: string[];
+  suggestedPredecessorTaskIds?: string[];
   suggestedWorkload?: Workload;
   suggestedEnvironment?: WorkEnvironment;
   suggestedSplittable?: boolean;

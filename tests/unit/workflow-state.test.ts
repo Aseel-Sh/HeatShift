@@ -102,6 +102,29 @@ describe("workflow state", () => {
     );
   });
 
+  it("suggests work-only predecessor order while skipping break and meal activities", () => {
+    const state=workflowReducer(createInitialWorkflowState(),{type:"applyExtraction",extraction:{assumptions:[],missingInformation:[],tasks:[
+      {nameEn:"Prep",nameAr:"تجهيز",activityKind:"work"},
+      {nameEn:"Break",nameAr:"استراحة",activityKind:"break"},
+      {nameEn:"Excavate",nameAr:"حفر",activityKind:"work"},
+      {nameEn:"Lunch",nameAr:"غداء",activityKind:"meal"},
+      {nameEn:"Pour",nameAr:"صب",activityKind:"work"},
+    ]}});
+    expect(state.tasks.map((task)=>task.suggestedPredecessorTaskIds)).toEqual([[],undefined,["extracted-task-1"],undefined,["extracted-task-3"]]);
+    expect(state.tasks.every((task)=>(task.predecessorTaskIds??[]).length===0)).toBe(true);
+  });
+
+  it("rejects circular confirmed dependencies during verification", () => {
+    const plan={siteName:"Site",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-07-20",shiftStart:"06:00",shiftEnd:"08:00",crewSize:"4",nonAcclimatizedWorkers:"0",planText:""};
+    const tasks=[
+      {id:"a",nameEn:"A",nameAr:"أ",durationMinutes:30,workload:"light" as const,environment:"conditioned_indoor" as const,splittable:false,predecessorTaskIds:["b"]},
+      {id:"b",nameEn:"B",nameAr:"ب",durationMinutes:30,workload:"light" as const,environment:"conditioned_indoor" as const,splittable:false,predecessorTaskIds:["a"]},
+    ];
+    const errors=validateVerifiedPlan(plan,tasks);
+    expect(errors["task-a-dependencies"]).toContain("circular");
+    expect(errors["task-b-dependencies"]).toContain("circular");
+  });
+
   it("preserves every unknown extracted safety field instead of defaulting it", () => {
     const state = workflowReducer(createInitialWorkflowState(), { type:"applyExtraction", extraction:{ tasks:[{nameEn:"Unknown",nameAr:"غير محدد"}], assumptions:[], missingInformation:[] } });
     expect(state.tasks[0]).toMatchObject({ durationMinutes:null, workload:"", environment:"", splittable:null });

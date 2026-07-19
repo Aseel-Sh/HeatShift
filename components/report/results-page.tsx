@@ -27,7 +27,9 @@ import {
   displayWorkload,
 } from "@/lib/i18n/operations-display";
 import { buildBriefings, buildHydrationPlan } from "@/lib/report/report-model";
+import { buildPlanOutcome } from "@/lib/report/plan-outcome";
 import { activityType, associatedBlocks, forecastRibbonPoints, idleBlocks, timeToMinutes } from "@/lib/report/timeline-model";
+import { classifyForecastTemperature } from "@/lib/domain/temperature-category";
 import { formatDuration } from "@/lib/workflow/format-duration";
 import type { ForecastSource, Language, PlanSource } from "@/lib/workflow/state";
 
@@ -138,6 +140,26 @@ const copy = {
     plannedTimes: "Planned times",
     unscheduledRemaining: "Not scheduled",
     untimedActivities: "Genuinely untimed activities",
+    noRequestedTime: "No requested time",
+    couldNotSchedule: "Could not be scheduled",
+    scheduled: "Scheduled",
+    remaining: "Remaining",
+    reason: "Reason",
+    planOutcome: "Plan outcome",
+    whatChanged: "What changed?",
+    whatIncomplete: "What could not be completed?",
+    why: "Why?",
+    nextActions: "What should the supervisor do next?",
+    forecastCategory: "Forecast heat category",
+    forecastContextOnly: "context only — not a TWL measurement",
+    appliedTwl: "Applied TWL zone",
+    selectionSummary: "HeatShift compared {count} deterministic schedule options and selected the valid option that best preserved required work, dependencies, and requested timing.",
+    howSelected: "How this schedule was selected",
+    hardViolations: "Hard-constraint violations",
+    invalidSchedule: "No operationally valid schedule can be displayed. Review the plan constraints and recalculate.",
+    lowRecovery: "0 min because the supervisor-entered Low TWL zone uses continuous-work guidance.",
+    noTwlRecovery: "No site TWL: exact recovery cycles were not applied.",
+    cycleRecovery: "Recovery blocks reflect the selected site-entered TWL cycle.",
     restrictionA11y: "The hatched vertical band marks 12:00 to 15:00, when configured direct-sun work is restricted.",
   },
   ar: {
@@ -230,6 +252,26 @@ const copy = {
     plannedTimes: "الأوقات المخططة",
     unscheduledRemaining: "غير مجدول",
     untimedActivities: "أنشطة بلا توقيت فعلي",
+    noRequestedTime: "لا يوجد وقت مطلوب",
+    couldNotSchedule: "تعذر جدولته",
+    scheduled: "المجدول",
+    remaining: "المتبقي",
+    reason: "السبب",
+    planOutcome: "نتيجة الخطة",
+    whatChanged: "ما الذي تغيّر؟",
+    whatIncomplete: "ما الذي تعذر إكماله؟",
+    why: "لماذا؟",
+    nextActions: "ماذا يجب أن يفعل المشرف بعد ذلك؟",
+    forecastCategory: "فئة حرارة التوقعات",
+    forecastContextOnly: "للسياق فقط — وليست قياس TWL",
+    appliedTwl: "نطاق TWL المطبق",
+    selectionSummary: "قارن HeatShift بين {count} خيارات جدولة حتمية واختار الخيار الصالح الذي حافظ بأفضل شكل على العمل المطلوب والتبعيات والتوقيت المطلوب.",
+    howSelected: "كيف تم اختيار هذا الجدول",
+    hardViolations: "مخالفات القيود الصلبة",
+    invalidSchedule: "لا يمكن عرض جدول صالح تشغيليًا. راجع قيود الخطة وأعد الحساب.",
+    lowRecovery: "TWL منخفض: إرشاد عمل متواصل؛ لم تُطبق فترات تعافٍ دورية.",
+    noTwlRecovery: "لا يوجد TWL من الموقع: لم تُطبق دورات تعافٍ دقيقة.",
+    cycleRecovery: "تعكس فترات التعافي دورة TWL التي أدخلها المشرف من الموقع.",
     restrictionA11y: "يمثل الشريط الرأسي المخطط الفترة من 12:00 إلى 15:00 حيث يُقيّد العمل المهيأ تحت الشمس المباشرة.",
   },
 } as const;
@@ -249,6 +291,14 @@ export function ResultsPage(props: ResultsPageProps) {
   const selectedTask = selection?.kind === "requested" ? plan.tasks.find((task) => task.id === selection.id) : undefined;
   const selectedBlock = selection?.kind === "scheduled" ? result.blocks.find((block) => block.id === selection.id) : undefined;
   const selectedBlockTask = selectedBlock?.taskId ? plan.tasks.find((task) => task.id === selectedBlock.taskId) : undefined;
+  const outcome = buildPlanOutcome(plan, conditions, result, language);
+  const forecastCategory = result.metrics.peakForecastTemperature === null ? null : classifyForecastTemperature(result.metrics.peakForecastTemperature).category;
+  const selectionSummary = t.selectionSummary.replace("{count}", String(result.optimizationSummary.candidatesEvaluated));
+  const recoveryNote = conditions.twlZone === "none" ? t.noTwlRecovery : conditions.twlZone === "low" ? t.lowRecovery : t.cycleRecovery;
+
+  if (result.optimizationSummary.hardConstraintViolations.length > 0) {
+    return <div className="results-report"><div role="alert" className="operational-alert critical"><AlertOctagon aria-hidden="true" /><div><strong>{t.invalidSchedule}</strong><ul>{result.optimizationSummary.hardConstraintViolations.map((violation) => <li key={violation}>{violation.replaceAll("_", " ")}</li>)}</ul></div></div><div className="report-actions"><button className="button-secondary" onClick={props.onEditPlan}>{t.edit}</button><button className="button-secondary" onClick={props.onChangeConditions}>{t.change}</button></div></div>;
+  }
 
   return (
     <div className="results-report">
@@ -261,8 +311,8 @@ export function ResultsPage(props: ResultsPageProps) {
           <div><dt><Users aria-hidden="true" />{language === "ar" ? "الفريق" : "Crew"}</dt><dd>{plan.crewSize}</dd></div>
         </dl>
         <p className="result-disclaimer">{t.disclaimer}</p>
-        <p className="result-selection">{result.explanationSummary}</p>
-        <p className="result-provenance">{props.planSource === "sample" ? t.sample : props.planSource === "ai" ? t.extracted : t.manual} · {props.forecastSource === "live" ? t.forecastLive : props.forecastSource === "sample" ? t.forecastSample : t.forecastNone} · {displayTwlZone(conditions.twlZone, language)}</p>
+        <p className="result-selection">{selectionSummary}</p>
+        <div className="result-context"><p><strong>{t.forecastCategory}:</strong> {forecastCategory ? `${displayForecastCategory(forecastCategory, language)} — ${t.forecastContextOnly}` : props.forecastSource === "none" ? t.forecastNone : "—"}</p><p><strong>{t.appliedTwl}:</strong> {displayAppliedTwl(conditions.twlZone, language)}</p><p>{props.planSource === "sample" ? t.sample : props.planSource === "ai" ? t.extracted : t.manual} · {props.forecastSource === "live" ? t.forecastLive : props.forecastSource === "sample" ? t.forecastSample : t.forecastNone}</p></div>
       </header>
 
       {!result.regulatoryGuidanceAvailable && <div role="status" className="operational-alert warning"><AlertOctagon aria-hidden="true" /><strong>{t.noRegulation}</strong></div>}
@@ -270,16 +320,18 @@ export function ResultsPage(props: ResultsPageProps) {
       {highNewWorkers && <div role="alert" className="operational-alert critical"><ShieldAlert aria-hidden="true" /><div><strong>{t.workers}</strong><span>{plan.nonAcclimatizedWorkers} / {plan.crewSize}</span></div></div>}
 
       <section aria-label={language === "ar" ? "ملخص التخطيط" : "Planning summary"} className="summary-bar optimization-metrics">
-        <SummaryItem label={t.candidates} value={String(result.optimizationSummary.candidatesEvaluated)} />
-        <SummaryItem label={t.strategy} value={result.optimizationSummary.selectedStrategy.replaceAll("_", " ")} />
         <SummaryItem label={t.mustComplete} value={`${formatDuration(scheduledMustMinutes(plan, result), language)} / ${formatDuration(requestedMustMinutes(plan), language)}`} />
         <SummaryItem label={t.otherWork} value={formatDuration(result.metrics.scheduledWorkMinutes - scheduledMustMinutes(plan, result), language)} />
-        <SummaryItem label={t.recovery} value={formatDuration(blockMinutes(result.blocks.filter((block) => block.type === "rest")), language)} />
+        <SummaryItem label={t.recovery} value={formatDuration(blockMinutes(result.blocks.filter((block) => block.type === "rest")), language)} note={recoveryNote} />
         <SummaryItem label={t.breakMeal} value={formatDuration(blockMinutes(result.blocks.filter((block) => block.type === "break" || block.type === "meal")), language)} />
         <SummaryItem label={t.unscheduled} value={formatDuration(result.metrics.unscheduledMinutes, language)} critical={result.metrics.unscheduledMinutes > 0} />
         <SummaryItem label={t.movement} value={formatDuration(result.optimizationSummary.movementMinutes, language)} />
         <SummaryItem label={t.splits} value={String(result.optimizationSummary.splitCount)} />
       </section>
+
+      <section className="plan-outcome" aria-labelledby="plan-outcome-title"><h2 id="plan-outcome-title">{t.planOutcome}</h2><div><OutcomeList title={t.whatChanged} items={outcome.changed} /><OutcomeList title={t.whatIncomplete} items={outcome.incomplete} /><OutcomeList title={t.why} items={outcome.reasons} /><OutcomeList title={t.nextActions} items={outcome.nextActions} /></div></section>
+
+      <details className="selection-details"><summary>{t.howSelected}</summary><p>{selectionSummary}</p><dl><div><dt>{t.candidates}</dt><dd>{result.optimizationSummary.candidatesEvaluated}</dd></div><div><dt>{t.strategy}</dt><dd>{displayStrategy(result.optimizationSummary.selectedStrategy, language)}</dd></div><div><dt>{t.hardViolations}</dt><dd>{result.optimizationSummary.hardConstraintViolations.length}</dd></div><div><dt>{t.movement}</dt><dd>{formatDuration(result.optimizationSummary.movementMinutes, language)}</dd></div><div><dt>{t.splits}</dt><dd>{result.optimizationSummary.splitCount}</dd></div></dl><p>{result.explanationSummary}</p></details>
 
       <section className="timeline-section" aria-labelledby="comparison-title">
         <div className="timeline-heading"><div><p className="eyebrow">{language === "ar" ? "مقارنة زمنية" : "Time comparison"}</p><h2 id="comparison-title">{t.requestedPlan} / {t.saferPlan}</h2><span>{t.selectBlock}</span></div>{restriction && <div className="restriction-key"><i />{language === "ar" ? <span>تقييد الشمس المباشرة <bdi dir="ltr">12:00–15:00</bdi></span> : t.restriction}</div>}</div>
@@ -364,9 +416,10 @@ function ShiftBoard({ plan, result, forecast, originalConflicts, language, selec
         </div>
         <div className="lane-label compact-label heat-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.heat}</strong><span>{language === "ar" ? "توقع نموذجي" : "Model forecast"}</span></div>
         <div className="heat-ribbon" data-testid="heat-ribbon" role="img" aria-label={`${t.heat}. ${heatPoints.map((point) => `${point.time}: ${point.temperature}°C, ${categoryLabel(point.category)}`).join("; ")}`}><div className="timeline-canvas">{heatPoints.map((point, index) => { const from = timeToMinutes(point.time) < start ? plan.shiftStart : point.time; const to = heatPoints[index + 1]?.time ?? plan.shiftEnd; return <div key={`${point.time}-${index}`} className={`heat-period heat-${point.category}`} style={styleFor(from, to)} title={`${point.time} · ${point.temperature}°C · ${t.apparent} ${point.apparentTemperature}°C · ${categoryLabel(point.category)}`}><strong>{point.temperature}°</strong><span>{categoryLabel(point.category)}</span></div>})}</div></div>
-        {(untimedTasks.length > 0 || result.unscheduled.length > 0) && <><div className="lane-label capacity-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.untimedActivities} / {t.unscheduled}</strong></div><div className="capacity-lane">{untimedTasks.map((task) => <button type="button" key={task.id} onClick={() => onSelect({ kind: "requested", id: task.id })}>{language === "ar" ? task.nameAr : task.nameEn} · {t.notSpecified} · {formatDuration(task.durationMinutes, language)}</button>)}{result.unscheduled.map((task) => <button type="button" key={`unscheduled-${task.taskId}`} className="unscheduled-item" onClick={() => onSelect({ kind: "requested", id: task.taskId })}>{task.taskName} · {formatDuration(task.unscheduledMinutes, language)}</button>)}</div></>}
+        {untimedTasks.length > 0 && <><div className="lane-label capacity-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.noRequestedTime}</strong></div><div className="capacity-lane">{untimedTasks.map((task) => <button type="button" key={task.id} onClick={() => onSelect({ kind: "requested", id: task.id })}>{language === "ar" ? task.nameAr : task.nameEn} · {t.notSpecified} · {formatDuration(task.durationMinutes, language)}</button>)}</div></>}
       </div>
     </div>
+    {result.unscheduled.length > 0 && <section className="unscheduled-section" aria-labelledby="unscheduled-title"><h3 id="unscheduled-title">{t.couldNotSchedule}</h3><div className="unscheduled-table-wrap"><table><thead><tr><th>{language === "ar" ? "النشاط" : "Activity"}</th><th>{t.requestedWork}</th><th>{t.scheduled}</th><th>{t.remaining}</th><th>{t.reason}</th></tr></thead><tbody>{result.unscheduled.map((item) => { const task=plan.tasks.find((candidate)=>candidate.id===item.taskId); const scheduled=Math.max(0,(task?.durationMinutes??item.unscheduledMinutes)-item.unscheduledMinutes); return <tr key={item.taskId}><th><button type="button" onClick={()=>onSelect({kind:"requested",id:item.taskId})}>{task ? (language === "ar" ? task.nameAr : task.nameEn) : item.taskName}</button></th><td>{formatDuration(task?.durationMinutes??item.unscheduledMinutes,language)}</td><td>{formatDuration(scheduled,language)}</td><td>{formatDuration(item.unscheduledMinutes,language)}</td><td>{displayUnscheduledReason(item.reasonCode,language)}</td></tr>; })}</tbody></table></div></section>}
     <div className="timeline-legend" aria-label={language === "ar" ? "مفتاح المخطط" : "Timeline legend"}><span><b>W</b>{t.work}</span><span><b>R</b>{t.rest}</span><span><b>B</b>{t.breakActivity}</span><span><b>M</b>{t.meal}</span><span><b>I</b>{t.idle}</span><span className="heat-low">{t.lower}</span><span className="heat-intermediate">{t.intermediate}</span><span className="heat-high">{t.high}</span><span className="heat-high_risk">{t.highRisk}</span></div>
     </>
   );
@@ -421,8 +474,31 @@ const blockMinutes = (blocks: ScheduleBlock[]) => blocks.reduce((sum, block) => 
 const requestedMustMinutes = (plan: ShiftPlan) => plan.tasks.filter((task) => isWorkActivity(task) && task.mustSchedule).reduce((sum, task) => sum + task.durationMinutes, 0);
 const scheduledMustMinutes = (plan: ShiftPlan, result: ScheduleResult) => { const ids = new Set(plan.tasks.filter((task) => isWorkActivity(task) && task.mustSchedule).map((task) => task.id)); return blockMinutes(result.blocks.filter((block) => block.type === "work" && block.taskId && ids.has(block.taskId))); };
 
-function SummaryItem({ label, value, critical = false }: { label: string; value: string; critical?: boolean }) {
-  return <div className={critical ? "critical" : ""}><span>{label}</span><strong className="tabular-nums" dir="ltr">{value}</strong></div>;
+function SummaryItem({ label, value, critical = false, note }: { label: string; value: string; critical?: boolean; note?: string }) {
+  return <div className={critical ? "critical" : ""}><span>{label}</span><strong className="tabular-nums" dir="ltr">{value}</strong>{note && <small>{note}</small>}</div>;
+}
+
+function OutcomeList({title,items}:{title:string;items:string[]}){return <section><h3>{title}</h3><ul>{items.map((item)=><li key={item}>{item}</li>)}</ul></section>;}
+
+function displayStrategy(strategy:string,language:Language):string{
+  const names:Record<string,{en:string;ar:string}>={critical_must_schedule_first:{en:"Must-complete work first",ar:"العمل الواجب إكماله أولاً"},preserve_requested_order:{en:"Preserve requested order",ar:"الحفاظ على الترتيب المطلوب"},coolest_direct_sun_first:{en:"Coolest direct-sun periods first",ar:"فترات الشمس المباشرة الأبرد أولاً"},minimum_splitting:{en:"Minimize task splitting",ar:"تقليل تقسيم المهام"},minimum_movement:{en:"Minimize movement from requested times",ar:"تقليل النقل عن الأوقات المطلوبة"},indoor_midday_utilization:{en:"Use conditioned indoor work at midday",ar:"استخدام العمل الداخلي المكيّف وقت الظهيرة"}};
+  return names[strategy]?.[language]??(language==="ar"?"استراتيجية جدولة حتمية":"Deterministic scheduling strategy");
+}
+
+function displayForecastCategory(category:"low"|"intermediate"|"high"|"high_risk",language:Language):string{
+  const names={low:{en:"Lower / caution",ar:"أقل / حذر"},intermediate:{en:"Intermediate",ar:"متوسط"},high:{en:"High",ar:"مرتفع"},high_risk:{en:"High risk",ar:"خطر مرتفع"}};
+  return names[category][language];
+}
+
+function displayAppliedTwl(zone:SiteConditions["twlZone"],language:Language):string{
+  const suffix=zone==="low"?(language==="ar"?"إرشاد عمل متواصل":"continuous-work guidance"):zone==="none"?(language==="ar"?"لم يُدخل من الموقع":"not entered on site"):(language==="ar"?"دورة عمل وتعافٍ مطبقة":"work/recovery cycle applied");
+  return `${displayTwlZone(zone,language)} — ${suffix}`;
+}
+
+function displayUnscheduledReason(reasonCode:string,language:Language):string{
+  if(reasonCode.includes("DEPENDENCY"))return language==="ar"?"لم يكتمل النشاط السابق المؤكد.":"A confirmed predecessor was not completed.";
+  if(reasonCode.includes("FIXED"))return language==="ar"?"تعذر ملاءمة الوقت الثابت دون خرق قيد.":"The fixed time could not fit without violating a constraint.";
+  return language==="ar"?"لم تتبق سعة صالحة ضمن الوردية.":"No valid crew capacity remained in the shift.";
 }
 
 function OriginalFinding({ finding, language }: { finding: OriginalPlanConflict; language: Language }) {

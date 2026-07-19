@@ -61,7 +61,7 @@ describe("deterministic bounded schedule optimization",()=>{
     const result=generateSchedule(plan,{measurementMode:"forecast",twlZone:"none"},[]);
 
     expect(result.optimizationSummary).toMatchObject({
-      candidatesEvaluated:6,hardConstraintViolations:0,unscheduledMustScheduleMinutes:0,
+      candidatesEvaluated:6,hardConstraintViolations:[],unscheduledMustScheduleMinutes:0,
     });
     expect(result.unscheduled).toContainEqual(expect.objectContaining({taskId:"optional",unscheduledMinutes:60}));
     expect(result.unscheduled.some(item=>item.taskId==="required")).toBe(false);
@@ -117,7 +117,7 @@ describe("deterministic bounded schedule optimization",()=>{
     expect(result.blocks.some(block=>block.taskId==="fixed-break")).toBe(false);
     expect(result.unscheduled).toContainEqual(expect.objectContaining({taskId:"fixed-break",unscheduledMinutes:30,reasonCode:"FIXED_ACTIVITY_INFEASIBLE"}));
     expect(result.conflicts).toContainEqual(expect.objectContaining({code:"FIXED_ACTIVITY_INFEASIBLE",taskId:"fixed-break",severity:"critical"}));
-    expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
   });
 
   it("moves a preferred break when its requested time is occupied by a fixed meal",()=>{
@@ -141,7 +141,56 @@ describe("deterministic bounded schedule optimization",()=>{
     const prepare=result.blocks.find(block=>block.taskId==="prepare"&&block.type==="work")!;
     const install=result.blocks.find(block=>block.taskId==="install"&&block.type==="work")!;
     expect(prepare.end<=install.start).toBe(true);
-    expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
+  });
+
+  it("blocks a successor when its predecessor is only partly scheduled",()=>{
+    const plan=shiftPlanSchema.parse({siteName:"Partial dependency",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-10-20",shiftStart:"06:00",shiftEnd:"07:00",crewSize:4,nonAcclimatizedWorkers:0,tasks:[
+      {id:"predecessor",nameEn:"Predecessor",nameAr:"السابق",durationMinutes:90,workload:"light",environment:"conditioned_indoor",splittable:true,mustSchedule:true},
+      {id:"successor",nameEn:"Successor",nameAr:"اللاحق",durationMinutes:30,workload:"light",environment:"conditioned_indoor",splittable:true,predecessorTaskIds:["predecessor"]},
+    ]});
+    const result=generateSchedule(plan,{measurementMode:"forecast",twlZone:"none"},[]);
+    expect(result.blocks.filter((block)=>block.taskId==="successor")).toEqual([]);
+    expect(result.unscheduled).toContainEqual(expect.objectContaining({taskId:"successor",unscheduledMinutes:30,reasonCode:"DEPENDENCY_INFEASIBLE"}));
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
+  });
+
+  it("preserves a work dependency chain across intervening break and meal activities",()=>{
+    const plan=shiftPlanSchema.parse({siteName:"Calendar chain",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-10-20",shiftStart:"06:00",shiftEnd:"09:00",crewSize:4,nonAcclimatizedWorkers:0,tasks:[
+      {id:"prep",nameEn:"Prep",nameAr:"تجهيز",durationMinutes:30,workload:"light",environment:"conditioned_indoor",splittable:false},
+      {id:"break",nameEn:"Break",nameAr:"استراحة",activityKind:"break",durationMinutes:15,recoveryEligibility:"not_eligible",timingPreference:"preferred",requestedStart:"06:30",requestedEnd:"06:45"},
+      {id:"install",nameEn:"Install",nameAr:"تركيب",durationMinutes:30,workload:"light",environment:"conditioned_indoor",splittable:false,predecessorTaskIds:["prep"]},
+      {id:"meal",nameEn:"Meal",nameAr:"وجبة",activityKind:"meal",durationMinutes:30,recoveryEligibility:"not_eligible",timingPreference:"preferred",requestedStart:"07:15",requestedEnd:"07:45"},
+      {id:"inspect",nameEn:"Inspect",nameAr:"فحص",durationMinutes:30,workload:"light",environment:"conditioned_indoor",splittable:false,predecessorTaskIds:["install"]},
+    ]});
+    const result=generateSchedule(plan,{measurementMode:"onsite_twl",twlZone:"low"},[]);
+    const end=(id:string)=>result.blocks.filter((block)=>block.taskId===id&&block.type==="work").at(-1)!.end;
+    const start=(id:string)=>result.blocks.find((block)=>block.taskId===id&&block.type==="work")!.start;
+    expect(end("prep")<=start("install")).toBe(true);
+    expect(end("install")<=start("inspect")).toBe(true);
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
+  });
+
+  it("prioritizes the exact must-complete concrete pour over cleanup and reports exact remaining minutes",()=>{
+    const tasks=[
+      {id:"toolbox",nameEn:"Toolbox talk + prep",nameAr:"حديث السلامة والتجهيز",durationMinutes:30,workload:"light" as const,environment:"conditioned_indoor" as const,splittable:false,timingPreference:"preferred" as const,requestedStart:"06:00",requestedEnd:"06:30"},
+      {id:"excavation",nameEn:"Excavation",nameAr:"الحفر",durationMinutes:150,workload:"heavy" as const,environment:"direct_sun" as const,splittable:true,timingPreference:"preferred" as const,requestedStart:"06:30",requestedEnd:"09:00",predecessorTaskIds:["toolbox"]},
+      {id:"break",nameEn:"Break",nameAr:"استراحة",activityKind:"break" as const,durationMinutes:15,recoveryEligibility:"eligible" as const,requestedStart:"09:00",requestedEnd:"09:15",timingPreference:"preferred" as const},
+      {id:"rebar",nameEn:"Rebar + forms",nameAr:"حديد التسليح والقوالب",durationMinutes:135,workload:"heavy" as const,environment:"shaded_outdoor" as const,splittable:false,timingPreference:"preferred" as const,requestedStart:"09:15",requestedEnd:"11:30",predecessorTaskIds:["excavation"]},
+      {id:"lunch",nameEn:"Lunch",nameAr:"غداء",activityKind:"meal" as const,durationMinutes:30,recoveryEligibility:"eligible" as const,requestedStart:"11:30",requestedEnd:"12:00",timingPreference:"preferred" as const},
+      {id:"concrete",nameEn:"Concrete pour",nameAr:"صب الخرسانة",durationMinutes:150,workload:"heavy" as const,environment:"direct_sun" as const,splittable:true,mustSchedule:true,timingPreference:"preferred" as const,requestedStart:"12:00",requestedEnd:"14:30",predecessorTaskIds:["rebar"],operationalNotes:["Pump booked only today."]},
+      {id:"finish",nameEn:"Finish + curing",nameAr:"الإنهاء والمعالجة",durationMinutes:30,workload:"light" as const,environment:"shaded_outdoor" as const,splittable:false,timingPreference:"preferred" as const,requestedStart:"14:30",requestedEnd:"15:00",predecessorTaskIds:["concrete"]},
+      {id:"cleanup",nameEn:"Cleanup",nameAr:"التنظيف",durationMinutes:60,workload:"light" as const,environment:"direct_sun" as const,splittable:true,timingPreference:"preferred" as const,requestedStart:"15:00",requestedEnd:"16:00",predecessorTaskIds:["finish"]},
+    ];
+    const plan=shiftPlanSchema.parse({siteName:"North utility site",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-07-20",shiftStart:"06:00",shiftEnd:"16:00",crewSize:8,nonAcclimatizedWorkers:2,tasks});
+    const result=generateSchedule(plan,{measurementMode:"onsite_twl",twlZone:"low"},[]);
+    const scheduled=(id:string)=>result.blocks.filter((block)=>block.taskId===id&&block.type==="work").reduce((total,block)=>total+Number(block.end.slice(0,2))*60+Number(block.end.slice(3))-Number(block.start.slice(0,2))*60-Number(block.start.slice(3)),0);
+    expect(scheduled("concrete")).toBe(90);
+    expect(scheduled("cleanup")).toBe(0);
+    expect(result.unscheduled).toContainEqual(expect.objectContaining({taskId:"concrete",unscheduledMinutes:60}));
+    expect(result.unscheduled).toContainEqual(expect.objectContaining({taskId:"cleanup",unscheduledMinutes:60,reasonCode:"DEPENDENCY_INFEASIBLE"}));
+    expect(result.optimizationSummary.unscheduledMustScheduleMinutes).toBe(60);
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
   });
 
   it("keeps feasible fixed work at the confirmed interval",()=>{
@@ -150,7 +199,7 @@ describe("deterministic bounded schedule optimization",()=>{
     ]});
     const result=generateSchedule(plan,{measurementMode:"onsite_twl",twlZone:"low"},[]);
     expect(result.blocks.find(block=>block.taskId==="fixed-work"&&block.type==="work")).toMatchObject({start:"08:00",end:"08:30"});
-    expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
   });
 
   it("preserves chronological recovery after fixed outdoor work",()=>{
@@ -162,7 +211,7 @@ describe("deterministic bounded schedule optimization",()=>{
     const result=generateSchedule(plan,conditions,[]);
     expect(result.blocks).toContainEqual(expect.objectContaining({type:"rest",start:"06:20",end:"07:00"}));
     expect(validateScheduleHardConstraints(plan,conditions,result)).toEqual([]);
-    expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
   });
 
   it("evaluates candidate strategies that produce different schedules",()=>{
@@ -188,7 +237,7 @@ describe("deterministic bounded schedule optimization",()=>{
     expect(candidates.every(candidate=>compareScheduleCandidates(selectedCandidate,candidate)<=0)).toBe(true);
     expect(selected).toEqual(generateSchedule(plan,conditions,[]));
     expect(validateScheduleHardConstraints(plan,conditions,selected)).toEqual([]);
-    expect(selected.optimizationSummary.hardConstraintViolations).toBe(0);
+    expect(selected.optimizationSummary.hardConstraintViolations).toEqual([]);
   });
 
   it("reports the confirmed non-splittable concrete pour honestly when its required cycle cannot fit",()=>{
@@ -198,7 +247,7 @@ describe("deterministic bounded schedule optimization",()=>{
     const cleanup=result.unscheduled.find(item=>item.taskId==="cleanup")?.unscheduledMinutes??0;
     expect(concrete).toBe(150);
     expect(cleanup).toBeGreaterThan(0);
-    expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
     expect(result.optimizationSummary.unscheduledMustScheduleMinutes).toBe(150);
     expect(result.blocks.filter(block=>block.taskId==="concrete"&&block.type==="work")).toHaveLength(0);
     const selectedCandidate=candidates.find(candidate=>candidate.strategy===result.optimizationSummary.selectedStrategy)!;
@@ -217,7 +266,7 @@ describe("deterministic bounded schedule optimization",()=>{
     expect(result.optimizationSummary.unscheduledMustScheduleMinutes).toBe(20);
     expect(result.unscheduled).toContainEqual(expect.objectContaining({taskId:"must",unscheduledMinutes:20}));
     expect(result.explanationSummary).toContain("must-schedule work could not fit");
-    expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
   });
 
   it("reports a fixed concrete-pump window inside the direct-sun restriction as infeasible",()=>{
@@ -228,7 +277,7 @@ describe("deterministic bounded schedule optimization",()=>{
     expect(result.blocks.filter(block=>block.taskId==="concrete"&&block.type==="work")).toHaveLength(0);
     expect(result.unscheduled).toContainEqual(expect.objectContaining({taskId:"concrete",unscheduledMinutes:150}));
     expect(result.conflicts).toContainEqual(expect.objectContaining({code:"FIXED_ACTIVITY_INFEASIBLE",taskId:"concrete",severity:"critical"}));
-    expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
   });
 
   it("keeps global recovery valid when forecast ranking reverses task order",()=>{
@@ -246,6 +295,6 @@ describe("deterministic bounded schedule optimization",()=>{
     const work=result.blocks.filter(block=>block.type==="work");
     expect(work.map(block=>block.taskId)).toEqual(["b","a"]);
     expect(validateChronologicalRecovery(plan,conditions,result.blocks)).toEqual([]);
-    expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
+    expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
   });
 });

@@ -4,7 +4,7 @@
 
 HeatShift returns a **selected safer schedule**, selected from six deterministic candidate schedules. It does not claim global optimality, the safest possible schedule, or a guaranteed best result. The search is intentionally bounded for an explainable single-crew MVP.
 
-`OptimizationSummary` is an explanation of the selected candidate, not a safety score. It reports the candidate count and strategy, confirms the selected schedule has zero hard-constraint violations, and exposes unscheduled must-schedule work, other unscheduled work, movement, splitting, order inversions, and forecast heat-exposure penalty.
+`OptimizationSummary` is an explanation of the selected candidate, not a safety score. It reports the candidate count and strategy, retains `hardConstraintViolations` as an array of validator codes, and exposes unscheduled must-schedule work, other unscheduled work, movement, splitting, order inversions, and forecast heat-exposure penalty. The results UI renders no selected schedule when that array is nonempty.
 
 ## Candidate strategies
 
@@ -31,6 +31,8 @@ A selected candidate must have zero violations of:
 - non-splittable work continuity; and
 - confirmed predecessor dependencies.
 
+Dependency suggestions are derived only between work activities in the imported line order. Breaks and meals do not become construction predecessors. Suggestions remain unconfirmed until a supervisor accepts or edits them, and circular, self, missing, or non-work predecessor references fail validation.
+
 Recovery state is evaluated chronologically across task boundaries, never from task-array order. A break or meal receives recovery credit only when `recoveryEligibility=eligible`. Credited time occupies the crew once and is not duplicated as a separate recovery block.
 
 ## Ordered score
@@ -55,6 +57,12 @@ The public summary exposes the requested score breakdown. Additional determinist
 Candidate construction and its bounded improvement pass can move activities, swap activity order, merge adjacent blocks, align explicitly eligible breaks or meals with recovery, and fill remaining valid five-minute gaps. A must-schedule activity is prioritized, but the engine will not violate a restriction, recovery rule, dependency, or fixed activity to force it into the shift.
 
 Operational notes affect explanation and must-schedule priority only. For example, “Pump booked only today” does not create a clock window; only an explicit confirmed time window does.
+
+The indoor-midday candidate may move a non-fixed preferred meal into the direct-sun restriction period when that creates valid capacity for higher-priority must-complete work. Lexicographic scoring accepts that movement only when it improves an earlier objective, such as unscheduled must-complete minutes.
+
+## Result explanation
+
+The default results summary uses operator language and keeps strategy identifiers inside the expandable **How this schedule was selected** section. The prominent **Plan outcome** section deterministically explains what moved, what remains incomplete, why constraints caused the result, and supported next actions. It never recommends adding crew capacity because the MVP models one crew only.
 
 ## Known limitations
 

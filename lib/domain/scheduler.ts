@@ -4,6 +4,7 @@ import { evaluateMiddayRestriction } from "./midday-restriction";
 import { getLoneWorkConflict, getNonAcclimatizedConflict } from "./twl-conflicts";
 import { getHydrationGuidance, getWorkRestGuidance } from "./twl-guidance";
 import { forecastAtOrBefore } from "./forecast";
+import { validateDependencyGraph } from "./dependencies";
 
 const SLOT_MINUTES = 5;
 const CAPACITY_SOURCE_ID = "heatshift-scheduler-capacity";
@@ -51,6 +52,7 @@ export function validateChronologicalRecovery(plan:ShiftPlan,conditions:SiteCond
 
 export function validateScheduleHardConstraints(plan:ShiftPlan,conditions:SiteConditions,result:Pick<ScheduleResult,"blocks"|"unscheduled">):string[]{
   const violations=new Set(validateChronologicalRecovery(plan,conditions,result.blocks));
+  for(const issue of validateDependencyGraph(plan.tasks))violations.add(issue.code);
   const shiftStart=timeToMinutes(plan.shiftStart),shiftEnd=timeToMinutes(plan.shiftEnd);
   const occupancy=result.blocks.filter(block=>block.type!=="restriction").sort((left,right)=>left.start.localeCompare(right.start)||left.end.localeCompare(right.end));
   for(let index=0;index<occupancy.length;index+=1){
@@ -76,7 +78,8 @@ export function validateScheduleHardConstraints(plan:ShiftPlan,conditions:SiteCo
     const dependent=intervals.get(activity.id);if(!dependent)continue;
     for(const predecessorId of activity.predecessorTaskIds??[]){
       const predecessor=intervals.get(predecessorId);
-      if(!predecessor||predecessor.minutes<(plan.tasks.find(item=>item.id===predecessorId)?.durationMinutes??0)||predecessor.end>dependent.start)violations.add("DEPENDENCY_ORDER_VIOLATION");
+      if(!predecessor||predecessor.minutes<(plan.tasks.find(item=>item.id===predecessorId)?.durationMinutes??0))violations.add("SUCCESSOR_WITH_INCOMPLETE_PREDECESSOR");
+      else if(predecessor.end>dependent.start)violations.add("DEPENDENCY_ORDER_VIOLATION");
     }
   }
   return [...violations];
@@ -311,7 +314,8 @@ function generateCandidateSchedule(
     const candidateStarts=slots.map((_,index)=>index).filter(index=>index+slotCount<=slots.length&&slots.slice(index,index+slotCount).every(slot=>!slot.occupiedByActivityId&&!slot.occupiedByTaskId&&!slot.restForTaskId));
     const exactIndex=requestedStart===undefined?-1:slots.findIndex(slot=>slot.startMinutes===requestedStart);
     const exactValid=exactIndex>=0&&candidateStarts.includes(exactIndex)&&requestedEnd!==undefined&&requestedStart!==undefined&&requestedEnd-requestedStart===activity.durationMinutes;
-    let startIndex=exactValid?exactIndex:-1;
+    const exploreMiddayMeal=strategy==="indoor_midday_utilization"&&activity.activityKind==="meal"&&restrictionActive&&activity.timingPreference!=="fixed";
+    let startIndex=exactValid&&!exploreMiddayMeal?exactIndex:-1;
     if(activity.timingPreference==="fixed"&&!exactValid){
       unscheduled.push({taskId:activity.id,taskName:activity.nameEn,unscheduledMinutes:activity.durationMinutes,reasonCode:"FIXED_ACTIVITY_INFEASIBLE"});
       capacityConflicts.push(fixedActivityConflict(activity));
@@ -319,6 +323,10 @@ function generateCandidateSchedule(
     }
     if(startIndex<0&&candidateStarts.length){
       startIndex=[...candidateStarts].sort((left,right)=>{
+        if(strategy==="indoor_midday_utilization"&&activity.activityKind==="meal"&&restrictionActive){
+          const leftMidday=restrictedSlots.has(left),rightMidday=restrictedSlots.has(right);
+          if(leftMidday!==rightMidday)return leftMidday?-1:1;
+        }
         if(activity.timingPreference==="preferred"&&requestedStart!==undefined)return Math.abs(slots[left].startMinutes-requestedStart)-Math.abs(slots[right].startMinutes-requestedStart)||left-right;
         return left-right;
       })[0];
@@ -541,6 +549,11 @@ function generateCandidateSchedule(
         .map((_, index) => index)
         .filter((index) => isValidSlot(slots[index], index))
         .sort((left, right) => {
+          if(task.timingPreference==="preferred"&&task.requestedStart){
+            const requested=timeToMinutes(task.requestedStart);
+            const movementDifference=Math.abs(slots[left].startMinutes-requested)-Math.abs(slots[right].startMinutes-requested);
+            if(movementDifference!==0)return movementDifference;
+          }
           if (restrictionActive && task.environment === "conditioned_indoor") {
             const leftIsMidday = restrictedSlots.has(left);
             const rightIsMidday = restrictedSlots.has(right);
@@ -564,6 +577,11 @@ function generateCandidateSchedule(
         .map((_, index) => index)
         .filter((index) => index + requiredSlots <= slots.length)
         .sort((left, right) => {
+          if(task.timingPreference==="preferred"&&task.requestedStart){
+            const requested=timeToMinutes(task.requestedStart);
+            const movementDifference=Math.abs(slots[left].startMinutes-requested)-Math.abs(slots[right].startMinutes-requested);
+            if(movementDifference!==0)return movementDifference;
+          }
           if (restrictionActive && task.environment === "conditioned_indoor") {
             const middaySlots = (startIndex: number) => {
               let count = 0;
@@ -714,11 +732,13 @@ function scoreCandidate(plan:ShiftPlan,result:CandidateResult,strategy:Candidate
     const temperature=forecast?.temperatureCelsius;
     if(temperature!==undefined)heatExposurePenalty+=Math.max(0,temperature-32.7)*(timeToMinutes(block.end)-timeToMinutes(block.start));
   }
-  return {candidatesEvaluated:CANDIDATE_STRATEGIES.length,selectedStrategy:strategy,hardConstraintViolations:validateScheduleHardConstraints(plan,conditions,result).length,unscheduledMustScheduleMinutes,unscheduledOtherMinutes,movementMinutes,splitCount,orderInversions,heatExposurePenalty:Number(heatExposurePenalty.toFixed(2))};
+  return {candidatesEvaluated:CANDIDATE_STRATEGIES.length,selectedStrategy:strategy,hardConstraintViolations:validateScheduleHardConstraints(plan,conditions,result),unscheduledMustScheduleMinutes,unscheduledOtherMinutes,movementMinutes,splitCount,orderInversions,heatExposurePenalty:Number(heatExposurePenalty.toFixed(2))};
 }
 
 export function compareOptimizationSummaries(left:OptimizationSummary,right:OptimizationSummary):number{
-  const fields:(keyof OptimizationSummary)[]=["hardConstraintViolations","unscheduledMustScheduleMinutes","unscheduledOtherMinutes","movementMinutes","splitCount","orderInversions","heatExposurePenalty"];
+  const hardDifference=left.hardConstraintViolations.length-right.hardConstraintViolations.length;
+  if(hardDifference!==0)return hardDifference;
+  const fields:(keyof OptimizationSummary)[]=["unscheduledMustScheduleMinutes","unscheduledOtherMinutes","movementMinutes","splitCount","orderInversions","heatExposurePenalty"];
   for(const field of fields){const difference=Number(left[field])-Number(right[field]);if(difference!==0)return difference;}
   return 0;
 }
@@ -740,7 +760,7 @@ function candidateScoreVector(plan:ShiftPlan,result:ScheduleResult,summary:Optim
   const completion=sorted.length?timeToMinutes(sorted.at(-1)!.end)-timeToMinutes(plan.shiftStart):0;
   let idleGaps=0;
   for(let index=1;index<sorted.length;index+=1)idleGaps+=Math.max(0,timeToMinutes(sorted[index].start)-timeToMinutes(sorted[index-1].end));
-  return [summary.hardConstraintViolations,summary.unscheduledMustScheduleMinutes,summary.unscheduledOtherMinutes,preferredMovement,summary.movementMinutes,summary.splitCount,summary.orderInversions,summary.heatExposurePenalty,indoorMiddayPenalty,completion,idleGaps];
+  return [summary.hardConstraintViolations.length,summary.unscheduledMustScheduleMinutes,summary.unscheduledOtherMinutes,preferredMovement,summary.movementMinutes,summary.splitCount,summary.orderInversions,summary.heatExposurePenalty,indoorMiddayPenalty,completion,idleGaps];
 }
 
 export function compareScheduleCandidates(left:ScheduleCandidate,right:ScheduleCandidate):number{
@@ -759,7 +779,8 @@ export function generateScheduleCandidates(shiftPlan:ShiftPlan,siteConditions:Si
 
 export function generateSchedule(shiftPlan:ShiftPlan,siteConditions:SiteConditions,forecastHours:readonly ForecastHour[]):ScheduleResult{
   const candidates=generateScheduleCandidates(shiftPlan,siteConditions,forecastHours);
-  const selected=[...candidates].sort(compareScheduleCandidates)[0];
+  const validCandidates=candidates.filter(candidate=>candidate.optimizationSummary.hardConstraintViolations.length===0);
+  const selected=[...(validCandidates.length?validCandidates:candidates)].sort(compareScheduleCandidates)[0];
   const infeasibility=selected.optimizationSummary.unscheduledMustScheduleMinutes>0?` Even confirmed must-schedule work could not fit without violating a hard constraint; ${selected.optimizationSummary.unscheduledMustScheduleMinutes} minutes require supervisor intervention.`:"";
   const operationalNotes=shiftPlan.tasks.filter(activity=>activity.mustSchedule&&(activity.operationalNotes?.length??0)>0).flatMap(activity=>activity.operationalNotes??[]);
   const noteExplanation=operationalNotes.length?` Operational priority note: ${operationalNotes.join(" ")} This affects candidate priority but does not create a clock window unless an explicit time window is confirmed.`:"";

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validateDependencyGraph } from "./dependencies";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 export const timeSchema = z
@@ -114,6 +115,16 @@ export const shiftPlanSchema = z
   .refine((plan) => plan.shiftStart < plan.shiftEnd, {
     message: "Overnight and zero-length shifts are not supported in the MVP",
     path: ["shiftEnd"],
+  })
+  .superRefine((plan, context) => {
+    for (const issue of validateDependencyGraph(plan.tasks)) {
+      const taskIndex = plan.tasks.findIndex((task) => task.id === issue.taskId);
+      context.addIssue({
+        code: "custom",
+        message: issue.code === "CIRCULAR_DEPENDENCY" ? "Circular dependencies are not supported" : "Invalid predecessor dependency",
+        path: ["tasks", taskIndex, "predecessorTaskIds"],
+      });
+    }
   });
 export type ShiftPlan = z.infer<typeof shiftPlanSchema>;
 

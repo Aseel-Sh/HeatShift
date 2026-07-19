@@ -73,7 +73,7 @@ export type ScheduleMetrics = z.infer<typeof scheduleMetricsSchema>;
 export const optimizationSummarySchema=z.object({
   candidatesEvaluated:z.number().int().positive(),
   selectedStrategy:z.string().min(1),
-  hardConstraintViolations:z.number().int().nonnegative(),
+  hardConstraintViolations:z.array(z.string().min(1)),
   unscheduledMustScheduleMinutes:z.number().int().nonnegative(),
   unscheduledOtherMinutes:z.number().int().nonnegative(),
   movementMinutes:z.number().int().nonnegative(),

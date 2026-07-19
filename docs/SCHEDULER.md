@@ -38,10 +38,14 @@ The scheduler follows these deterministic steps:
 7. Carry TWL exposure and recovery chronologically across every outdoor work block. Rest consumes the one crew's capacity. A final rest is omitted only when no further outdoor work follows.
 8. For splittable cyclic work, place the largest valid package, subtract its work minutes, search again across all remaining valid windows, and repeat deterministically. If only partial capacity remains, schedule only genuine work capacity and report the exact remaining minutes. A non-splittable task is either scheduled in full or left unscheduled.
 9. Preserve breaks and meals as crew activities. Only explicitly eligible activities may receive recovery credit, and credited time is not duplicated as a separate rest block.
-10. Apply bounded move, swap, merge, recovery-alignment, and safe-gap filling behavior; validate hard constraints; score valid candidates; and select the lowest ordered score.
-11. Merge adjacent slots of the same activity and type into blocks, calculate metrics, and emit deterministic conflicts for remaining activities.
+10. Enforce confirmed finish-to-start dependencies. A successor cannot begin until every scheduled minute of each predecessor is complete; if a predecessor is partly unscheduled, the successor is dependency-blocked and its full remaining duration is reported.
+11. Apply bounded move, swap, merge, recovery-alignment, and safe-gap filling behavior. A preferred meal may move into the restricted outdoor period in the indoor-midday candidate when doing so creates valid must-complete capacity.
+12. Run the global chronological hard-constraint validator over each candidate, retain its exact violation codes, reject every invalid candidate regardless of score, and select the lowest ordered score only from valid candidates.
+13. Merge adjacent slots of the same activity and type into blocks, calculate metrics, and emit deterministic conflicts for remaining activities.
 
 Every work and rest block includes reason codes. When no supervisor-entered TWL zone is supplied, the result is marked preliminary and no precise cycle is generated.
+
+The final validator checks single-crew overlap, shift boundaries, direct-sun restriction overlap, chronological TWL recovery, fixed-time movement, non-splittable fragmentation, invalid dependency graphs, predecessor completion, and finish-to-start order. `hardConstraintViolations: []` is therefore evidence that the selected candidate passed the configured checks, not a claim of legal compliance or guaranteed safety.
 
 ## Determinism
 

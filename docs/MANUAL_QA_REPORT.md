@@ -1,5 +1,43 @@
 # HeatShift Manual Release QA Report
 
+## 2026-07-19 operational-sequence regression addendum
+
+The exact North utility site plan was run through the optimized production UI with Riyadh coordinates, 2026-07-20, 06:00–16:00, crew 8, two non-acclimatized workers, supervisor-confirmed work classifications, the work-only predecessor chain, and Low site-entered TWL.
+
+Observed import state:
+
+- Eight requested activities and every requested interval were retained.
+- Break and Lunch remained calendar activities and were excluded from predecessor suggestions.
+- Concrete displayed **Must complete**, evidence from “Need concrete completed today.”, and the pump note without an invented fixed interval.
+- The supervisor confirmed Toolbox → Excavation → Rebar/Forms → Concrete → Finish/Curing → Cleanup.
+
+Selected operational sequence:
+
+1. Toolbox talk + prep — 06:00–06:30
+2. Excavation — 06:30–09:00
+3. Break — 09:00–09:15
+4. Rebar + forms — 09:15–11:30
+5. Concrete pour — 11:30–12:00
+6. Lunch — 12:00–12:30
+7. Idle/direct-sun restricted capacity — 12:30–15:00
+8. Concrete pour — 15:00–16:00
+
+Concrete received 90 of 150 requested minutes and retained exactly 60 unscheduled must-complete minutes. Because Concrete was incomplete, Finish/Curing remained fully dependency-blocked for 30 minutes and Cleanup remained fully dependency-blocked for 60 minutes. No successor was moved before its predecessor. The selected `indoor_midday_utilization` candidate passed with `hardConstraintViolations: []` and beat alternatives by reducing unscheduled must-complete work before movement was considered.
+
+The production result visibly separated forecast category (**High — context only, not TWL**) from applied TWL (**Low — continuous-work guidance**) and explained zero recovery. Plan outcome, requested and selected timelines, unscheduled table, Concrete block details, mobile layout, Arabic result, and print media were inspected. No page-level horizontal overflow or fabricated value was observed.
+
+Evidence:
+
+- `artifacts/regression-work-plan/01-import-review.png`
+- `artifacts/regression-work-plan/02-supervisor-confirmed.png`
+- `artifacts/regression-work-plan/03-selected-schedule.png`
+- `artifacts/regression-work-plan/05-concrete-details.png`
+- `artifacts/regression-work-plan/06-mobile.png`
+- `artifacts/regression-work-plan/07-arabic.png`
+- `artifacts/regression-work-plan/08-print.png`
+
+Verdict for this exact local production workflow: ready to record as a deterministic planning demonstration. This does not establish safety or regulatory compliance.
+
 Date: 2026-07-19  
 Baseline commit: `65a02be1f23bc82d5f52d6351dac2bbe7bc68098`  
 Runtime: Node `v24.13.1`, npm `11.8.0`  
