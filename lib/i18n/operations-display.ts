@@ -80,7 +80,7 @@ const originalFindingNames: Record<string, Record<Language, { title: string; des
 
 const errorTranslations: Record<string, string> = {
   "Site name is required.": "اسم الموقع مطلوب.",
-  "Select a city.": "اختر مدينة.",
+  "Select a Saudi location.": "اختر موقعًا داخل المملكة العربية السعودية.",
   "Select a shift date.": "اختر تاريخ الوردية.",
   "Enter a start time.": "أدخل وقت البداية.",
   "Enter an end time.": "أدخل وقت النهاية.",

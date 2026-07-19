@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { evaluateOriginalPlan } from "../../lib/domain/original-plan";
 import type { ShiftPlan, SiteConditions, WorkTask } from "../../lib/domain/types";
+import { SAUDI_LOCATION_PRESETS } from "../../data/cities";
 
 const task=(id:string,overrides:Partial<WorkTask>={}):WorkTask=>({id,nameEn:id,nameAr:id,durationMinutes:60,workload:"heavy",environment:"direct_sun",splittable:true,...overrides});
-const plan=(tasks:WorkTask[],overrides:Partial<ShiftPlan>={}):ShiftPlan=>({siteName:"Site",city:"riyadh",shiftDate:"2026-07-20",shiftStart:"06:30",shiftEnd:"16:30",crewSize:8,nonAcclimatizedWorkers:0,tasks,...overrides});
+const plan=(tasks:WorkTask[],overrides:Partial<ShiftPlan>={}):ShiftPlan=>({siteName:"Site",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-07-20",shiftStart:"06:30",shiftEnd:"16:30",crewSize:8,nonAcclimatizedWorkers:0,tasks,...overrides});
 const high:SiteConditions={measurementMode:"onsite_twl",twlZone:"high"};
 
 describe("original requested plan evaluation",()=>{

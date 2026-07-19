@@ -1,6 +1,7 @@
 import { describe,expect,it } from "vitest";
 import { generateSchedule } from "../../lib/domain/scheduler";
 import type { ForecastHour,ShiftPlan } from "../../lib/domain/types";
+import { SAUDI_LOCATION_PRESETS } from "../../data/cities";
 
 const forecasts:ForecastHour[]=[
   {time:"06:00",temperatureCelsius:25,apparentTemperatureCelsius:26,relativeHumidityPercent:40,windSpeedKph:8},
@@ -10,7 +11,7 @@ const forecasts:ForecastHour[]=[
   {time:"15:00",temperatureCelsius:47,apparentTemperatureCelsius:50,relativeHumidityPercent:20,windSpeedKph:11},
   {time:"16:00",temperatureCelsius:44,apparentTemperatureCelsius:47,relativeHumidityPercent:22,windSpeedKph:10},
 ];
-const plan=(shiftStart:string,shiftEnd:string):ShiftPlan=>({siteName:"Site",city:"riyadh",shiftDate:"2026-07-20",shiftStart,shiftEnd,crewSize:2,nonAcclimatizedWorkers:0,tasks:[]});
+const plan=(shiftStart:string,shiftEnd:string):ShiftPlan=>({siteName:"Site",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-07-20",shiftStart,shiftEnd,crewSize:2,nonAcclimatizedWorkers:0,tasks:[]});
 
 describe("shift-scoped forecast metrics",()=>{
   it.each([

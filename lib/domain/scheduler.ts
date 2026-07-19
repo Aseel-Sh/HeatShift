@@ -3,6 +3,7 @@ import type { ScheduleBlock, ScheduleResult, UnscheduledTask } from "./scheduler
 import { evaluateMiddayRestriction } from "./midday-restriction";
 import { getLoneWorkConflict, getNonAcclimatizedConflict } from "./twl-conflicts";
 import { getHydrationGuidance, getWorkRestGuidance } from "./twl-guidance";
+import { forecastAtOrBefore } from "./forecast";
 
 const SLOT_MINUTES = 5;
 const CAPACITY_SOURCE_ID = "heatshift-scheduler-capacity";
@@ -70,14 +71,7 @@ function forecastTemperatureAt(
   minute: number,
   forecastHours: readonly ForecastHour[],
 ): number {
-  if (forecastHours.length === 0) return Number.POSITIVE_INFINITY;
-
-  let selected = forecastHours[0];
-  for (const forecast of forecastHours) {
-    if (timeToMinutes(forecast.time) > minute) break;
-    selected = forecast;
-  }
-  return selected.temperatureCelsius;
+  return forecastAtOrBefore(forecastHours,minutesToTime(minute))?.temperatureCelsius??Number.POSITIVE_INFINITY;
 }
 
 function cycleReasonCode(task: WorkTask, twlZone: SiteConditions["twlZone"]): string {
@@ -194,7 +188,7 @@ export function generateSchedule(
     const minute = timeToMinutes(hour.time);
     return minute >= shiftStart && minute < shiftEnd;
   });
-  const sortedForecast = [...shiftForecast].sort(
+  const sortedForecast = [...forecastHours].sort(
     (left, right) => timeToMinutes(left.time) - timeToMinutes(right.time),
   );
   const slots = buildSlots(shiftStart, shiftEnd);

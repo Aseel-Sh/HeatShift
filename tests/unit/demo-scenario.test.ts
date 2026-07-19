@@ -13,7 +13,7 @@ describe("deterministic demo scenario", () => {
       isDemo: true,
       label: "Sample data — no live AI or weather request",
       shiftPlan: {
-        city: "riyadh",
+        location: { name: "Riyadh", source: "preset" },
         shiftStart: "06:30",
         shiftEnd: "16:30",
         crewSize: 8,

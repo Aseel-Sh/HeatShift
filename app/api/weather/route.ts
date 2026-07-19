@@ -1,27 +1,30 @@
 import { errorResponse, IntegrationError } from "../../../lib/server/api-errors";
 import {
-  fetchCityWeather,
+  fetchLocationWeather,
   weatherQuerySchema,
 } from "../../../lib/weather/open-meteo";
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const query = weatherQuerySchema.safeParse({
-    city: url.searchParams.get("city"),
+    latitude: url.searchParams.get("latitude"),
+    longitude: url.searchParams.get("longitude"),
     date: url.searchParams.get("date"),
+    timezone: url.searchParams.get("timezone"),
+    locationName: url.searchParams.get("locationName"),
   });
   if (!query.success) {
     return errorResponse(
       "INVALID_INPUT",
-      "City and date must use a supported city ID and YYYY-MM-DD date.",
+      "Coordinates, location, timezone, and date are invalid.",
       400,
     );
   }
 
   try {
-    const hours = await fetchCityWeather(query.data.city, query.data.date);
+    const hours = await fetchLocationWeather(query.data);
     return Response.json({
-      data: { city: query.data.city, date: query.data.date, retrievedAt: new Date().toISOString(), hours },
+      data: { locationName:query.data.locationName,latitude:query.data.latitude,longitude:query.data.longitude,timezone:query.data.timezone,date:query.data.date,retrievedAt:new Date().toISOString(),hours },
     });
   } catch (error) {
     const integrationError =

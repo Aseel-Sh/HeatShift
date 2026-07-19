@@ -318,3 +318,26 @@ Regression coverage includes the exact eight-activity construction plan, all req
 Final validation: lint passed; strict typecheck passed; 152 unit tests across 20 files passed; 38 Playwright tests passed; production build passed; diff check passed.
 
 Blockers: none. OpenRouter remains optional for structured schedule rows and required only to enrich unstructured prose imports.
+
+## Saudi location search and coordinate weather
+
+Status: complete on 2026-07-19.
+
+Baseline before editing: lint and strict typecheck passed; 152 unit tests across 20 files passed; 38 Playwright tests passed; production build passed.
+
+Implemented:
+
+- Replaced the production `SaudiCity` plan field with a required, Zod-validated `SiteLocation` containing name, optional region, Saudi country code, coordinates, timezone, and provenance.
+- Kept Riyadh, Jeddah, Dammam, Mecca, and Medina as keyboard-accessible quick presets and deterministic demo/offline fallbacks.
+- Added debounced English/Arabic Saudi place search through `GET /api/locations`, including upstream validation, Saudi-only filtering, eight-result cap, timeout handling, brief successful-result caching, and typed errors.
+- Added a keyboard-operable combobox result list, selected-location coordinate summary, and clear/change action without adding a map or location tracking.
+- Changed `GET /api/weather` to accept and return selected location name, latitude, longitude, timezone, date, and retrieval time. No hardcoded city lookup occurs for geocoded weather.
+- Retained the complete requested day's hourly data for scheduler lookup, including the 06:00 point used by a 06:30 slot, while keeping display and peak metrics shift-scoped.
+- Added the normalized `ForecastDisplayPoint` model for later timeline use and visible Open-Meteo attribution.
+- Changing a location or date clears stale weather and derived sample state; the demo remains completely network-free.
+
+Regression coverage includes Arabic Riyadh and English neighborhood searches, Saudi-only filtering, empty/malformed/timeout geocoding responses, quick presets, coordinate weather requests, stale-weather invalidation, previous-hour slot lookup, shift-scoped peaks, and the network-free demo.
+
+Final validation: lint passed; strict typecheck passed; 166 unit tests across 23 files passed; 40 Playwright tests passed; production build passed.
+
+Blockers: none. OpenRouter remains optional; Open-Meteo location and weather calls require network access but no API key.

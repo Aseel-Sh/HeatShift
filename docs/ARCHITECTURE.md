@@ -9,7 +9,7 @@ The intended future request flow is:
 1. A supervisor describes one crew's plan.
 2. A swappable AI provider extracts that text into a strictly validated structure; it does not make safety decisions.
 3. The supervisor verifies the extracted tasks and manually entered site information.
-4. City-center forecast data and the supervisor-entered TWL zone remain visibly separate inputs.
+4. A coordinate-based model forecast and the supervisor-entered TWL zone remain visibly separate inputs.
 5. A deterministic domain engine applies restrictions and work/rest rules.
 6. The UI presents a safer shift plan and a planning report with clear limitations.
 
@@ -26,12 +26,13 @@ The boundary schemas, source metadata, deterministic heat-planning rules, pure f
 - `components/report/`: future planning report UI
 - `lib/ai/`: provider-neutral extraction service, OpenRouter adapter, and extraction schemas
 - `lib/domain/`: Zod boundary schemas, pure deterministic heat-planning rules, and the single-crew scheduler
-- `lib/weather/`: Open-Meteo adapter and pure response normalization
+- `lib/location/`: Open-Meteo geocoding adapter, Saudi filtering, validation, timeout, and short-lived cache
+- `lib/weather/`: coordinate-based Open-Meteo adapter and pure response/display normalization
 - `lib/server/`: server environment validation and shared typed integration errors
 - `lib/demo/`: network-free deterministic demo service
 - `lib/workflow/`: typed local reducer and workflow validation
 - `lib/i18n/`: future English and Arabic message handling
-- `data/`: official source metadata, fixed city coordinates, and deterministic demo fixtures
+- `data/`: official source metadata, five quick-location presets, and deterministic demo fixtures
 - `tests/unit/`: fast deterministic tests
 - `tests/e2e/`: browser-level user-flow tests
 
@@ -43,7 +44,7 @@ No data is persisted server-side. The product handles one crew without worker na
 
 ## Safety model
 
-AI is limited to structured plan extraction. City-center forecast data informs advance planning, while a supervisor-entered TWL zone comes from a separate appropriate on-site assessment; HeatShift neither measures nor verifies TWL and must never collapse these concepts. All restrictions, work/rest decisions, schedule changes, hydration guidance, and briefings are deterministic and testable.
+AI is limited to structured plan extraction. A model forecast for the selected coordinates informs advance planning, while a supervisor-entered TWL zone comes from a separate appropriate on-site assessment; HeatShift neither measures nor verifies TWL and must never collapse these concepts. All restrictions, work/rest decisions, schedule changes, hydration guidance, and briefings are deterministic and testable.
 
 HeatShift provides planning guidance. It must never claim to guarantee safety or regulatory compliance.
 
@@ -67,7 +68,7 @@ The scheduler uses the existing rule functions rather than duplicating policy th
 
 Plan import has a deterministic preprocessing stage. It parses recognizable schedule rows into normalized requested times, derived minute durations, activity kinds, timing preferences, and field-level evidence before OpenRouter is called. The provider may translate names or suggest unverified workload/environment/splitting values, but it cannot replace parser-backed timing or authoritative form context.
 
-`POST /api/parse-plan` and `GET /api/weather` are thin HTTP adapters. They validate request boundaries, invoke server-only services, and map internal failures to typed responses without stack traces. OpenRouter output and Open-Meteo payloads are both locally validated before use. Integration setup and failure behavior are documented in `docs/INTEGRATIONS.md`.
+`POST /api/parse-plan`, `GET /api/locations`, and `GET /api/weather` are thin HTTP adapters. They validate request boundaries, invoke server-only services, and map internal failures to typed responses without stack traces. OpenRouter and Open-Meteo payloads are locally validated before use. The browser stores a complete `SiteLocation`; weather requests use its coordinates and timezone rather than resolving a city ID on the server. Integration setup and failure behavior are documented in `docs/INTEGRATIONS.md`.
 
 ## Client workflow
 

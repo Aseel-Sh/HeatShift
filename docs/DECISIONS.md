@@ -11,7 +11,7 @@
 | No database or authentication | The MVP plans one crew and does not need accounts or server persistence. |
 | AI only extracts structured plan data | Probabilistic output is isolated from safety decisions. |
 | Deterministic safety engine | Restrictions and work/rest decisions must be explainable, reproducible, and testable. |
-| Forecast and supervisor-entered TWL are separate | City-center forecasts support preliminary advance planning; a supervisor-entered zone comes from a separate appropriate on-site assessment. HeatShift does not measure or verify TWL. |
+| Forecast and supervisor-entered TWL are separate | Coordinate-based model forecasts support preliminary advance planning; a supervisor-entered zone comes from a separate appropriate on-site assessment. HeatShift does not measure or verify TWL. |
 | Built-in deterministic demo required | The core experience must remain demonstrable without AI, weather services, or secrets. |
 | Qualified safety language only | The product provides guidance and cannot guarantee safety or regulatory compliance. |
 | Discriminated guidance results | Hydration output distinguishes a planning range, a minimum, and preliminary guidance; work/rest output distinguishes continuous work, cycles, and preliminary guidance. |
@@ -23,7 +23,8 @@
 | Provider-neutral extraction boundary | Business logic depends on a small chat-completions interface rather than a provider SDK. |
 | OpenRouter free router by default | `openrouter/free` avoids paid-model defaults and routes to available free models supporting requested capabilities. |
 | Double validation for AI output | Provider structured output constrains generation, while local Zod parsing remains the trusted boundary. |
-| Fixed Open-Meteo city coordinates | Five supported city IDs resolve deterministically without maps, geocoding, or user-location tracking. |
+| Searchable Saudi site locations | Open-Meteo geocoding results are validated, filtered to Saudi Arabia, capped at eight, and retained as coordinates; the five original cities remain quick presets and offline/demo fallbacks. |
+| Coordinate-based weather | Forecast requests use the selected location's latitude, longitude, and timezone. The full requested day is retained for slot lookup while display and peak metrics use a shift-filtered subset. |
 | No weather fallback values | Empty, unavailable, malformed, or timed-out forecasts return typed errors instead of invented data. |
 | Versioned restriction configuration | The source-backed midday restriction is represented with full 2026 effective dates and is not silently reused for a later year. Unsupported years keep ordinary scheduling but are marked preliminary with regulatory guidance unavailable. |
 | Rate-first hydration guidance | The UI presents the configured range or minimum per worker per hour; it does not imply an exact medical prescription or extrapolate an unsupported crew total. |

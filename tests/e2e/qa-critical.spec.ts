@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 async function fillManualPlan(page: import("@playwright/test").Page, overrides: { start?: string; end?: string; crew?: string; newWorkers?: string } = {}) {
   await page.getByLabel("Site name").fill("QA site");
-  await page.getByLabel("City").selectOption("riyadh");
+  await page.getByRole("button", { name: "Riyadh", exact: true }).click();
   await page.getByLabel("Shift date").fill("2026-07-20");
   await page.getByLabel("Shift start").fill(overrides.start ?? "06:30");
   await page.getByLabel("Shift end").fill(overrides.end ?? "16:30");
@@ -62,7 +62,7 @@ test("demo is console-clean, network-clean, and stable under duplicate Generate"
 });
 
 test("manual entry completes without AI and renders user text safely", async ({ page }) => {
-  await page.route("**/api/weather?*", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { city: "riyadh", date: "2026-07-20", retrievedAt:"2026-07-19T09:00:00Z", hours: [{ time:"06:30",temperatureCelsius:30,apparentTemperatureCelsius:31,relativeHumidityPercent:25,windSpeedKph:8 }] } }) }));
+  await page.route("**/api/weather?*", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { locationName:"Riyadh",latitude:24.7136,longitude:46.6753,timezone:"Asia/Riyadh",date:"2026-07-20",retrievedAt:"2026-07-19T09:00:00Z",hours: [{ time:"06:00",temperatureCelsius:30,apparentTemperatureCelsius:31,relativeHumidityPercent:25,windSpeedKph:8 }] } }) }));
   await page.goto("/"); await fillManualPlan(page); await addManualTask(page, '<img src=x onerror="window.__qaXss=1">');
   await page.getByRole("button", { name: "Continue to conditions" }).click();
   await page.getByRole("button", { name: "Generate safer shift" }).click();

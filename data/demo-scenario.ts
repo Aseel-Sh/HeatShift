@@ -1,4 +1,5 @@
 import type { ForecastHour, ShiftPlan, SiteConditions } from "../lib/domain/types";
+import { SAUDI_LOCATION_PRESETS } from "./cities";
 
 export interface DemoScenario {
   isDemo: true;
@@ -6,7 +7,7 @@ export interface DemoScenario {
   shiftPlan: ShiftPlan;
   siteConditions: SiteConditions;
   forecastHours: ForecastHour[];
-  weatherMetadata: { city: "riyadh"; date: string; retrievedAt: string };
+  weatherMetadata: { locationName:string;latitude:number;longitude:number;timezone:string;date:string;retrievedAt:string };
 }
 
 export const DEMO_SCENARIO: DemoScenario = {
@@ -14,7 +15,7 @@ export const DEMO_SCENARIO: DemoScenario = {
   label: "Sample data — no live AI or weather request",
   shiftPlan: {
     siteName: "Riyadh North Utilities Demonstration Site",
-    city: "riyadh",
+    location: SAUDI_LOCATION_PRESETS.riyadh,
     shiftDate: "2026-07-20",
     shiftStart: "06:30",
     shiftEnd: "16:30",
@@ -83,7 +84,7 @@ export const DEMO_SCENARIO: DemoScenario = {
     twlZone: "high",
     manualTemperatureCelsius: 44.6,
   },
-  weatherMetadata: { city:"riyadh", date:"2026-07-20", retrievedAt:"2026-07-19T12:00:00+03:00" },
+  weatherMetadata: { locationName:"Riyadh",latitude:24.7136,longitude:46.6753,timezone:"Asia/Riyadh",date:"2026-07-20",retrievedAt:"2026-07-19T12:00:00+03:00" },
   forecastHours: [
     { time: "06:30", temperatureCelsius: 30.5, apparentTemperatureCelsius: 32.1, relativeHumidityPercent: 31, windSpeedKph: 7.8 },
     { time: "07:30", temperatureCelsius: 32.2, apparentTemperatureCelsius: 34.1, relativeHumidityPercent: 29, windSpeedKph: 8.1 },

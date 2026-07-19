@@ -7,12 +7,13 @@ import {
   OFFICIAL_SOURCES,
   SOURCE_IDS,
 } from "../../data/official-sources";
+import { SAUDI_LOCATION_PRESETS } from "../../data/cities";
 
 describe("domain boundary schemas", () => {
   it("accepts a valid single-crew shift plan", () => {
     const result = shiftPlanSchema.safeParse({
       siteName: "North works yard",
-      city: "riyadh",
+      location: SAUDI_LOCATION_PRESETS.riyadh,
       shiftDate: "2026-07-18",
       shiftStart: "06:00",
       shiftEnd: "15:00",
@@ -37,7 +38,7 @@ describe("domain boundary schemas", () => {
   it("rejects invalid dates, times, counts, and enum values", () => {
     const result = shiftPlanSchema.safeParse({
       siteName: "Yard",
-      city: "tabuk",
+      location: { ...SAUDI_LOCATION_PRESETS.riyadh, countryCode: "AE" },
       shiftDate: "18-07-2026",
       shiftStart: "6am",
       shiftEnd: "25:00",
@@ -61,7 +62,7 @@ describe("domain boundary schemas", () => {
   it("rejects overnight shifts for the MVP", () => {
     const result = shiftPlanSchema.safeParse({
       siteName: "Night works yard",
-      city: "riyadh",
+      location: SAUDI_LOCATION_PRESETS.riyadh,
       shiftDate: "2026-07-18",
       shiftStart: "22:00",
       shiftEnd: "06:00",
@@ -81,7 +82,7 @@ describe("domain boundary schemas", () => {
   it("rejects inputs that cannot be represented by five-minute slots", () => {
     const result = shiftPlanSchema.safeParse({
       siteName: "Yard",
-      city: "riyadh",
+      location: SAUDI_LOCATION_PRESETS.riyadh,
       shiftDate: "2026-07-18",
       shiftStart: "06:02",
       shiftEnd: "08:00",

@@ -6,7 +6,7 @@ HeatShift helps an outdoor crew supervisor turn an unstructured daily plan into 
 
 ## Core MVP
 
-The core MVP will support one supervisor planning one crew's shift. It will provide structured plan entry and verification, clearly separated city-center forecast and supervisor-entered TWL concepts, deterministic schedule generation, and a planning report. A built-in deterministic demo scenario must allow the complete experience to work without external services.
+The core MVP will support one supervisor planning one crew's shift. It will provide structured plan entry and verification, clearly separated coordinate-based model forecast and supervisor-entered TWL concepts, deterministic schedule generation, and a planning report. A built-in deterministic demo scenario must allow the complete experience to work without external services.
 
 ## Non-negotiable boundaries
 
@@ -22,7 +22,7 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - No voice or image upload in the core MVP
 - AI is used only for structured plan extraction
 - Safety decisions are deterministic
-- City-center forecast planning and supervisor-entered TWL planning are shown as separate concepts
+- Coordinate-based forecast planning and supervisor-entered TWL planning are shown as separate concepts
 - The app works with a built-in deterministic demo scenario
 - The app never describes itself as guaranteeing safety or regulatory compliance
 
@@ -43,7 +43,8 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - Priority-based placement, forecast temperature preference, conditioned-indoor midday preference, and contiguous non-splittable tasks
 - TWL work/rest packages, exact unscheduled capacity, schedule metrics, and preliminary results
 - Server-only OpenRouter structured plan extraction behind a provider-neutral interface with local schema validation
-- Open-Meteo hourly forecast retrieval for five supported Saudi cities
+- Free Saudi place search through Open-Meteo geocoding, with five quick presets and no map requirement
+- Coordinate- and timezone-based Open-Meteo hourly forecast retrieval
 - Explicitly labeled deterministic Riyadh demo data available without network calls
 - English/Arabic Describe, Verify, Conditions, results, briefing, and print workflow
 - Deterministic per-worker/per-hour hydration planning guidance without an unsupported exact crew total

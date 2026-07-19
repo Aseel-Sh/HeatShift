@@ -1,5 +1,4 @@
 import { CalendarDays, HardHat, Languages, MapPin, Users } from "lucide-react";
-import { displayCity } from "@/lib/i18n/operations-display";
 import type { Language, PlanForm, WorkflowStep } from "@/lib/workflow/state";
 
 interface BrandHeaderProps {
@@ -31,7 +30,7 @@ export function BrandHeader({ language, plan, status, onLanguageChange }: BrandH
         </div>
 
         <dl className="header-facts">
-          <div><dt><MapPin aria-hidden="true" />{language === "ar" ? "الموقع" : "Site"}</dt><dd>{plan.siteName || unknown}{plan.city ? ` · ${displayCity(plan.city, language)}` : ""}</dd></div>
+          <div><dt><MapPin aria-hidden="true" />{language === "ar" ? "الموقع" : "Site"}</dt><dd>{plan.siteName || unknown}{plan.location ? ` · ${plan.location.name}` : ""}</dd></div>
           <div><dt><CalendarDays aria-hidden="true" />{language === "ar" ? "التاريخ" : "Shift date"}</dt><dd dir="ltr">{plan.shiftDate || unknown}</dd></div>
           <div><dt><Users aria-hidden="true" />{language === "ar" ? "الفريق" : "Crew"}</dt><dd>{plan.crewSize || "—"}</dd></div>
           <div><dt>{language === "ar" ? "الحالة" : "Status"}</dt><dd className="status-value">{statusCopy[status][language]}</dd></div>

@@ -43,15 +43,21 @@ OPENROUTER_MODEL=openrouter/free
 
 OpenRouter documents the [free router](https://openrouter.ai/docs/guides/routing/routers/free-router), [chat-completions API and structured outputs](https://openrouter.ai/docs/api/reference/overview), and [free-tier rate limits](https://openrouter.ai/docs/api/reference/limits). Free availability, latency, selected models, and limits can change, so manual entry and the deterministic demo remain essential fallback paths.
 
-## Open-Meteo weather
+## Open-Meteo location search and weather
 
-`GET /api/weather?city=riyadh&date=YYYY-MM-DD` supports Riyadh, Jeddah, Dammam, Mecca, and Medina using fixed coordinates in `data/cities.ts`. Requests use `Asia/Riyadh` and request:
+`GET /api/locations?q=<query>&language=en|ar` uses Open-Meteo Geocoding without an API key. Queries must contain 2–100 characters. The adapter validates upstream records, keeps Saudi Arabia (`countryCode=SA`) results only, returns no more than eight, applies a six-second timeout, and briefly caches successful searches. Empty results remain empty; malformed, timed-out, and failed responses return typed errors without exposing upstream details. Riyadh, Jeddah, Dammam, Mecca, and Medina remain quick presets and network-free fallback choices rather than the only production locations.
+
+`GET /api/weather?latitude=<latitude>&longitude=<longitude>&date=YYYY-MM-DD&timezone=<timezone>&locationName=<name>` uses the selected `SiteLocation` coordinates and timezone. It requests:
 
 - `temperature_2m` → `temperatureCelsius`
 - `apparent_temperature` → `apparentTemperatureCelsius`
 - `relative_humidity_2m` → `relativeHumidityPercent`
 - `wind_speed_10m` → `windSpeedKph`
 
-The service validates array lengths and every normalized hour. It never substitutes, interpolates, or fabricates missing weather. Invalid cities or dates, unavailable dates, empty forecasts, malformed responses, upstream failures, and timeouts return typed errors.
+The service validates array lengths and every normalized hour. It never substitutes, interpolates, or fabricates missing weather. Invalid coordinates, dates, timezones, unavailable dates, empty forecasts, malformed responses, upstream failures, and timeouts return typed errors. Response metadata includes the selected name, latitude, longitude, forecast timezone, requested date, and retrieval time.
 
-Forecast values support advance planning. The UI labels them as a city-center model forecast, shows the city, forecast date, retrieval time, temperature, apparent temperature, humidity, and wind, and calculates displayed maxima from shift hours only. Forecast data remains separate from the supervisor-entered TWL zone and does not replace qualified field procedures. HeatShift does not calculate TWL from ordinary forecast values.
+The full requested day's hourly forecast is retained for deterministic scheduling lookup. A 06:30 slot uses the latest forecast at or before that slot, so the 06:00 point is preserved. A separate shift-filtered subset drives the displayed strip, peak temperature, peak apparent temperature, and shift summary; values after an early shift cannot inflate those metrics.
+
+Forecast values support advance planning. The UI labels them “Model forecast for selected coordinates — preliminary planning only,” shows coordinate and retrieval metadata, and explicitly states that the model forecast is not an on-site measurement. Forecast data remains separate from the supervisor-entered TWL zone and does not replace qualified field procedures. HeatShift does not calculate TWL from ordinary forecast values.
+
+Location search and forecast data are attributed to [Open-Meteo](https://open-meteo.com/). No Open-Meteo key is required.

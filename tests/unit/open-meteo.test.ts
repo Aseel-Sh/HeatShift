@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   fetchCityWeather,
+  fetchLocationWeather,
   normalizeOpenMeteoResponse,
 } from "../../lib/weather/open-meteo";
 
@@ -47,6 +48,15 @@ describe("Open-Meteo weather integration", () => {
       }),
     ).rejects.toMatchObject({ code: "WEATHER_UNAVAILABLE", status: 502 });
     expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it("requests weather for the selected coordinates and timezone",async()=>{
+    const fetchImpl=vi.fn().mockResolvedValue(new Response(JSON.stringify(validPayload),{status:200}));
+    await fetchLocationWeather({latitude:24.6901,longitude:46.685,timezone:"Asia/Riyadh",date:"2026-07-20"},{fetchImpl:fetchImpl as typeof fetch});
+    const url=new URL(String(fetchImpl.mock.calls[0][0]));
+    expect(url.searchParams.get("latitude")).toBe("24.6901");
+    expect(url.searchParams.get("longitude")).toBe("46.685");
+    expect(url.searchParams.get("timezone")).toBe("Asia/Riyadh");
   });
 
   it("rejects malformed hourly values instead of silently dropping them", () => {

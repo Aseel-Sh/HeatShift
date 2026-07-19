@@ -2,12 +2,13 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function mockIntegrations(page: Page, weatherOk = true) {
   await page.route("**/api/parse-plan", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { tasks: [{ nameEn: "Pipe inspection", nameAr: "فحص الأنابيب", durationMinutes: 30, workload: "light", environment: "shaded_outdoor", splittable: false }], assumptions: [], missingInformation: [] } }) }));
-  await page.route("**/api/weather?*", (route) => route.fulfill({ status: weatherOk ? 200 : 502, contentType: "application/json", body: weatherOk ? JSON.stringify({ data: { city: "riyadh", date: "2026-07-20", retrievedAt:"2026-07-19T09:00:00Z", hours: [{ time:"06:30",temperatureCelsius:31,apparentTemperatureCelsius:33,relativeHumidityPercent:25,windSpeedKph:8 },{ time:"12:30",temperatureCelsius:44,apparentTemperatureCelsius:47,relativeHumidityPercent:18,windSpeedKph:10 }] } }) : JSON.stringify({ error: { code:"WEATHER_UNAVAILABLE",message:"Forecast service unavailable for test." } }) }));
+  await page.route("**/api/locations?*", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: [{ id:"geocoding-1",name:"Al Olaya",admin1:"Riyadh Region",countryCode:"SA",latitude:24.6905,longitude:46.6854,timezone:"Asia/Riyadh",source:"geocoding" }] }) }));
+  await page.route("**/api/weather?*", (route) => route.fulfill({ status: weatherOk ? 200 : 502, contentType: "application/json", body: weatherOk ? JSON.stringify({ data: { locationName:"Riyadh",latitude:24.7136,longitude:46.6753,timezone:"Asia/Riyadh",date:"2026-07-20",retrievedAt:"2026-07-19T09:00:00Z",hours: [{ time:"06:00",temperatureCelsius:30,apparentTemperatureCelsius:32,relativeHumidityPercent:26,windSpeedKph:7 },{ time:"07:00",temperatureCelsius:31,apparentTemperatureCelsius:33,relativeHumidityPercent:25,windSpeedKph:8 },{ time:"12:00",temperatureCelsius:44,apparentTemperatureCelsius:47,relativeHumidityPercent:18,windSpeedKph:10 }] } }) : JSON.stringify({ error: { code:"WEATHER_UNAVAILABLE",message:"Forecast service unavailable for test." } }) }));
 }
 
 async function fillPlan(page: Page, overrides: { start?: string; end?: string; crew?: string; newWorkers?: string } = {}) {
   await page.getByLabel("Site name").fill("Test site");
-  await page.getByLabel("City").selectOption("riyadh");
+  await page.getByRole("button", { name: "Riyadh", exact: true }).click();
   await page.getByLabel("Shift date").fill("2026-07-20");
   await page.getByLabel("Shift start").fill(overrides.start ?? "06:30");
   await page.getByLabel("Shift end").fill(overrides.end ?? "16:30");
@@ -16,6 +17,30 @@ async function fillPlan(page: Page, overrides: { start?: string; end?: string; c
 }
 
 test.beforeEach(async ({ page }) => { await mockIntegrations(page); await page.goto("/"); });
+
+test("searches an English neighborhood and selects it with the keyboard", async ({ page }) => {
+  const search = page.getByRole("combobox", { name: "Search location" });
+  await search.fill("Al Olaya");
+  await expect(page.getByRole("option", { name: /Al Olaya/ })).toBeVisible();
+  await search.press("Enter");
+  await expect(page.getByTestId("selected-location")).toContainText("Al Olaya");
+  await expect(page.getByTestId("selected-location")).toContainText("24.6905, 46.6854");
+});
+
+test("sends an Arabic Riyadh location search in Arabic mode", async ({ page }) => {
+  let requestedUrl = "";
+  await page.unroute("**/api/locations?*");
+  await page.route("**/api/locations?*", route => {
+    requestedUrl = route.request().url();
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: [{ id:"geocoding-ar",name:"الرياض",admin1:"منطقة الرياض",countryCode:"SA",latitude:24.7136,longitude:46.6753,timezone:"Asia/Riyadh",source:"geocoding" }] }) });
+  });
+  await page.getByRole("button", { name: "العربية" }).click();
+  const search = page.getByRole("combobox");
+  await search.fill("الرياض");
+  await expect(page.getByRole("option", { name: /الرياض/ })).toBeVisible();
+  expect(decodeURIComponent(requestedUrl)).toContain("q=الرياض");
+  expect(requestedUrl).toContain("language=ar");
+});
 
 test("loads demo scenario and reaches Conditions without integration calls", async ({ page }) => {
   let calls = 0;
@@ -78,20 +103,22 @@ test("missing AI safety fields remain blank and block scheduling", async ({ page
   await expect(page.getByText("Select a workload.")).toBeVisible();
 });
 
-test("editing a sample invalidates it and requests weather for the edited city", async ({ page }) => {
+test("editing a sample invalidates it and requests weather for the selected coordinates", async ({ page }) => {
   let weatherUrl="";
   await page.unroute("**/api/weather?*");
-  await page.route("**/api/weather?*",route=>{weatherUrl=route.request().url();return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({data:{city:"jeddah",date:"2026-07-20",retrievedAt:"2026-07-19T09:00:00Z",hours:[{time:"06:30",temperatureCelsius:32,apparentTemperatureCelsius:34,relativeHumidityPercent:40,windSpeedKph:8}]}})});});
+  await page.route("**/api/weather?*",route=>{weatherUrl=route.request().url();return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({data:{locationName:"Jeddah",latitude:21.4858,longitude:39.1925,timezone:"Asia/Riyadh",date:"2026-07-20",retrievedAt:"2026-07-19T09:00:00Z",hours:[{time:"06:00",temperatureCelsius:32,apparentTemperatureCelsius:34,relativeHumidityPercent:40,windSpeedKph:8}]}})});});
   await page.getByRole("button",{name:"View sample shift"}).click();
   await page.getByRole("button",{name:"Back"}).click();
-  await page.getByLabel("City").selectOption("jeddah");
+  await page.getByRole("button", { name: "Clear / change" }).click();
+  await page.getByRole("button", { name: "Jeddah", exact: true }).click();
   await page.getByRole("button",{name:"Enter tasks manually"}).click();
   await expect(page.getByText("Sample data — no live AI or weather request")).toHaveCount(0);
   await page.getByRole("button",{name:"Continue to conditions"}).click();
-  expect(weatherUrl).toContain("city=jeddah");
+  expect(weatherUrl).toContain("latitude=21.4858");
+  expect(weatherUrl).toContain("longitude=39.1925");
   await expect(page.getByText("46.7°")).toHaveCount(0);
-  await expect(page.getByText("City-center model forecast — preliminary planning only.")).toBeVisible();
-  await expect(page.getByText(/Jeddah · Forecast date/)).toBeVisible();
+  await expect(page.getByText("Model forecast for selected coordinates — preliminary planning only.")).toBeVisible();
+  await expect(page.getByText(/Jeddah · 21.4858, 39.1925/)).toBeVisible();
 });
 
 test("imports the exact structured plan with contextual fields, activities, evidence, and readable durations", async ({ page }) => {
@@ -134,7 +161,7 @@ Need concrete completed today. Pump booked only today.`;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { siteName:"North utility site", city:"riyadh", shiftDate:"2026-07-20", shiftStart:"06:00", shiftEnd:"16:30", crewSize:8, nonAcclimatizedWorkers:2, tasks, assumptions:[], missingInformation:[] } }) });
   });
   await page.getByLabel("Site name").fill("North utility site");
-  await page.getByLabel("City").selectOption("riyadh");
+  await page.getByRole("button", { name: "Riyadh", exact: true }).click();
   await page.getByLabel("Shift date").fill("2026-07-20");
   await page.getByLabel("Shift start").fill("06:00");
   await page.getByLabel("Shift end").fill("16:30");
@@ -143,7 +170,7 @@ Need concrete completed today. Pump booked only today.`;
   await page.getByLabel("Import work plan").fill(regressionText);
   await page.getByRole("button", { name: "Structure task list" }).click();
 
-  expect(posted).toMatchObject({ context: { siteName:"North utility site", locationName:"riyadh", shiftDate:"2026-07-20", shiftStart:"06:00", shiftEnd:"16:30", crewSize:8, nonAcclimatizedWorkers:2 } });
+  expect(posted).toMatchObject({ context: { siteName:"North utility site", locationName:"Riyadh", shiftDate:"2026-07-20", shiftStart:"06:00", shiftEnd:"16:30", crewSize:8, nonAcclimatizedWorkers:2 } });
   await expect(page.getByTestId(/^task-row-/)).toHaveCount(8);
   await expect(page.getByLabel("Activity").nth(2)).toHaveValue("break");
   await expect(page.getByLabel("Activity").nth(4)).toHaveValue("meal");

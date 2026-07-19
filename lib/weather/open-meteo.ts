@@ -1,14 +1,17 @@
 import { z } from "zod";
 import { SAUDI_CITIES } from "../../data/cities";
-import { forecastHourSchema, saudiCitySchema, type ForecastHour, type SaudiCity } from "../domain/types";
+import { forecastHourSchema, type ForecastHour, type SaudiCity } from "../domain/types";
 import { IntegrationError } from "../server/api-errors";
 
 const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
 const DEFAULT_TIMEOUT_MS = 8_000;
 
 export const weatherQuerySchema = z.object({
-  city: saudiCitySchema,
+  latitude: z.coerce.number().min(16).max(33),
+  longitude: z.coerce.number().min(34).max(56),
   date: z.iso.date(),
+  timezone: z.string().trim().min(1).max(64).regex(/^[A-Za-z_+\-]+(?:\/[A-Za-z0-9_+\-]+)*$/),
+  locationName: z.string().trim().min(1).max(160),
 });
 
 const openMeteoResponseSchema = z.object({
@@ -97,14 +100,23 @@ export async function fetchCityWeather(
   options: WeatherServiceOptions = {},
 ): Promise<ForecastHour[]> {
   const cityRecord = SAUDI_CITIES[city];
+  return fetchLocationWeather({latitude:cityRecord.latitude,longitude:cityRecord.longitude,timezone:cityRecord.timezone,date},options);
+}
+
+export interface CoordinateWeatherRequest { latitude:number; longitude:number; timezone:string; date:string }
+
+export async function fetchLocationWeather(
+  request:CoordinateWeatherRequest,
+  options: WeatherServiceOptions = {},
+): Promise<ForecastHour[]> {
   const parameters = new URLSearchParams({
-    latitude: String(cityRecord.latitude),
-    longitude: String(cityRecord.longitude),
+    latitude: String(request.latitude),
+    longitude: String(request.longitude),
     hourly:
       "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m",
-    timezone: "Asia/Riyadh",
-    start_date: date,
-    end_date: date,
+    timezone: request.timezone,
+    start_date: request.date,
+    end_date: request.date,
   });
   const controller = new AbortController();
   const timeout = setTimeout(
@@ -131,7 +143,7 @@ export async function fetchCityWeather(
         502,
       );
     }
-    return normalizeOpenMeteoResponse(await response.json(), date);
+    return normalizeOpenMeteoResponse(await response.json(), request.date);
   } catch (error) {
     if (error instanceof IntegrationError) throw error;
     if (

@@ -17,14 +17,14 @@ import {
 } from "lucide-react";
 import { BrandHeader } from "@/components/layout/brand-header";
 import { ResultsPage } from "@/components/report/results-page";
+import { LocationPicker } from "@/components/workflow/location-picker";
 import { getDemoScenario } from "@/lib/demo/get-demo-scenario";
 import type { ExtractedPlan } from "@/lib/ai/plan-extraction-schema";
 import { evaluateMiddayRestriction } from "@/lib/domain/midday-restriction";
 import { generateSchedule } from "@/lib/domain/scheduler";
 import { classifyForecastTemperature } from "@/lib/domain/temperature-category";
-import type { ForecastHour, SaudiCity, ShiftPlan, TwlZone } from "@/lib/domain/types";
+import type { ForecastHour, ShiftPlan, TwlZone } from "@/lib/domain/types";
 import {
-  displayCity,
   displayEnvironment,
   displayError,
   displayTemperatureCategory,
@@ -32,6 +32,7 @@ import {
 } from "@/lib/i18n/operations-display";
 import { toWorkTasks, type DraftWorkTask } from "@/lib/workflow/draft-task";
 import { formatDuration } from "@/lib/workflow/format-duration";
+import { filterForecastForShift } from "@/lib/weather/forecast-display";
 import {
   createInitialWorkflowState,
   validatePlanDetails,
@@ -65,7 +66,7 @@ const copy = {
     select: "Select",
     currentSummary: "Current shift",
     assumptionsTitle: "Planning assumptions",
-    assumptionsList: ["One crew", "Five-minute planning grid", "City-center forecast context", "No worker-level assignment"],
+    assumptionsList: ["One crew", "Five-minute planning grid", "Selected-coordinate forecast context", "No worker-level assignment"],
     taskPlan: "Task plan",
     taskReview: "Review extracted fields",
     reviewNotice: "Review every field before planning. Unknown values remain incomplete.",
@@ -120,7 +121,9 @@ const copy = {
     indoorNote: "Indoor means a cooled area. Heat-exposed indoor work needs a separate site assessment.",
     conditionsTitle: "Conditions",
     forecastContext: "A. Forecast context",
-    cityForecast: "City-center model forecast — preliminary planning only.",
+    cityForecast: "Model forecast for selected coordinates — preliminary planning only.",
+    forecastMeasurement: "This is not an on-site measurement. TWL is not calculated from the weather forecast.",
+    weatherAttribution: "Weather data by Open-Meteo",
     retrieved: "Retrieved",
     forecastDate: "Forecast date",
     peak: "Peak shift temperature",
@@ -226,7 +229,9 @@ const copy = {
     indoorNote: "المنطقة الداخلية تعني منطقة مكيّفة. يحتاج العمل الداخلي المعرض للحرارة إلى تقييم منفصل للموقع.",
     conditionsTitle: "الظروف",
     forecastContext: "أ. سياق التوقعات",
-    cityForecast: "توقعات نموذج مركز المدينة — للتخطيط الأولي فقط.",
+    cityForecast: "توقع نموذجي للإحداثيات المحددة — للتخطيط الأولي فقط.",
+    forecastMeasurement: "هذا ليس قياسًا ميدانيًا. لا يُحسب TWL من توقعات الطقس.",
+    weatherAttribution: "بيانات الطقس من Open-Meteo",
     retrieved: "وقت الاسترجاع",
     forecastDate: "تاريخ التوقعات",
     peak: "أعلى حرارة خلال الوردية",
@@ -257,7 +262,6 @@ const copy = {
   },
 } as const;
 
-const cities: SaudiCity[] = ["riyadh", "jeddah", "dammam", "mecca", "medina"];
 type WorkflowDispatch = Dispatch<Parameters<typeof workflowReducer>[1]>;
 type UiCopy = (typeof copy)[Language];
 
@@ -278,7 +282,7 @@ export function HeatShiftWorkflow() {
 
   const buildPlan = (): ShiftPlan => ({
     siteName: state.plan.siteName,
-    city: state.plan.city as SaudiCity,
+    location: state.plan.location!,
     shiftDate: state.plan.shiftDate,
     shiftStart: state.plan.shiftStart,
     shiftEnd: state.plan.shiftEnd,
@@ -302,7 +306,7 @@ export function HeatShiftWorkflow() {
           text: state.plan.planText,
           context: {
             siteName: state.plan.siteName || undefined,
-            locationName: state.plan.city || undefined,
+            locationName: state.plan.location?.name,
             shiftDate: state.plan.shiftDate || undefined,
             shiftStart: state.plan.shiftStart || undefined,
             shiftEnd: state.plan.shiftEnd || undefined,
@@ -338,11 +342,13 @@ export function HeatShiftWorkflow() {
     if (state.isDemo) return;
     dispatch({ type: "weatherLoading" });
     try {
-      const response = await fetch(`/api/weather?city=${state.plan.city}&date=${state.plan.shiftDate}`);
-      const payload = await response.json() as { data?: { city?: SaudiCity; date?: string; retrievedAt?: string; hours?: ForecastHour[] }; error?: { message?: string } };
+      const location=state.plan.location!;
+      const parameters=new URLSearchParams({latitude:String(location.latitude),longitude:String(location.longitude),date:state.plan.shiftDate,timezone:location.timezone,locationName:location.name});
+      const response = await fetch(`/api/weather?${parameters}`);
+      const payload = await response.json() as { data?: { locationName?:string;latitude?:number;longitude?:number;timezone?:string;date?:string;retrievedAt?:string;hours?:ForecastHour[] }; error?: { message?: string } };
       if (!response.ok || !payload.data?.hours?.length) throw new Error(payload.error?.message || "Weather is unavailable.");
-      if (!payload.data.city || !payload.data.date || !payload.data.retrievedAt) throw new Error("Weather metadata is unavailable.");
-      dispatch({ type: "weatherSuccess", forecast: payload.data.hours, metadata: { city: payload.data.city, date: payload.data.date, retrievedAt: payload.data.retrievedAt } });
+      if(!payload.data.locationName||payload.data.latitude===undefined||payload.data.longitude===undefined||!payload.data.timezone||!payload.data.date||!payload.data.retrievedAt)throw new Error("Weather metadata is unavailable.");
+      dispatch({type:"weatherSuccess",forecast:payload.data.hours,metadata:{locationName:payload.data.locationName,latitude:payload.data.latitude,longitude:payload.data.longitude,timezone:payload.data.timezone,date:payload.data.date,retrievedAt:payload.data.retrievedAt}});
     } catch (error) {
       dispatch({ type: "weatherError", error: error instanceof Error ? error.message : "Weather is unavailable." });
     }
@@ -362,7 +368,7 @@ export function HeatShiftWorkflow() {
   }
 
   const active = { describe: 0, verify: 1, conditions: 2, results: 3 }[state.step];
-  const shiftForecast = state.forecast.filter((hour) => hour.time >= state.plan.shiftStart && hour.time < state.plan.shiftEnd);
+  const shiftForecast = filterForecastForShift(state.forecast,state.plan.shiftStart,state.plan.shiftEnd);
   const peak = shiftForecast.length ? Math.max(...shiftForecast.map((hour) => hour.temperatureCelsius)) : null;
   const apparentPeak = shiftForecast.length ? Math.max(...shiftForecast.map((hour) => hour.apparentTemperatureCelsius)) : null;
 
@@ -410,8 +416,8 @@ function WorkflowSteps({ labels, active }: { labels: readonly string[]; active: 
 }
 
 function ShiftSetup({ state, t, dispatch, analyze, manual }: { state: WorkflowState; t: UiCopy; dispatch: WorkflowDispatch; analyze: () => void; manual: () => void }) {
-  const set = (field: keyof PlanForm, value: string) => dispatch({ type: "setPlanField", field, value });
-  const fields: Array<[keyof PlanForm, string, string]> = [
+  const set = (field: Exclude<keyof PlanForm,"location">, value: string) => dispatch({ type: "setPlanField", field, value });
+  const fields: Array<[Exclude<keyof PlanForm,"location">, string, string]> = [
     ["siteName", t.site, "text"], ["shiftDate", t.date, "date"], ["shiftStart", t.start, "time"],
     ["shiftEnd", t.end, "time"], ["crewSize", t.crew, "number"], ["nonAcclimatizedWorkers", t.newWorkers, "number"],
   ];
@@ -422,7 +428,7 @@ function ShiftSetup({ state, t, dispatch, analyze, manual }: { state: WorkflowSt
         <fieldset className="section-block">
           <legend>{t.details}</legend>
           <div className="shift-fields">
-            <label><span className="form-label">{t.city}</span><select id="plan-city" className="form-control" value={state.plan.city} onChange={(event) => set("city", event.target.value)} aria-invalid={Boolean(state.errors.city)}><option value="">{t.select}</option>{cities.map((city) => <option key={city} value={city}>{displayCity(city, state.language)}</option>)}</select><ErrorText state={state} name="city" /></label>
+            <LocationPicker language={state.language} value={state.plan.location} error={state.errors.location} onSelect={location=>dispatch({type:"selectLocation",location})} onClear={()=>dispatch({type:"clearLocation"})}/>
             {fields.map(([field, label, type]) => <label key={field}><span className="form-label">{label}</span><input id={`plan-${field}`} className="form-control" dir={type === "text" ? undefined : "ltr"} type={type} step={type === "time" ? 300 : undefined} min={type === "number" ? (field === "crewSize" ? 1 : 0) : undefined} value={state.plan[field]} onChange={(event) => set(field, event.target.value)} aria-invalid={Boolean(state.errors[field])} /><ErrorText state={state} name={field} /></label>)}
           </div>
         </fieldset>
@@ -444,7 +450,7 @@ function ShiftSetup({ state, t, dispatch, analyze, manual }: { state: WorkflowSt
         <h2>{t.currentSummary}</h2>
         <dl>
           <div><dt>{t.site}</dt><dd>{state.plan.siteName || "—"}</dd></div>
-          <div><dt>{t.city}</dt><dd>{state.plan.city ? displayCity(state.plan.city, state.language) : "—"}</dd></div>
+          <div><dt>{t.location}</dt><dd>{state.plan.location?.name ?? "—"}</dd></div>
           <div><dt>{t.date}</dt><dd dir="ltr">{state.plan.shiftDate || "—"}</dd></div>
           <div><dt>{t.start} / {t.end}</dt><dd dir="ltr">{state.plan.shiftStart || "—"} – {state.plan.shiftEnd || "—"}</dd></div>
           <div><dt>{t.crew}</dt><dd>{state.plan.crewSize || "—"}</dd></div>
@@ -458,7 +464,7 @@ function ShiftSetup({ state, t, dispatch, analyze, manual }: { state: WorkflowSt
 
 function TaskPlan({ state, t, dispatch, next }: { state: WorkflowState; t: UiCopy; dispatch: WorkflowDispatch; next: () => void }) {
   const notice = state.planSource === "ai" ? `${state.tasks.length} ${t.structured}` : state.planSource === "sample" ? t.sampleNotice : t.manualNotice;
-  const shiftFields: Array<[keyof PlanForm, string]> = [["siteName", t.site], ["city", t.location], ["shiftDate", t.date], ["shiftStart", t.start], ["shiftEnd", t.end], ["crewSize", t.crew], ["nonAcclimatizedWorkers", t.newWorkers]];
+  const shiftFields: Array<[keyof PlanForm, string]> = [["siteName", t.site], ["location", t.location], ["shiftDate", t.date], ["shiftStart", t.start], ["shiftEnd", t.end], ["crewSize", t.crew], ["nonAcclimatizedWorkers", t.newWorkers]];
   const shiftErrors = {...validatePlanDetails(state.plan), ...state.errors};
   const shiftIssues = shiftFields.filter(([field]) => Boolean(shiftErrors[field]));
   const editShift = () => {
@@ -522,7 +528,7 @@ function Suggestion({ label, action, onUse }: { label: string; action: string; o
 }
 
 function Conditions({ state, t, peak, apparentPeak, dispatch, generate }: { state: WorkflowState; t: UiCopy; peak: number | null; apparentPeak: number | null; dispatch: WorkflowDispatch; generate: () => void }) {
-  const shiftHours = state.forecast.filter((hour) => hour.time >= state.plan.shiftStart && hour.time < state.plan.shiftEnd);
+  const shiftHours = filterForecastForShift(state.forecast,state.plan.shiftStart,state.plan.shiftEnd);
   const retrieved = state.weatherMetadata ? new Date(state.weatherMetadata.retrievedAt).toLocaleString(state.language === "ar" ? "ar-SA" : "en-GB") : null;
   const category = peak === null ? "—" : displayTemperatureCategory(classifyForecastTemperature(peak).category, state.language);
   const options: Array<{ zone: TwlZone; label: string; cycle: string }> = [
@@ -539,7 +545,7 @@ function Conditions({ state, t, peak, apparentPeak, dispatch, generate }: { stat
         {state.weatherStatus === "loading" && <div className="weather-skeleton" role="status"><LoaderCircle aria-hidden="true" /><strong>{t.loadingWeather}</strong><div /><div /><div /><div /></div>}
         {state.weatherStatus === "error" && <div role="alert" className="weather-error"><AlertTriangle aria-hidden="true" /><div><strong>{t.unavailable}</strong><p>{displayError(state.weatherError ?? "Weather is unavailable.", state.language)}</p><p>{t.fallback}</p></div></div>}
         {state.weatherStatus === "success" && <>
-          <div className="forecast-header"><div><strong>{t.cityForecast}</strong>{state.weatherMetadata && <p>{displayCity(state.weatherMetadata.city, state.language)} · {t.forecastDate}: <span dir="ltr">{state.weatherMetadata.date}</span> · {t.retrieved}: <span dir="ltr">{retrieved}</span></p>}</div><dl><div><dt>{t.peak}</dt><dd dir="ltr">{peak === null ? "—" : `${peak.toFixed(1)}°C`}</dd></div><div><dt>{t.apparentPeak}</dt><dd dir="ltr">{apparentPeak === null ? "—" : `${apparentPeak.toFixed(1)}°C`}</dd></div><div><dt>{t.risk}</dt><dd>{category}</dd></div></dl></div>
+          <div className="forecast-header"><div><strong>{t.cityForecast}</strong>{state.weatherMetadata && <p>{state.weatherMetadata.locationName} · <span dir="ltr">{state.weatherMetadata.latitude.toFixed(4)}, {state.weatherMetadata.longitude.toFixed(4)}</span> · {state.weatherMetadata.timezone} · {t.forecastDate}: <span dir="ltr">{state.weatherMetadata.date}</span> · {t.retrieved}: <span dir="ltr">{retrieved}</span></p>}<p>{t.forecastMeasurement}</p><a href="https://open-meteo.com/" target="_blank" rel="noreferrer" className="source-link">{t.weatherAttribution}</a></div><dl><div><dt>{t.peak}</dt><dd dir="ltr">{peak === null ? "—" : `${peak.toFixed(1)}°C`}</dd></div><div><dt>{t.apparentPeak}</dt><dd dir="ltr">{apparentPeak === null ? "—" : `${apparentPeak.toFixed(1)}°C`}</dd></div><div><dt>{t.risk}</dt><dd>{category}</dd></div></dl></div>
           <div className="forecast-strip" aria-label={t.hourlyForecast} role="region" tabIndex={0}>
             <table><caption className="sr-only">{t.hourlyForecast}</caption><thead><tr><th>{state.language === "ar" ? "المقياس" : "Measure"}</th>{shiftHours.map((hour) => <th key={hour.time} className={isRestrictedHour(state.plan.shiftDate, hour.time) ? "restricted-hour" : ""} dir="ltr">{hour.time}</th>)}</tr></thead><tbody>
               <tr><th>{t.temperature}</th>{shiftHours.map((hour) => <td key={hour.time} className={isRestrictedHour(state.plan.shiftDate, hour.time) ? "restricted-hour" : ""} dir="ltr">{hour.temperatureCelsius.toFixed(1)}°</td>)}</tr>

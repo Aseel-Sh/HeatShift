@@ -17,6 +17,18 @@ export const saudiCitySchema = z.enum([
 ]);
 export type SaudiCity = z.infer<typeof saudiCitySchema>;
 
+export const siteLocationSchema = z.object({
+  id: nonEmptyStringSchema,
+  name: nonEmptyStringSchema,
+  admin1: nonEmptyStringSchema.optional(),
+  countryCode: z.literal("SA"),
+  latitude: z.number().min(16).max(33),
+  longitude: z.number().min(34).max(56),
+  timezone: nonEmptyStringSchema.max(64),
+  source: z.enum(["geocoding", "preset", "manual"]),
+});
+export type SiteLocation = z.infer<typeof siteLocationSchema>;
+
 export const workloadSchema = z.enum(["light", "heavy"]);
 export type Workload = z.infer<typeof workloadSchema>;
 
@@ -66,7 +78,7 @@ export type WorkTask = z.infer<typeof workTaskSchema>;
 export const shiftPlanSchema = z
   .object({
     siteName: nonEmptyStringSchema,
-    city: saudiCitySchema,
+    location: siteLocationSchema,
     shiftDate: z.iso.date(),
     shiftStart: timeSchema,
     shiftEnd: timeSchema,

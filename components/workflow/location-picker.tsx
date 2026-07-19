@@ -1,0 +1,23 @@
+"use client";
+
+import { useEffect,useId,useState } from "react";
+import { MapPin,Search,X } from "lucide-react";
+import { SAUDI_CITIES,SAUDI_LOCATION_PRESETS } from "@/data/cities";
+import type { SaudiCity,SiteLocation } from "@/lib/domain/types";
+import type { Language } from "@/lib/workflow/state";
+
+interface Props{language:Language;value:SiteLocation|null;error?:string;onSelect:(location:SiteLocation)=>void;onClear:()=>void}
+const presetIds:SaudiCity[]=["riyadh","jeddah","dammam","mecca","medina"];
+
+export function LocationPicker({language,value,error,onSelect,onClear}:Props){
+  const listId=useId(); const [query,setQuery]=useState(""); const [results,setResults]=useState<SiteLocation[]>([]); const [status,setStatus]=useState<"idle"|"loading"|"error">("idle"); const [active,setActive]=useState(-1); const ar=language==="ar";
+  useEffect(()=>{const trimmed=query.trim();if(trimmed.length<2)return;let current=true;const timeout=setTimeout(async()=>{setStatus("loading");try{const response=await fetch(`/api/locations?q=${encodeURIComponent(trimmed)}&language=${language}`);const payload=await response.json() as {data?:SiteLocation[]};if(!response.ok||!payload.data)throw new Error();if(current){setResults(payload.data);setStatus("idle");setActive(payload.data.length?0:-1);}}catch{if(current){setResults([]);setStatus("error");setActive(-1);}}},300);return()=>{current=false;clearTimeout(timeout);};},[query,language]);
+  const updateQuery=(next:string)=>{setQuery(next);setResults([]);setActive(-1);setStatus("idle");};
+  const choose=(location:SiteLocation)=>{onSelect(location);setQuery("");setResults([]);setActive(-1);};
+  const onKeyDown=(event:React.KeyboardEvent<HTMLInputElement>)=>{if(!results.length)return;if(event.key==="ArrowDown"){event.preventDefault();setActive(index=>(index+1)%results.length);}else if(event.key==="ArrowUp"){event.preventDefault();setActive(index=>(index-1+results.length)%results.length);}else if(event.key==="Enter"&&active>=0){event.preventDefault();choose(results[active]);}else if(event.key==="Escape"){setResults([]);setActive(-1);}};
+  return <div className="location-picker"><span className="form-label">{ar?"الموقع":"Location"}</span>
+    {value?<div className="selected-location" data-testid="selected-location"><MapPin aria-hidden="true"/><div><strong>{value.name}{value.admin1?` · ${value.admin1}`:""}</strong><small dir="ltr">{value.latitude.toFixed(4)}, {value.longitude.toFixed(4)} · {value.timezone}</small></div><button id="plan-location" type="button" onClick={onClear}><X aria-hidden="true"/>{ar?"تغيير الموقع":"Clear / change"}</button></div>:<div className="location-search"><Search aria-hidden="true"/><input id="plan-location" className="form-control" role="combobox" aria-autocomplete="list" aria-expanded={results.length>0} aria-controls={listId} aria-activedescendant={active>=0?`${listId}-${active}`:undefined} aria-invalid={Boolean(error)} aria-describedby={error?"location-error":undefined} aria-label={ar?"البحث عن موقع":"Search location"} placeholder={ar?"ابحث عن مدينة أو حي أو مكان":"Search city, neighborhood, or place"} value={query} onChange={event=>updateQuery(event.target.value)} onKeyDown={onKeyDown}/>{results.length>0&&<ul id={listId} role="listbox" className="location-results">{results.map((location,index)=><li id={`${listId}-${index}`} role="option" aria-selected={index===active} key={location.id} onMouseDown={event=>{event.preventDefault();choose(location);}}><strong>{location.name}</strong><span>{location.admin1??"Saudi Arabia"}</span><small dir="ltr">{location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</small></li>)}</ul>}</div>}
+    {status==="loading"&&<p role="status" className="location-status">{ar?"جارٍ البحث":"Searching locations…"}</p>}{status==="error"&&<p role="alert" className="field-error">{ar?"تعذر البحث. استخدم موقعًا سريعًا أو أعد المحاولة.":"Location search unavailable. Use a quick preset or try again."}</p>}{!value&&query.trim().length>=2&&status==="idle"&&results.length===0&&<p role="status" className="location-status">{ar?"لا توجد نتائج سعودية.":"No Saudi locations found."}</p>}{error&&<p id="location-error" role="alert" className="field-error">{ar?"اختر موقعًا سعوديًا.":error}</p>}
+    <div className="location-presets" aria-label={ar?"مواقع سريعة":"Quick location presets"}>{presetIds.map(id=><button type="button" key={id} onClick={()=>choose(structuredClone(SAUDI_LOCATION_PRESETS[id]))}>{ar?SAUDI_CITIES[id].nameAr:SAUDI_CITIES[id].nameEn}</button>)}</div><small className="location-attribution">{ar?"بحث المواقع من Open-Meteo":"Location search by Open-Meteo"}</small>
+  </div>;
+}

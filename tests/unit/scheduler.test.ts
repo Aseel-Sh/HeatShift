@@ -7,6 +7,7 @@ import type {
   SiteConditions,
   WorkTask,
 } from "../../lib/domain/types";
+import { SAUDI_LOCATION_PRESETS } from "../../data/cities";
 
 const defaultConditions: SiteConditions = {
   measurementMode: "onsite_twl",
@@ -29,7 +30,7 @@ function task(overrides: Partial<WorkTask> = {}): WorkTask {
 function plan(overrides: Partial<ShiftPlan> = {}): ShiftPlan {
   return {
     siteName: "North works yard",
-    city: "riyadh",
+    location: SAUDI_LOCATION_PRESETS.riyadh,
     shiftDate: "2026-07-18",
     shiftStart: "11:30",
     shiftEnd: "15:30",

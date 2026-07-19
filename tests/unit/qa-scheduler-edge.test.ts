@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { generateSchedule } from "../../lib/domain/scheduler";
 import type { ShiftPlan, SiteConditions, WorkTask } from "../../lib/domain/types";
+import { SAUDI_LOCATION_PRESETS } from "../../data/cities";
 
 const task = (id: string, overrides: Partial<WorkTask> = {}): WorkTask => ({ id, nameEn:id, nameAr:`مهمة ${id}`, durationMinutes:20, workload:"heavy", environment:"direct_sun", splittable:true, ...overrides });
-const plan = (overrides: Partial<ShiftPlan> = {}): ShiftPlan => ({ siteName:"QA",city:"riyadh",shiftDate:"2026-07-20",shiftStart:"06:30",shiftEnd:"16:30",crewSize:4,nonAcclimatizedWorkers:0,tasks:[task("a")],...overrides });
+const plan = (overrides: Partial<ShiftPlan> = {}): ShiftPlan => ({ siteName:"QA",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-07-20",shiftStart:"06:30",shiftEnd:"16:30",crewSize:4,nonAcclimatizedWorkers:0,tasks:[task("a")],...overrides });
 const conditions = (twlZone: SiteConditions["twlZone"]): SiteConditions => ({ measurementMode:twlZone==="none"?"forecast":"onsite_twl",twlZone });
 
 describe("scheduler adversarial edges", () => {

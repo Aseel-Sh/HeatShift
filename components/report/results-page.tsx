@@ -20,7 +20,6 @@ import { evaluateOriginalPlan, type OriginalPlanConflict } from "@/lib/domain/or
 import type { ScheduleBlock, ScheduleResult } from "@/lib/domain/scheduler-types";
 import type { ShiftPlan, SiteConditions, WorkTask } from "@/lib/domain/types";
 import {
-  displayCity,
   displayEnvironment,
   displayOriginalFinding,
   displayReason,
@@ -98,8 +97,8 @@ const copy = {
     sample: "Sample shift",
     extracted: "Imported plan",
     manual: "Manual plan",
-    forecastLive: "Live city-center forecast",
-    forecastSample: "Sample city-center forecast",
+    forecastLive: "Live coordinate forecast",
+    forecastSample: "Sample coordinate forecast",
     forecastNone: "No forecast data",
   },
   ar: {
@@ -154,8 +153,8 @@ const copy = {
     sample: "وردية نموذجية",
     extracted: "خطة مستوردة",
     manual: "خطة يدوية",
-    forecastLive: "توقع مباشر لمركز المدينة",
-    forecastSample: "توقع نموذجي لمركز المدينة",
+    forecastLive: "توقع مباشر للإحداثيات",
+    forecastSample: "توقع نموذجي للإحداثيات",
     forecastNone: "لا توجد بيانات توقعات",
   },
 } as const;
@@ -184,7 +183,7 @@ export function ResultsPage(props: ResultsPageProps) {
       <header className="result-status-header">
         <div><p>04 / {t.saferPlan}</p><h1>{t.title}</h1><span className="status-tag">{result.isPreliminary ? t.preliminary : t.twlEntered}</span></div>
         <dl>
-          <div><dt><MapPin aria-hidden="true" />{language === "ar" ? "الموقع" : "Site"}</dt><dd>{plan.siteName} · {displayCity(plan.city, language)}</dd></div>
+          <div><dt><MapPin aria-hidden="true" />{language === "ar" ? "الموقع" : "Site"}</dt><dd>{plan.siteName} · {plan.location.name}</dd></div>
           <div><dt><CalendarDays aria-hidden="true" />{language === "ar" ? "التاريخ" : "Date"}</dt><dd dir="ltr">{plan.shiftDate}</dd></div>
           <div><dt><Clock3 aria-hidden="true" />{language === "ar" ? "الوردية" : "Shift"}</dt><dd dir="ltr">{plan.shiftStart}–{plan.shiftEnd}</dd></div>
           <div><dt><Users aria-hidden="true" />{language === "ar" ? "الفريق" : "Crew"}</dt><dd>{plan.crewSize}</dd></div>

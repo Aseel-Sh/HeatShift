@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getDemoScenario } from "../../lib/demo/get-demo-scenario";
+import { SAUDI_LOCATION_PRESETS } from "../../data/cities";
 import { generateSchedule } from "../../lib/domain/scheduler";
 import { toWorkTasks } from "../../lib/workflow/draft-task";
 import {
@@ -50,7 +51,7 @@ describe("workflow state", () => {
       validatePlanDetails({
         ...initial.plan,
         siteName: "Site",
-        city: "riyadh",
+        location: SAUDI_LOCATION_PRESETS.riyadh,
         shiftDate: "2026-07-20",
         shiftStart: "16:00",
         shiftEnd: "06:00",
@@ -104,7 +105,7 @@ describe("workflow state", () => {
   it("preserves every unknown extracted safety field instead of defaulting it", () => {
     const state = workflowReducer(createInitialWorkflowState(), { type:"applyExtraction", extraction:{ tasks:[{nameEn:"Unknown",nameAr:"غير محدد"}], assumptions:[], missingInformation:[] } });
     expect(state.tasks[0]).toMatchObject({ durationMinutes:null, workload:"", environment:"", splittable:null });
-    const errors=validateVerifiedPlan({...state.plan,siteName:"Site",city:"riyadh",shiftDate:"2026-07-20",shiftStart:"06:30",shiftEnd:"16:30",crewSize:"8",nonAcclimatizedWorkers:"0"},state.tasks);
+    const errors=validateVerifiedPlan({...state.plan,siteName:"Site",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-07-20",shiftStart:"06:30",shiftEnd:"16:30",crewSize:"8",nonAcclimatizedWorkers:"0"},state.tasks);
     expect(errors).toMatchObject({[`task-${state.tasks[0].id}-workload`]:expect.any(String),[`task-${state.tasks[0].id}-environment`]:expect.any(String),[`task-${state.tasks[0].id}-splittable`]:expect.any(String)});
   });
 
@@ -119,20 +120,22 @@ describe("workflow state", () => {
 
   it("invalidates sample-derived forecast, conditions, and result after material edits", () => {
     const loaded=workflowReducer(createInitialWorkflowState(),{type:"loadDemo",demo:getDemoScenario()});
-    const edited=workflowReducer(loaded,{type:"setPlanField",field:"city",value:"jeddah"});
+    const edited=workflowReducer(loaded,{type:"selectLocation",location:SAUDI_LOCATION_PRESETS.jeddah});
     expect(edited).toMatchObject({isDemo:false,planSource:"manual",forecast:[],forecastSource:"none",weatherMetadata:null,weatherStatus:"idle",weatherError:null,scheduleResult:null,derivedDataInvalidated:true,conditions:{measurementMode:"forecast",twlZone:"none"}});
   });
 
-  it("clears stale live weather when city or date changes", () => {
+  it("clears stale live weather when location or date changes", () => {
     const initial = createInitialWorkflowState();
     const withWeather = workflowReducer(initial, {
       type: "weatherSuccess",
       forecast: getDemoScenario().forecastHours,
-      metadata: { city: "riyadh", date: "2026-07-20", retrievedAt: "2026-07-19T09:00:00Z" },
+      metadata: { locationName:"Riyadh",latitude:24.7136,longitude:46.6753,timezone:"Asia/Riyadh",date:"2026-07-20",retrievedAt:"2026-07-19T09:00:00Z" },
     });
     const changed = workflowReducer(withWeather, { type: "setPlanField", field: "shiftDate", value: "2026-07-21" });
 
     expect(changed).toMatchObject({ forecast: [], forecastSource: "none", weatherMetadata: null, weatherStatus: "idle" });
+    const relocated=workflowReducer(withWeather,{type:"selectLocation",location:SAUDI_LOCATION_PRESETS.jeddah});
+    expect(relocated).toMatchObject({forecast:[],forecastSource:"none",weatherMetadata:null,weatherStatus:"idle"});
   });
 
   it("never reuses task IDs after deletion", () => {
@@ -145,7 +148,7 @@ describe("workflow state", () => {
     state=workflowReducer(state,{type:"updateTask",id:newest.id,field:"nameEn",value:"Newest"});
     expect(state.tasks[0].nameEn).toBe(firstName);expect(state.tasks.at(-1)?.nameEn).toBe("Newest");
     state={...state,tasks:state.tasks.map(task=>({...task,nameEn:task.nameEn||task.id,nameAr:task.nameAr||task.id,durationMinutes:5,workload:"light",environment:"shaded_outdoor",splittable:false}))};
-    const result=generateSchedule({siteName:"Site",city:"riyadh",shiftDate:"2026-10-01",shiftStart:"06:30",shiftEnd:"07:00",crewSize:2,nonAcclimatizedWorkers:0,tasks:toWorkTasks(state.tasks)},{measurementMode:"forecast",twlZone:"none"},[]);
+    const result=generateSchedule({siteName:"Site",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-10-01",shiftStart:"06:30",shiftEnd:"07:00",crewSize:2,nonAcclimatizedWorkers:0,tasks:toWorkTasks(state.tasks)},{measurementMode:"forecast",twlZone:"none"},[]);
     expect(new Set(result.blocks.filter(block=>block.type==="work").map(block=>block.taskId))).toEqual(new Set(state.tasks.map(task=>task.id)));
   });
 });
