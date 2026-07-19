@@ -25,6 +25,10 @@
 | Fixed Open-Meteo city coordinates | Five supported city IDs resolve deterministically without maps, geocoding, or user-location tracking. |
 | No weather fallback values | Empty, unavailable, malformed, or timed-out forecasts return typed errors instead of invented data. |
 | Network-free demo service | The core scenario remains repeatable when provider access, credentials, or connectivity are unavailable. |
+| Typed local workflow reducer | Explicit transitions keep the first workflow testable without a global state dependency. |
+| Manual values take precedence | AI extraction fills gaps without silently replacing supervisor-entered plan details. |
+| Internal bilingual dictionary | English/Arabic labels and RTL behavior work without an external translation service. |
+| Weather failure remains preliminary | The UI offers forecast-only preliminary guidance or site-verified TWL entry without inventing weather. |
 
 ## Visual system
 
@@ -32,4 +36,4 @@ The shell uses a warm neutral background, deep navy text, and amber emphasis. Re
 
 ## Deferred decisions
 
-Provider contracts, localization strategy, and production hosting will be decided in later iterations. The current scheduler intentionally remains a bounded single-crew greedy strategy rather than a general optimization framework.
+Production hosting and the polished results/report presentation will be decided in later iterations. The current scheduler intentionally remains a bounded single-crew greedy strategy rather than a general optimization framework.

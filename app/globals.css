@@ -41,6 +41,16 @@ body {
   outline-offset: 3px;
 }
 
+@layer components {
+  .form-label { @apply mb-1.5 block text-sm font-bold text-[var(--navy-700)]; }
+  .form-control { @apply min-h-11 w-full rounded-lg border border-[var(--sand-300)] bg-white px-3 py-2 text-base text-[var(--navy-950)] shadow-sm; }
+  .form-control[aria-invalid="true"] { @apply border-red-600 ring-1 ring-red-600; }
+  .button-primary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 font-bold text-[var(--navy-950)] shadow-sm hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60; }
+  .button-secondary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--navy-950)] bg-white px-5 py-2.5 font-bold text-[var(--navy-950)] hover:bg-[var(--sand-100)]; }
+  .button-quiet { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-bold text-[var(--navy-700)] hover:bg-[var(--sand-100)]; }
+  .button-danger { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-red-800 hover:bg-red-50; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

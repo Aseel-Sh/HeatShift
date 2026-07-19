@@ -44,6 +44,37 @@ Deferred by that iteration's scope:
 
 Blockers: none.
 
+## Describe, verify, and conditions workflow iteration
+
+Status: complete on 2026-07-18.
+
+Implemented:
+
+- Typed local reducer for plan fields, editable tasks, language, extraction metadata, conditions, forecast status, and a basic schedule result
+- Responsive Describe form with inline validation, AI loading/errors, manual task creation, and deterministic demo loading
+- AI extraction through `/api/parse-plan` while preserving already-entered manual fields
+- Editable bilingual task cards with duration, workload, environment, split, add, and delete controls
+- Conditions screen with hourly forecast, peak/category summary, explicit failure path, and site-verified TWL selection
+- Local deterministic scheduler invocation with a deliberately basic completion summary
+- Functional English/Arabic dictionary toggle and document-level RTL direction
+- Accessible labels, associated errors, visible focus, and loading/disabled controls
+- Cross-platform Playwright server ownership and reliable teardown
+
+Validation:
+
+- `npm run lint` — passed
+- `npm run typecheck` — passed
+- `npm run test` — passed, 13 files and 84 tests
+- `npm run test:e2e` — passed, 7 tests
+- E2E integration calls are mocked; the demo test asserts that neither API is called
+
+Deferred by scope:
+
+- Polished schedule results and report screen
+- Persistence, authentication, uploads, worker-level assignment, or live monitoring
+
+Blockers: none. A Gemini key is optional for demo/manual use and required only for live AI extraction.
+
 ## Deterministic scheduler iteration
 
 Status: complete on 2026-07-18.

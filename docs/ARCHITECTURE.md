@@ -13,12 +13,13 @@ The intended future request flow is:
 5. A deterministic domain engine applies restrictions and work/rest rules.
 6. The UI presents a safer shift plan and a planning report with clear limitations.
 
-The application shell, boundary schemas, source metadata, deterministic heat-planning rules, pure five-minute scheduler, server integrations, and offline demo data now exist. The complete workflow UI remains deferred.
+The boundary schemas, source metadata, deterministic heat-planning rules, pure five-minute scheduler, server integrations, offline demo data, and Describe → Verify → Conditions workflow now exist. The polished results/report UI remains deferred.
 
 ## Directory boundaries
 
 - `app/`: layouts, pages, global styling, and future HTTP route handlers under `app/api/`
 - `components/layout/`: shared application framing
+- `components/workflow/`: the client-side Describe, Verify, and Conditions workflow
 - `components/plan/`: future plan description and verification UI
 - `components/conditions/`: future forecast and site-verified TWL UI
 - `components/schedule/`: future generated schedule UI
@@ -28,6 +29,7 @@ The application shell, boundary schemas, source metadata, deterministic heat-pla
 - `lib/weather/`: Open-Meteo adapter and pure response normalization
 - `lib/server/`: server environment validation and shared typed integration errors
 - `lib/demo/`: network-free deterministic demo service
+- `lib/workflow/`: typed local reducer and workflow validation
 - `lib/i18n/`: future English and Arabic message handling
 - `data/`: official source metadata, fixed city coordinates, and deterministic demo fixtures
 - `tests/unit/`: fast deterministic tests
@@ -64,3 +66,7 @@ The scheduler uses the existing rule functions rather than duplicating policy th
 ## Server integration API
 
 `POST /api/parse-plan` and `GET /api/weather` are thin HTTP adapters. They validate request boundaries, invoke server-only services, and map internal failures to typed responses without stack traces. Gemini output and Open-Meteo payloads are both locally validated before use. Integration setup and failure behavior are documented in `docs/INTEGRATIONS.md`.
+
+## Client workflow
+
+One typed React reducer owns plan fields, verified tasks, extraction notes, conditions, forecast status, language, and the basic result invocation. Manual values already entered by the supervisor take precedence over overlapping extracted values. Demo loading bypasses both APIs, and only the local deterministic scheduler is called by Generate.
