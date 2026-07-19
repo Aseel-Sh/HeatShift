@@ -388,6 +388,7 @@ export function HeatShiftWorkflow() {
               plan={buildPlan()}
               conditions={state.conditions}
               result={state.scheduleResult}
+              forecast={state.forecast}
               planSource={state.planSource}
               forecastSource={state.forecastSource}
               onEditPlan={() => dispatch({ type: "setStep", step: "verify" })}

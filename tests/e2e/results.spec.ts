@@ -16,9 +16,33 @@ test("completes the demo scenario through results", async ({ page }) => {
   await expect(page.getByTestId("shift-board").getByText("Requested plan", { exact: true })).toBeVisible();
   await expect(page.getByTestId("shift-board").getByText("Selected safer schedule", { exact: true })).toBeVisible();
   await expect(page.getByText("Selected from 6 deterministic candidate schedules.", { exact:false }).first()).toBeVisible();
-  await expect(page.locator(".restriction-band")).toHaveCount(2);
-  await expect(page.locator(".restriction-band").first()).toBeVisible();
+  await expect(page.locator(".restriction-top-label")).toHaveCount(1);
+  expect(await page.locator(".restriction-band").count()).toBeGreaterThan(1);
   await expect(page.locator('[data-block-type="restriction"]')).toHaveCount(0);
+});
+
+test("requested task selection links every generated interval and uses human durations", async ({ page }) => {
+  await openDemoResults(page);
+  await page.locator('[data-requested-id="demo-trenching"]').click();
+  await expect(page.getByText("Planned times", { exact: true })).toBeVisible();
+  await expect(page.getByText("06:30–06:50, 06:50–07:30, 07:30–07:50, 07:50–08:30, 08:30–08:50, 08:50–09:30", { exact: true })).toBeVisible();
+  await expect(page.locator('.scheduled-block.linked[data-task-id="demo-trenching"]')).toHaveCount(6);
+  await expect(page.getByText("1 hr", { exact: true })).toBeVisible();
+});
+
+test("timeline scales, heat ribbon, and page containment remain usable", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openDemoResults(page);
+  await expect(page.getByRole("button", { name: "1 hour" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("heat-ribbon")).toHaveAttribute("aria-label", /30.5°C.*Lower \/ caution.*46.7°C.*High risk/);
+  await page.getByRole("button", { name: "30 minutes" }).click();
+  await expect(page.getByRole("button", { name: "30 minutes" })).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await openDemoResults(page);
+  await expect(page.getByRole("button", { name: "Fit shift" })).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
 test("schedule details translate internal reason codes into operator language", async ({ page }) => {

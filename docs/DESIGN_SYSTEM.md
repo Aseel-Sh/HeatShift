@@ -54,6 +54,28 @@ The requested plan and safer shift share one chronological, left-to-right ruler 
 
 Selecting a requested or generated block reveals its original time, planned time, workload, environment, translated rule explanation, planning consequence, and source where applicable. A complete text alternative follows the visual board for screen-reader and narrow-screen use.
 
+### Scale and containment
+
+- Desktop results default to the **1 hour** detail scale at 140 pixels per hour.
+- The **30 minutes** scale uses 260 pixels per hour for close inspection.
+- **Fit shift** keeps the full shift inside the timeline region and is the mobile default.
+- Detailed scales scroll horizontally inside the timeline region. The document itself must never gain horizontal overflow.
+- Chronology remains left-to-right in Arabic; row labels retain Arabic right-to-left text.
+
+### Requested and selected schedules
+
+Every genuinely timed requested activity receives its own row. The fixed label column carries the activity name, type, human-readable duration, requested interval, timing preference, and conflict text. Activities without explicit requested times appear in a separate compact list and are never assigned invented times.
+
+The selected schedule uses one chronological crew lane. Work, recovery, break, meal, and idle periods have independent border patterns and text labels. Block width remains proportional to elapsed time. Narrow blocks use the `W`, `R`, `B`, `M`, or `I` abbreviation while their exact interval and full name remain available through the accessible name, title, details panel, and timeline text alternative.
+
+Selecting a requested activity highlights every associated generated interval, including task-linked recovery. The details panel lists all planned intervals and explicitly reports remaining unscheduled minutes when applicable.
+
+### Heat and restriction overlays
+
+The temperature ribbon shares the timeline ruler and uses four restrained categories: lower/caution, intermediate, high, and high risk. Every period includes a numeric temperature, category text, apparent-temperature detail, and a screen-reader description. Color is supplementary.
+
+The direct-sun restriction is a low-opacity aligned hatch with one label above the ruler. The hatch remains visible in monochrome print without obscuring activity text.
+
 ## English and Arabic handling
 
 - The document `lang` and `dir` attributes update with the language control.

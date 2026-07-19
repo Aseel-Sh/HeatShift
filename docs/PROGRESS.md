@@ -1,5 +1,29 @@
 # Progress
 
+## Requested-versus-safer timeline repair
+
+Status: implemented on 2026-07-19; final verification recorded below.
+
+- Added Fit shift, 1 hour, and 30 minute timeline scales with internal horizontal scrolling and page-overflow protection.
+- Replaced stacked requested blocks with one activity row per requested interval and a genuinely-untimed list.
+- Added one chronological crew lane for work, recovery, break, meal, idle, and separately listed unscheduled work.
+- Linked requested activities to every generated task and recovery interval; the details panel now lists all planned intervals.
+- Replaced minute-only report values with human-readable durations.
+- Added a forecast heat ribbon aligned to the shift ruler with numeric, categorical, hover, and screen-reader information.
+- Reduced restriction-band prominence and retained a light monochrome print hatch with one visible label.
+- Expanded block details with timing, must-complete status, operational notes, specific movement explanations, sources, and optimization consequences.
+- Added optimization summary values without introducing a safety score.
+- Added timeline display-model unit coverage, responsive/browser assertions, and repeatable visual-QA captures.
+
+Final verification:
+
+- `npm run lint` — passed
+- `npm run typecheck` — passed
+- `npm run test` — 187/187 passed across 25 files
+- `npm run test:e2e` — 44/44 passed
+- `npm run build` — passed
+- In-app browser audit — no document-level horizontal overflow and no console errors during the sample workflow
+
 ## Foundation iteration
 
 Status: complete.
