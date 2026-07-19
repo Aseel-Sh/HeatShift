@@ -2,7 +2,7 @@
 
 ## Purpose and boundaries
 
-The HeatShift scheduler converts one validated `ShiftPlan`, one `SiteConditions` value, and zero or more `ForecastHour` records into a deterministic `ScheduleResult`. It is a pure TypeScript planning component: it performs no network calls, persistence, AI inference, worker assignment, or medical calculation.
+The HeatShift scheduler converts one validated `ShiftPlan`, one `SiteConditions` value, and zero or more `ForecastHour` records into a deterministic `ScheduleResult`. It evaluates a bounded set of candidate schedules and returns a selected safer schedule. It is a pure TypeScript planning component: it performs no network calls, persistence, AI inference, worker assignment, or medical calculation.
 
 Callers must parse form or API input with the existing Zod schemas before calling `generateSchedule`.
 
@@ -12,9 +12,9 @@ Five minutes is the smallest interval needed by the current rules: all required 
 
 Shift times and task durations must align to five minutes. Overnight and zero-length shifts are rejected for this MVP rather than being interpreted across dates.
 
-## Priority order
+## Candidate construction heuristics
 
-Tasks are considered in this fixed order, retaining input order when two tasks have the same priority:
+The original environment/workload order remains one construction heuristic, retaining input order for ties:
 
 1. Direct-sun heavy
 2. Direct-sun light
@@ -23,36 +23,40 @@ Tasks are considered in this fixed order, retaining input order when two tasks h
 5. Indoor heavy
 6. Indoor light
 
-## Greedy strategy
+It is not the final selection score. Must-schedule capacity, requested timing, movement, splitting, original order, forecast exposure, indoor-midday use, completion time, and idle gaps are evaluated across six deterministic strategies as documented in `docs/OPTIMIZATION.md`.
+
+## Bounded candidate strategy
 
 The scheduler follows these deterministic steps:
 
 1. Create every five-minute slot from shift start, inclusive, to shift end, exclusive.
 2. When the full date is within the configured 2026 restriction period and the plan contains direct-sun work, create a 12:00–15:00 direct-sun restriction mask clipped to the shift. This mask does not consume crew capacity, so conditioned-indoor and shaded work may still use those slots. Other years are not assumed to use the 2026 rule; ordinary scheduling remains available and the result is marked preliminary with regulatory guidance unavailable.
-3. Sort tasks by the fixed priority order.
+3. Construct candidates using must-schedule-first, requested-order, coolest-direct-sun, minimum-splitting, minimum-movement, and indoor-midday strategies.
 4. For direct-sun work with forecast records, rank valid candidates by lower forecast temperature and then earlier time.
 5. For conditioned-indoor work during an active seasonal restriction, rank midday candidates before other times. Conditioned-indoor work does not receive outdoor TWL recovery cycles.
 6. Keep non-splittable work contiguous. Splittable work may occupy multiple blocks.
-7. Convert TWL cycle guidance into contiguous work/rest packages. Rest consumes the one crew's capacity. A final rest is omitted only when no further outdoor work follows.
+7. Carry TWL exposure and recovery chronologically across every outdoor work block. Rest consumes the one crew's capacity. A final rest is omitted only when no further outdoor work follows.
 8. For splittable cyclic work, place the largest valid package, subtract its work minutes, search again across all remaining valid windows, and repeat deterministically. If only partial capacity remains, schedule only genuine work capacity and report the exact remaining minutes. A non-splittable task is either scheduled in full or left unscheduled.
-9. Merge adjacent slots of the same task and type into blocks, calculate metrics, and emit deterministic conflicts for remaining work.
+9. Preserve breaks and meals as crew activities. Only explicitly eligible activities may receive recovery credit, and credited time is not duplicated as a separate rest block.
+10. Apply bounded move, swap, merge, recovery-alignment, and safe-gap filling behavior; validate hard constraints; score valid candidates; and select the lowest ordered score.
+11. Merge adjacent slots of the same activity and type into blocks, calculate metrics, and emit deterministic conflicts for remaining activities.
 
 Every work and rest block includes reason codes. When no supervisor-entered TWL zone is supplied, the result is marked preliminary and no precise cycle is generated.
 
 ## Determinism
 
-The engine uses fixed task priorities, stable input-order tie breaking, numeric temperature comparisons, chronological tie breaking, and deterministic block IDs. It uses no randomness, external optimizer, mutable global state, clock, network, or AI. Identical inputs therefore produce deeply equal outputs.
+The engine uses fixed candidate strategies, stable input-order tie breaking, numeric temperature comparisons, chronological validation, an ordered score vector, and deterministic block IDs. It uses no randomness, external optimizer, mutable global state, clock, network, or AI. Identical inputs therefore produce deeply equal outputs.
 
 ## Known limitations
 
 - One crew only; crew work and rest cannot overlap.
 - Same-day shifts only; overnight shifts are rejected.
 - Five-minute input granularity is required.
-- The greedy strategy does not claim a globally optimal arrangement.
+- The bounded multi-candidate search does not claim a globally optimal arrangement.
 - Forecast records influence ordering but are not TWL measurements and are filtered to the selected shift for displayed maxima and risk categories.
 - The scheduler does not assign individual workers or model parallel crews.
 - The scheduler does not fetch forecasts or verify field conditions.
-- The results UI presents scheduler output but does not turn the greedy strategy into a general optimization engine.
+- The results UI says “Selected safer schedule” and reports the candidate count; it does not turn bounded selection into a claim of global optimality.
 
 ## Safety and regulatory language
 

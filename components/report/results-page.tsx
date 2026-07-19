@@ -18,7 +18,7 @@ import {
 import { OFFICIAL_SOURCES, SOURCE_IDS } from "@/data/official-sources";
 import { evaluateOriginalPlan, type OriginalPlanConflict } from "@/lib/domain/original-plan";
 import type { ScheduleBlock, ScheduleResult } from "@/lib/domain/scheduler-types";
-import type { ShiftPlan, SiteConditions, WorkTask } from "@/lib/domain/types";
+import { isWorkActivity,type ScheduleActivity, type ShiftPlan, type SiteConditions } from "@/lib/domain/types";
 import {
   displayEnvironment,
   displayOriginalFinding,
@@ -46,7 +46,7 @@ type Selection = { kind: "requested"; id: string } | { kind: "scheduled"; id: st
 
 const copy = {
   en: {
-    title: "Safer shift generated",
+    title: "Selected safer schedule",
     preliminary: "Preliminary",
     twlEntered: "Supervisor-entered TWL",
     disclaimer: "Planning aid only. This report does not guarantee safety or regulatory compliance. Verify conditions through qualified on-site procedures.",
@@ -59,7 +59,7 @@ const copy = {
     capacity: "This shift cannot accommodate all planned work under the selected conditions.",
     workers: "Affected non-acclimatized workers need reassignment or supervisor intervention.",
     requestedPlan: "Requested plan",
-    saferPlan: "Safer shift",
+    saferPlan: "Selected safer schedule",
     restriction: "12:00–15:00 direct-sun restriction",
     notSpecified: "Time not specified",
     selectBlock: "Select a block for movement and rule details.",
@@ -89,6 +89,8 @@ const copy = {
     crew: "crew",
     work: "Work",
     rest: "Recovery",
+    breakActivity:"Break",
+    meal:"Meal",
     critical: "Critical",
     warning: "Warning",
     info: "Information",
@@ -102,7 +104,7 @@ const copy = {
     forecastNone: "No forecast data",
   },
   ar: {
-    title: "تم إنشاء وردية أكثر أمانًا",
+    title: "الجدول المختار لوردية أكثر أمانًا",
     preliminary: "أولية",
     twlEntered: "نطاق TWL أدخله المشرف",
     disclaimer: "أداة مساعدة للتخطيط فقط. لا يضمن هذا التقرير السلامة أو الامتثال التنظيمي. تحقق من الظروف من خلال إجراءات ميدانية مؤهلة.",
@@ -115,7 +117,7 @@ const copy = {
     capacity: "لا يمكن لهذه الوردية استيعاب كل العمل المخطط في ظل الظروف المحددة.",
     workers: "يحتاج العمال غير المتأقلمين المتأثرون إلى إعادة توزيع أو تدخل المشرف.",
     requestedPlan: "الخطة المطلوبة",
-    saferPlan: "الوردية الأكثر أمانًا",
+    saferPlan: "الجدول المختار لوردية أكثر أمانًا",
     restriction: "تقييد الشمس المباشرة 12:00–15:00",
     notSpecified: "الوقت غير محدد",
     selectBlock: "اختر فترة لعرض تفاصيل الحركة والقاعدة.",
@@ -145,6 +147,8 @@ const copy = {
     crew: "الفريق",
     work: "عمل",
     rest: "تعافٍ",
+    breakActivity:"استراحة",
+    meal:"وجبة",
     critical: "حرج",
     warning: "تحذير",
     info: "معلومة",
@@ -189,6 +193,7 @@ export function ResultsPage(props: ResultsPageProps) {
           <div><dt><Users aria-hidden="true" />{language === "ar" ? "الفريق" : "Crew"}</dt><dd>{plan.crewSize}</dd></div>
         </dl>
         <p className="result-disclaimer">{t.disclaimer}</p>
+        <p className="result-selection">{result.explanationSummary}</p>
         <p className="result-provenance">{props.planSource === "sample" ? t.sample : props.planSource === "ai" ? t.extracted : t.manual} · {props.forecastSource === "live" ? t.forecastLive : props.forecastSource === "sample" ? t.forecastSample : t.forecastNone} · {displayTwlZone(conditions.twlZone, language)}</p>
       </header>
 
@@ -237,6 +242,7 @@ function ShiftBoard({ plan, result, originalConflicts, language, selection, onSe
   if (ticks.at(-1) !== end) ticks.push(end);
   const styleFor = (from: string, to: string) => ({ left: `${Math.max(0, ((toMinutes(from) - start) / duration) * 100)}%`, width: `${Math.max(1.1, ((toMinutes(to) - Math.max(start, toMinutes(from))) / duration) * 100)}%` });
   const conflictTaskIds = new Set(originalConflicts.filter((finding) => finding.severity !== "info").flatMap((finding) => finding.taskIds));
+  const blockTypeLabel=(type:ScheduleBlock["type"])=>type==="rest"?t.rest:type==="break"?t.breakActivity:type==="meal"?t.meal:t.work;
   return (
     <div className="shift-board-scroll" role="region" aria-label={`${t.requestedPlan} / ${t.saferPlan}`} tabIndex={0}>
       <div className="shift-board" dir="ltr" data-testid="shift-board">
@@ -252,7 +258,7 @@ function ShiftBoard({ plan, result, originalConflicts, language, selection, onSe
         <div className="timeline-plot safer-plot">
           <GridLines ticks={ticks} start={start} duration={duration} />
           {restriction && <RestrictionBand block={restriction} style={styleFor(restriction.start, restriction.end)} />}
-          {result.blocks.filter((block) => block.type !== "restriction").map((block) => <button key={block.id} data-block-type={block.type} data-start={block.start} data-end={block.end} data-task-id={block.taskId} className={`scheduled-block ${block.type} ${block.environment === "conditioned_indoor" ? "indoor" : ""} ${selection?.kind === "scheduled" && selection.id === block.id ? "selected" : ""}`} style={styleFor(block.start, block.end)} onClick={() => onSelect({ kind: "scheduled", id: block.id })} aria-label={`${block.type === "rest" ? t.rest : t.work}: ${language === "ar" ? block.labelAr : block.labelEn}, ${block.start}–${block.end}`}><span>{block.type === "rest" ? t.rest : language === "ar" ? block.labelAr : block.labelEn}</span><time>{block.start}–{block.end}</time></button>)}
+          {result.blocks.filter((block) => block.type !== "restriction").map((block) => <button key={block.id} data-block-type={block.type} data-start={block.start} data-end={block.end} data-task-id={block.taskId} className={`scheduled-block ${block.type} ${block.environment === "conditioned_indoor" ? "indoor" : ""} ${selection?.kind === "scheduled" && selection.id === block.id ? "selected" : ""}`} style={styleFor(block.start, block.end)} onClick={() => onSelect({ kind: "scheduled", id: block.id })} aria-label={`${blockTypeLabel(block.type)}: ${language === "ar" ? block.labelAr : block.labelEn}, ${block.start}–${block.end}`}><span>{block.type === "rest" ? t.rest : language === "ar" ? block.labelAr : block.labelEn}</span><time>{block.start}–{block.end}</time></button>)}
         </div>
         {(untimedTasks.length > 0 || result.unscheduled.length > 0) && <><div className="lane-label capacity-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.notSpecified} / {t.unscheduled}</strong></div><div className="capacity-lane">{untimedTasks.map((task) => <span key={task.id}>{language === "ar" ? task.nameAr : task.nameEn} · {t.notSpecified}</span>)}{result.unscheduled.map((task) => <span key={`unscheduled-${task.taskId}`} className="unscheduled-item">{task.taskName} · {task.unscheduledMinutes} {t.minutes}</span>)}</div></>}
       </div>
@@ -268,7 +274,7 @@ function RestrictionBand({ block, style }: { block: ScheduleBlock; style: React.
   return <div className="restriction-band" style={style} aria-hidden="true"><span>{block.start}–{block.end}</span></div>;
 }
 
-function BlockDetails({ language, task, block, result }: { language: Language; task?: WorkTask; block?: ScheduleBlock; result: ScheduleResult }) {
+function BlockDetails({ language, task, block, result }: { language: Language; task?: ScheduleActivity; block?: ScheduleBlock; result: ScheduleResult }) {
   const t = copy[language];
   const original = task?.requestedStart && task.requestedEnd ? `${task.requestedStart}–${task.requestedEnd}` : t.notSpecified;
   const planned = block ? `${block.start}–${block.end}` : "—";
@@ -276,7 +282,7 @@ function BlockDetails({ language, task, block, result }: { language: Language; t
   const sourceIds = new Set<string>();
   if (block?.reasonCodes.some((code) => code.includes("MIDDAY"))) sourceIds.add(SOURCE_IDS.middayRestriction);
   if (block?.reasonCodes.some((code) => code.startsWith("TWL_"))) sourceIds.add(SOURCE_IDS.twlGuidance);
-  return <aside className="block-drawer" aria-live="polite"><div><p className="eyebrow">{t.blockDetails}</p><h3>{task ? (language === "ar" ? task.nameAr : task.nameEn) : block ? (language === "ar" ? block.labelAr : block.labelEn) : ""}</h3></div><dl><div><dt>{t.originalTime}</dt><dd dir="ltr">{original}</dd></div><div><dt>{t.plannedTime}</dt><dd dir="ltr">{planned}</dd></div>{task && <><div><dt>{t.workload}</dt><dd>{displayWorkload(task.workload, language)}</dd></div><div><dt>{t.environment}</dt><dd>{displayEnvironment(task.environment, language)}</dd></div></>}</dl>{block && <div className="drawer-rules"><strong>{t.ruleApplied}</strong><ul>{block.reasonCodes.map((code) => <li key={code}>{displayReason(code, language)}</li>)}</ul></div>}<p><strong>{t.movedBecause}:</strong> {moved ? t.moved : t.noMove}</p>{sourceIds.size > 0 && <div><strong>{t.source}</strong>{[...sourceIds].map((sourceId) => <SourceReference key={sourceId} sourceId={sourceId} language={language} />)}</div>}</aside>;
+  return <aside className="block-drawer" aria-live="polite"><div><p className="eyebrow">{t.blockDetails}</p><h3>{task ? (language === "ar" ? task.nameAr : task.nameEn) : block ? (language === "ar" ? block.labelAr : block.labelEn) : ""}</h3></div><dl><div><dt>{t.originalTime}</dt><dd dir="ltr">{original}</dd></div><div><dt>{t.plannedTime}</dt><dd dir="ltr">{planned}</dd></div>{task && isWorkActivity(task) && <><div><dt>{t.workload}</dt><dd>{displayWorkload(task.workload, language)}</dd></div><div><dt>{t.environment}</dt><dd>{displayEnvironment(task.environment, language)}</dd></div></>}</dl>{block && <div className="drawer-rules"><strong>{t.ruleApplied}</strong><ul>{block.reasonCodes.map((code) => <li key={code}>{displayReason(code, language)}</li>)}</ul></div>}<p><strong>{t.movedBecause}:</strong> {moved ? t.moved : t.noMove}</p>{sourceIds.size > 0 && <div><strong>{t.source}</strong>{[...sourceIds].map((sourceId) => <SourceReference key={sourceId} sourceId={sourceId} language={language} />)}</div>}</aside>;
 }
 
 function SummaryItem({ label, value, critical = false }: { label: string; value: string; critical?: boolean }) {

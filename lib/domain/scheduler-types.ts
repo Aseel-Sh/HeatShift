@@ -12,7 +12,7 @@ const reasonCodesSchema = z.array(z.string().min(1)).min(1);
 export const scheduleBlockSchema = z.object({
   id: z.string().min(1),
   taskId: z.string().min(1).optional(),
-  type: z.enum(["work", "rest", "restriction"]),
+  type: z.enum(["work", "rest", "break", "meal", "restriction"]),
   start: timeSchema,
   end: timeSchema,
   labelEn: z.string().min(1),
@@ -70,6 +70,19 @@ export const scheduleMetricsSchema = z.object({
 });
 export type ScheduleMetrics = z.infer<typeof scheduleMetricsSchema>;
 
+export const optimizationSummarySchema=z.object({
+  candidatesEvaluated:z.number().int().positive(),
+  selectedStrategy:z.string().min(1),
+  hardConstraintViolations:z.number().int().nonnegative(),
+  unscheduledMustScheduleMinutes:z.number().int().nonnegative(),
+  unscheduledOtherMinutes:z.number().int().nonnegative(),
+  movementMinutes:z.number().int().nonnegative(),
+  splitCount:z.number().int().nonnegative(),
+  orderInversions:z.number().int().nonnegative(),
+  heatExposurePenalty:z.number().nonnegative(),
+});
+export type OptimizationSummary=z.infer<typeof optimizationSummarySchema>;
+
 export const scheduleResultSchema = z.object({
   blocks: z.array(scheduleBlockSchema),
   conflicts: z.array(conflictSchema),
@@ -78,5 +91,6 @@ export const scheduleResultSchema = z.object({
   explanationSummary: z.string().min(1),
   isPreliminary: z.boolean(),
   regulatoryGuidanceAvailable: z.boolean(),
+  optimizationSummary:optimizationSummarySchema,
 });
 export type ScheduleResult = z.infer<typeof scheduleResultSchema>;

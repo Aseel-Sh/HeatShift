@@ -1,7 +1,7 @@
 import { SOURCE_IDS } from "../../data/official-sources";
 import { evaluateMiddayRestriction } from "./midday-restriction";
 import { getWorkRestGuidance } from "./twl-guidance";
-import type { ConflictSeverity, ShiftPlan, SiteConditions, WorkTask } from "./types";
+import { isWorkActivity,type ConflictSeverity, type ScheduleActivity, type ShiftPlan, type SiteConditions } from "./types";
 
 export interface OriginalPlanConflict {
   id: string;
@@ -19,7 +19,7 @@ const STRUCTURE_SOURCE = "heatshift-original-plan-evaluator";
 const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
 const overlap = (aStart: number, aEnd: number, bStart: number, bEnd: number) => aStart < bEnd && bStart < aEnd;
 
-function finding(task: WorkTask, code: string, severity: ConflictSeverity, titleEn: string, descriptionEn: string, sourceId = STRUCTURE_SOURCE): OriginalPlanConflict {
+function finding(task: ScheduleActivity, code: string, severity: ConflictSeverity, titleEn: string, descriptionEn: string, sourceId = STRUCTURE_SOURCE): OriginalPlanConflict {
   return { id: `${code.toLowerCase()}-${task.id}`, severity, code, titleEn, titleAr: titleEn, descriptionEn, descriptionAr: descriptionEn, taskIds: [task.id], sourceId };
 }
 
@@ -37,7 +37,7 @@ export function evaluateOriginalPlan(plan: ShiftPlan, conditions: SiteConditions
     });
   }
 
-  const timed: Array<{ task: WorkTask; start: number; end: number }> = [];
+  const timed: Array<{ task: ScheduleActivity; start: number; end: number }> = [];
   for (const task of plan.tasks) {
     if (!task.requestedStart || !task.requestedEnd) {
       findings.push(finding(task, "ORIGINAL_TIME_MISSING", "info", "Original time not stated", "No complete requested time was provided, so time-specific original-plan checks are preliminary."));
@@ -52,14 +52,14 @@ export function evaluateOriginalPlan(plan: ShiftPlan, conditions: SiteConditions
     if (end - start < task.durationMinutes) {
       findings.push(finding(task, "ORIGINAL_INTERVAL_TOO_SHORT", "critical", "Requested interval is too short", "The requested interval is shorter than the task duration."));
     }
-    if (
+    if (isWorkActivity(task) &&
       task.environment === "direct_sun" &&
       evaluateMiddayRestriction({ date: plan.shiftDate, time: "12:00", environment: task.environment }).seasonActive &&
       overlap(start, end, 12 * 60, 15 * 60)
     ) {
       findings.push(finding(task, "ORIGINAL_MIDDAY_DIRECT_SUN", "critical", "Direct-sun work requested during the midday restriction", "The original requested interval overlaps 12:00–15:00 during the active season.", SOURCE_IDS.middayRestriction));
     }
-    if (conditions.twlZone !== "none" && task.environment !== "conditioned_indoor") {
+    if (isWorkActivity(task) && conditions.twlZone !== "none" && task.environment !== "conditioned_indoor") {
       const guidance = getWorkRestGuidance(conditions.twlZone, task.workload);
       if (guidance.kind === "cycle") {
         const rests = Math.max(0, Math.ceil(task.durationMinutes / guidance.workMinutes) - 1);

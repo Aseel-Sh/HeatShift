@@ -72,8 +72,33 @@ export const workTaskSchema = z.object({
   timingPreference: timingPreferenceSchema.optional(),
   requestedStart: timeSchema.optional(),
   requestedEnd: timeSchema.optional(),
+  predecessorTaskIds: z.array(nonEmptyStringSchema).optional(),
 });
 export type WorkTask = z.infer<typeof workTaskSchema>;
+
+export const nonWorkActivitySchema = z.object({
+  id: nonEmptyStringSchema,
+  nameEn: nonEmptyStringSchema,
+  nameAr: nonEmptyStringSchema,
+  durationMinutes: z.number().int().positive().refine((minutes)=>minutes%5===0,{
+    message:"Duration must be a multiple of five minutes",
+  }),
+  activityKind: z.enum(["break","meal"]),
+  recoveryEligibility: recoveryEligibilitySchema.default("unknown"),
+  timingPreference: timingPreferenceSchema.optional(),
+  requestedStart: timeSchema.optional(),
+  requestedEnd: timeSchema.optional(),
+  mustSchedule: z.boolean().optional(),
+  operationalNotes: z.array(nonEmptyStringSchema).optional(),
+  predecessorTaskIds: z.array(nonEmptyStringSchema).optional(),
+});
+export type NonWorkActivity = z.infer<typeof nonWorkActivitySchema>;
+
+export const scheduleActivitySchema = z.union([workTaskSchema,nonWorkActivitySchema]);
+export type ScheduleActivity = z.infer<typeof scheduleActivitySchema>;
+export function isWorkActivity(activity:ScheduleActivity):activity is WorkTask{
+  return activity.activityKind!=="break"&&activity.activityKind!=="meal";
+}
 
 export const shiftPlanSchema = z
   .object({
@@ -84,7 +109,7 @@ export const shiftPlanSchema = z
     shiftEnd: timeSchema,
     crewSize: z.number().int().positive(),
     nonAcclimatizedWorkers: z.number().int().nonnegative(),
-    tasks: z.array(workTaskSchema),
+    tasks: z.array(scheduleActivitySchema),
   })
   .refine((plan) => plan.shiftStart < plan.shiftEnd, {
     message: "Overnight and zero-length shifts are not supported in the MVP",

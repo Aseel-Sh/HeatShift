@@ -39,7 +39,8 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - Supervisor-entered TWL work/rest and hydration planning guidance
 - High-TWL non-acclimatized-worker conflicts
 - Intermediate/high-TWL outdoor lone-work warnings
-- Deterministic five-minute, single-crew schedule generation
+- Deterministic five-minute, single-crew bounded candidate generation and selection
+- Work, break, and meal occupancy with confirmed recovery eligibility, fixed/preferred/flexible timing, must-schedule priority, and finish-to-start dependencies
 - Priority-based placement, forecast temperature preference, conditioned-indoor midday preference, and contiguous non-splittable tasks
 - TWL work/rest packages, exact unscheduled capacity, schedule metrics, and preliminary results
 - Server-only OpenRouter structured plan extraction behind a provider-neutral interface with local schema validation

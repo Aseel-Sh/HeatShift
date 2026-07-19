@@ -30,7 +30,7 @@ import {
   displayTemperatureCategory,
   displayWorkload,
 } from "@/lib/i18n/operations-display";
-import { toWorkTasks, type DraftWorkTask } from "@/lib/workflow/draft-task";
+import { toScheduleActivities, type DraftWorkTask } from "@/lib/workflow/draft-task";
 import { formatDuration } from "@/lib/workflow/format-duration";
 import { filterForecastForShift } from "@/lib/weather/forecast-display";
 import {
@@ -288,7 +288,7 @@ export function HeatShiftWorkflow() {
     shiftEnd: state.plan.shiftEnd,
     crewSize: Number(state.plan.crewSize),
     nonAcclimatizedWorkers: Number(state.plan.nonAcclimatizedWorkers),
-    tasks: toWorkTasks(state.tasks),
+    tasks: toScheduleActivities(state.tasks),
   });
 
   async function analyze() {

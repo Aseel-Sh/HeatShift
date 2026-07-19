@@ -18,7 +18,9 @@
 | Stable source IDs in rule output | Rule results remain compact and deterministic while UI layers can resolve human-readable official source metadata separately. |
 | End-exclusive midday time boundary | The restricted interval is represented as 12:00 inclusive to 15:00 exclusive, matching the requirement that work at 15:00 is permitted. |
 | Five-minute discrete scheduler | Every current time and cycle rule divides into five-minute units, enabling exact capacity and overlap accounting. |
-| Stable greedy scheduling | Fixed task priority, stable input-order ties, cooler-temperature ranking, and chronological final ties make results reproducible without an optimizer. |
+| Stable candidate construction | Fixed strategies, input-order ties, forecast lookup, and chronological final ties make each bounded candidate reproducible. |
+| Deterministic bounded candidate selection | Six stable construction strategies are compared lexicographically. This improves the selected result without claiming global optimality or introducing a solver dependency. |
+| Chronological crew recovery | Outdoor exposure and confirmed recovery continue across task boundaries; eligible breaks/meals may receive recovery credit once, while ineligible activities do not reset the cycle. |
 | Separate restriction and crew occupancy masks | Direct-sun restrictions can overlap conditioned-indoor work while crew work and rest remain mutually exclusive. |
 | Provider-neutral extraction boundary | Business logic depends on a small chat-completions interface rather than a provider SDK. |
 | OpenRouter free router by default | `openrouter/free` avoids paid-model defaults and routes to available free models supporting requested capabilities. |

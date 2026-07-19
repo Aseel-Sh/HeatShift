@@ -5,16 +5,17 @@ async function openDemoResults(page: Page) {
   await page.getByRole("button", { name: "View sample shift" }).click();
   await page.getByRole("button", { name: "Continue to conditions" }).click();
   await page.getByRole("button", { name: "Generate safer shift" }).click();
-  await expect(page.getByRole("heading", { name: "Safer shift generated" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Selected safer schedule", exact:true })).toBeVisible();
 }
 
 test("completes the demo scenario through results", async ({ page }) => {
   await openDemoResults(page);
   await expect(page.getByText("Supervisor-entered TWL", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Requested plan / Safer shift" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Requested plan / Selected safer schedule" })).toBeVisible();
   await expect(page.getByTestId("shift-board")).toBeVisible();
   await expect(page.getByTestId("shift-board").getByText("Requested plan", { exact: true })).toBeVisible();
-  await expect(page.getByTestId("shift-board").getByText("Safer shift", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("shift-board").getByText("Selected safer schedule", { exact: true })).toBeVisible();
+  await expect(page.getByText("Selected from 6 deterministic candidate schedules.", { exact:false }).first()).toBeVisible();
   await expect(page.locator(".restriction-band")).toHaveCount(2);
   await expect(page.locator(".restriction-band").first()).toBeVisible();
   await expect(page.locator('[data-block-type="restriction"]')).toHaveCount(0);
@@ -73,7 +74,7 @@ test("print report control and printable layout are present", async ({ page }) =
   await expect(page.getByRole("button", { name: "Print supervisor report" })).toBeVisible();
   await page.emulateMedia({ media: "print" });
   await expect(page.getByRole("navigation", { name: "Planning progress" })).toBeHidden();
-  await expect(page.getByRole("heading", { name: "Safer shift generated" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Selected safer schedule", exact:true })).toBeVisible();
   await page.screenshot({ path: "artifacts/ui-review/print-preview-1440x900.png", fullPage: false });
   await page.screenshot({ path: "artifacts/manual-qa/28-print-preview-english.png", fullPage: false });
 });

@@ -25,7 +25,7 @@ The boundary schemas, source metadata, deterministic heat-planning rules, pure f
 - `components/schedule/`: future generated schedule UI
 - `components/report/`: future planning report UI
 - `lib/ai/`: provider-neutral extraction service, OpenRouter adapter, and extraction schemas
-- `lib/domain/`: Zod boundary schemas, pure deterministic heat-planning rules, and the single-crew scheduler
+- `lib/domain/`: Zod boundary schemas, pure deterministic heat-planning rules, chronological recovery validation, and bounded single-crew candidate selection
 - `lib/location/`: Open-Meteo geocoding adapter, Saudi filtering, validation, timeout, and short-lived cache
 - `lib/weather/`: coordinate-based Open-Meteo adapter and pure response/display normalization
 - `lib/server/`: server environment validation and shared typed integration errors
@@ -62,7 +62,7 @@ The public domain entry point is `lib/domain/index.ts`. Current pure functions c
 
 Every rule result contains a stable source ID. Human-readable source metadata is stored separately in `data/official-sources.ts`; domain functions make no network calls.
 
-The scheduler uses the existing rule functions rather than duplicating policy thresholds. Its public API and limitations are documented in `docs/SCHEDULER.md`.
+The scheduler uses the existing rule functions rather than duplicating policy thresholds. It evaluates six deterministic candidate strategies, validates chronological crew recovery and other hard constraints, and selects by an ordered operational score. Its public API and limitations are documented in `docs/SCHEDULER.md` and `docs/OPTIMIZATION.md`.
 
 ## Server integration API
 

@@ -341,3 +341,39 @@ Regression coverage includes Arabic Riyadh and English neighborhood searches, Sa
 Final validation: lint passed; strict typecheck passed; 166 unit tests across 23 files passed; 40 Playwright tests passed; production build passed.
 
 Blockers: none. OpenRouter remains optional; Open-Meteo location and weather calls require network access but no API key.
+
+## Deterministic bounded schedule optimization
+
+Status: complete on 2026-07-19.
+
+Baseline before editing: lint and strict typecheck passed; 166 unit tests across 23 files passed; 40 Playwright tests passed; production build passed.
+
+Implemented:
+
+- Replaced the single-result claim with a selected safer schedule chosen from six deterministic candidate strategies.
+- Added the public `OptimizationSummary`, ordered candidate score vector, stable strategy selection, and explicit non-global claim boundary.
+- Preserved work, break, and meal activities through the verified workflow into the scheduler; all occupy the one crew.
+- Added fixed, preferred, and flexible activity placement; must-schedule priority; operational-note explanation; and confirmed finish-to-start dependencies.
+- Added chronological crew-level recovery validation across task boundaries and conditioned-indoor exclusion from outdoor TWL cycles.
+- Allowed explicitly eligible breaks/meals to satisfy partial or complete recovery without adding duplicate recovery blocks; unknown or ineligible activities receive no credit.
+- Added explicit critical infeasibility for fixed or must-schedule activities that cannot fit without breaking a hard constraint.
+- Added bounded movement, ordering swaps, adjacent-block merging, eligible-recovery alignment, and safe-gap filling across candidate construction.
+- Added the exact confirmed construction regression fixture. Its must-schedule concrete pour is fully scheduled; lower-priority excavation, curing, cleanup, rebar/forms, and toolbox work retain exact unscheduled minutes.
+- Changed results language to “Selected safer schedule” and visibly reports “Selected from 6 deterministic candidate schedules.”
+- Added `docs/OPTIMIZATION.md` and updated scheduler, architecture, scope, decisions, and README documentation.
+
+Regression result:
+
+- Candidates evaluated: 6
+- Selected strategy: `critical_must_schedule_first`
+- Hard-constraint violations: 0
+- Unscheduled must-schedule work: 0 minutes
+- Other unscheduled work: 355 minutes
+- Movement: 535 minutes
+- Splits: 9
+- Original-order inversions: 4
+- Forecast heat-exposure penalty: 0 for the network-free regression fixture
+
+Final validation: lint passed; strict typecheck passed; 183 unit tests across 24 files passed; 40 Playwright tests passed; production build passed.
+
+Blockers: none. The bounded search is deterministic and explainable but does not claim global optimality.

@@ -322,7 +322,7 @@ describe("deterministic scheduler", () => {
     );
   });
 
-  it("uses the required environment and workload priority order", () => {
+  it("respects original order when higher-priority objectives tie", () => {
     const tasks: WorkTask[] = [
       task({ id: "indoor-light", durationMinutes: 5, environment: "conditioned_indoor", workload: "light" }),
       task({ id: "shaded-light", durationMinutes: 5, environment: "shaded_outdoor", workload: "light" }),
@@ -342,12 +342,12 @@ describe("deterministic scheduler", () => {
         .filter((block) => block.type === "work")
         .map((block) => block.taskId),
     ).toEqual([
-      "sun-heavy",
-      "sun-light",
-      "shaded-heavy",
-      "shaded-light",
-      "indoor-heavy",
       "indoor-light",
+      "shaded-light",
+      "sun-light",
+      "indoor-heavy",
+      "shaded-heavy",
+      "sun-heavy",
     ]);
   });
 

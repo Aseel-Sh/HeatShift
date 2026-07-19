@@ -4,7 +4,7 @@
 
 HeatShift is a planning application for supervisors preparing a single outdoor crew's next shift in Saudi Arabia. It will turn an unstructured plan into a safer executable schedule using deterministic rules. It is planning guidance only and does not guarantee safety or regulatory compliance.
 
-This repository contains the complete main planning workflow: validated domain models, deterministic Saudi heat-planning rules, a pure five-minute scheduler, server-side OpenRouter plan extraction, Saudi location search and coordinate-based Open-Meteo weather retrieval, deterministic demo data, editable planning steps, and bilingual printable results.
+This repository contains the complete main planning workflow: validated domain models, deterministic Saudi heat-planning rules, a pure five-minute bounded candidate scheduler, server-side OpenRouter plan extraction, Saudi location search and coordinate-based Open-Meteo weather retrieval, deterministic demo data, editable planning steps, and bilingual printable results.
 
 The workflow works without credentials through **Load demo scenario** or **Create tasks manually**. Live AI extraction requires a server-only OpenRouter key in `.env.local`; see `docs/INTEGRATIONS.md`.
 
@@ -49,7 +49,7 @@ npm run build
 - `tests/` — Vitest unit tests and Playwright end-to-end tests
 - `docs/` — product scope, architecture, decisions, and progress
 
-See [Product scope](docs/PRODUCT_SCOPE.md), [Architecture](docs/ARCHITECTURE.md), [Design system](docs/DESIGN_SYSTEM.md), [Scheduler](docs/SCHEDULER.md), [Integrations](docs/INTEGRATIONS.md), and [Progress](docs/PROGRESS.md).
+See [Product scope](docs/PRODUCT_SCOPE.md), [Architecture](docs/ARCHITECTURE.md), [Design system](docs/DESIGN_SYSTEM.md), [Scheduler](docs/SCHEDULER.md), [Optimization](docs/OPTIMIZATION.md), [Integrations](docs/INTEGRATIONS.md), and [Progress](docs/PROGRESS.md).
 
 The configured midday restriction applies only from 2026-06-15 through 2026-09-15. HeatShift does not silently extend that source-backed configuration to another year; unsupported years remain available for preliminary ordinary scheduling with an explicit warning.
 
