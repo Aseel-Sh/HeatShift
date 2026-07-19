@@ -19,7 +19,7 @@ describe("workflow state", () => {
 
     expect(state.step).toBe("verify");
     expect(state.plan.siteName).toBe(demo.shiftPlan.siteName);
-    expect(state.tasks).toEqual(demo.shiftPlan.tasks);
+    expect(state.tasks).toEqual(demo.shiftPlan.tasks.map((task) => expect.objectContaining(task)));
     expect(state.forecast).toEqual(demo.forecastHours);
     expect(state.isDemo).toBe(true);
   });

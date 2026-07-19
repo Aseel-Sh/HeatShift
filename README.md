@@ -55,4 +55,6 @@ The configured midday restriction applies only from 2026-06-15 through 2026-09-1
 
 ## Verification integrity
 
+Structured schedule rows are parsed deterministically before OpenRouter. Existing shift-form values are authoritative, time ranges produce reviewable requested times and durations, and field-level evidence distinguishes parsed facts from model suggestions. Breaks and meals remain non-work activities and are never defaulted to light work.
+
 Task verification uses a separate draft model: absent AI duration, workload, environment, or splittability remains visibly unknown and blocks scheduling until supplied. Optional requested task times are retained so original-plan findings remain separate from generated-schedule capacity and worker-readiness findings. “Indoor / cooled area” means a conditioned area only; heat-exposed indoor work requires a separate site assessment.

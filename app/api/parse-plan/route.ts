@@ -1,4 +1,4 @@
-import { extractPlan } from "../../../lib/ai/plan-extractor";
+import { extractDeterministicPlan, extractPlan } from "../../../lib/ai/plan-extractor";
 import { parsePlanRequestSchema } from "../../../lib/ai/plan-extraction-schema";
 import {
   errorResponse,
@@ -45,6 +45,8 @@ export async function POST(request: Request): Promise<Response> {
 
   const environment = getServerEnvironment();
   if (!environment.ai.enabled || !environment.ai.apiKey) {
+    const deterministic = extractDeterministicPlan(input.data.text, input.data.context);
+    if (deterministic) return Response.json({ data: deterministic, metadata: { actualModel: null } });
     return errorResponse(
       "AI_NOT_CONFIGURED",
       "AI plan extraction is not configured.",
@@ -62,6 +64,7 @@ export async function POST(request: Request): Promise<Response> {
     const extraction = await extractPlan(input.data.text, {
       apiKey: environment.ai.apiKey,
       model: environment.ai.model,
+      context: input.data.context,
       signal: controller.signal,
     });
     return Response.json({ data: extraction.plan, metadata: extraction.metadata });

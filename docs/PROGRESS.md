@@ -295,3 +295,26 @@ Status: completed on 2026-07-19 for the local production build.
 - Final regression: lint, strict typecheck, 126 unit tests, 36 browser tests, and production build pass
 
 Release note: the deterministic sample demo is suitable for local recording. Live AI remains too variable for the recorded demo, and no deployed application was tested.
+
+## Context-aware work-plan import repair
+
+Status: complete on 2026-07-19.
+
+Baseline before editing: lint and strict typecheck passed; 126 unit tests across 18 files passed; 36 Playwright tests passed; production build passed.
+
+Implemented:
+
+- Added authoritative shift-form context to `POST /api/parse-plan` and to browser requests; populated form values win and suppress resolved missing-information messages.
+- Added a pure structured-row parser for dash variants, English/Arabic numerals, 12/24-hour inputs, sequential half-day inference, noon rollover, ambiguity reporting, normalized times, and derived durations.
+- Made structured-row import available without OpenRouter and as a deterministic fallback when provider enrichment fails.
+- Added work, break, and meal draft activity kinds; break/meal recovery eligibility is supervisor-controlled and no fake workload or environment is assigned.
+- Added must-complete flags, operational notes, and flexible/preferred/fixed timing preferences without inventing equipment times.
+- Replaced whole-document task evidence with per-field source-line provenance and separated inferred workload/environment/splitting suggestions from verified values.
+- Added human-readable duration labels, visible suggestion controls, evidence details, and a complete shift-attention panel that returns focus to the first invalid setup field.
+- Preserved the existing scheduler and results-timeline algorithm; only verified work activities cross the current `ShiftPlan` boundary.
+
+Regression coverage includes the exact eight-activity construction plan, all requested time syntaxes and rollovers, Arabic city/time aliases, distinct crew/new-worker counts, contextual precedence, field evidence, non-work activity behavior, suggestions, duration display, and missing-shift focus handling.
+
+Final validation: lint passed; strict typecheck passed; 152 unit tests across 20 files passed; 38 Playwright tests passed; production build passed; diff check passed.
+
+Blockers: none. OpenRouter remains optional for structured schedule rows and required only to enrich unstructured prose imports.

@@ -6,6 +6,12 @@ HeatShift keeps external services behind server-only modules and Next.js route h
 
 ## OpenRouter plan extraction
 
+`POST /api/parse-plan` accepts `text` plus optional authoritative form `context`: site name, location name, shift date/start/end, crew size, and non-acclimatized-worker count. Extraction fills empty fields only and removes missing-information messages for values already supplied by the supervisor.
+
+Before OpenRouter, a pure parser recognizes hyphen/en-dash/em-dash schedule rows, English or Arabic numerals, 12/24-hour times, sequential half-day inference, and noon rollover inside a supplied same-day shift. Explicit ranges create requested start/end values and derived minute durations with the source row attached as evidence. Ambiguous ranges remain review items. Obvious break/meal terms create non-work activities, and explicit must-complete/equipment notes are retained without inventing equipment times.
+
+If OpenRouter is unconfigured or unavailable but the deterministic parser found structured rows, the endpoint returns those reviewable activities without a model. Unstructured prose still returns the existing typed AI error and keeps manual entry available.
+
 `POST /api/parse-plan` accepts JSON containing a `text` field. The text is trimmed, must contain at least 10 meaningful characters, may not exceed 5000 characters, and is protected by a 10 KiB request-body limit. Unsupported content types and invalid JSON receive typed `INVALID_INPUT` errors.
 
 The provider-neutral extraction service asks OpenRouter's OpenAI-compatible chat-completions endpoint for strict JSON-schema output and sends `provider.require_parameters: true` so routing is limited to providers that support the requested parameters. It extracts stated plan facts only. Instructions prohibit invented regulations, safety decisions, dates, times, durations, crew counts, or locations. Uncertainty is returned as assumptions or missing information, and local Zod validation remains the trusted boundary.
@@ -14,7 +20,7 @@ When OpenRouter returns an actual model identifier, the endpoint exposes it as n
 
 AI does not decide whether work is safe and does not apply restrictions, work/rest rules, hydration calculations, scheduling, or briefing content. Those decisions remain deterministic.
 
-Requests are aborted after 12 seconds or when the incoming request disconnects. Provider failures are mapped to typed, user-facing errors without stack traces:
+Requests are aborted after 30 seconds or when the incoming request disconnects. Provider failures are mapped to typed, user-facing errors without stack traces:
 
 - `AI_NOT_CONFIGURED`
 - `AI_TIMEOUT`

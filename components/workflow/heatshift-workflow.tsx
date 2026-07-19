@@ -31,6 +31,7 @@ import {
   displayWorkload,
 } from "@/lib/i18n/operations-display";
 import { toWorkTasks, type DraftWorkTask } from "@/lib/workflow/draft-task";
+import { formatDuration } from "@/lib/workflow/format-duration";
 import {
   createInitialWorkflowState,
   validatePlanDetails,
@@ -49,6 +50,7 @@ const copy = {
     details: "Shift details",
     site: "Site name",
     city: "City",
+    location: "Location",
     date: "Shift date",
     start: "Shift start",
     end: "Shift end",
@@ -80,6 +82,25 @@ const copy = {
     task: "Task",
     requestedTime: "Requested time",
     duration: "Duration",
+    activity: "Activity",
+    work: "Work",
+    breakActivity: "Break",
+    meal: "Meal",
+    recovery: "Recovery eligibility",
+    recoveryUnknown: "Unknown",
+    recoveryEligible: "Eligible",
+    recoveryNotEligible: "Not eligible",
+    recoveryHelp: "A break counts toward heat recovery only after the supervisor confirms appropriate shaded or cooled conditions.",
+    suggested: "Suggested",
+    useSuggestion: "Use suggestion",
+    timing: "Timing",
+    flexible: "Flexible",
+    preferred: "Preferred",
+    fixed: "Fixed",
+    mustComplete: "Must complete",
+    operationalNotes: "Operational notes",
+    shiftAttention: "Shift details need attention",
+    editShift: "Edit shift details",
     workload: "Workload",
     area: "Work area",
     canSplit: "Can split?",
@@ -135,6 +156,7 @@ const copy = {
     details: "تفاصيل الوردية",
     site: "اسم الموقع",
     city: "المدينة",
+    location: "الموقع",
     date: "تاريخ الوردية",
     start: "بداية الوردية",
     end: "نهاية الوردية",
@@ -166,6 +188,25 @@ const copy = {
     task: "المهمة",
     requestedTime: "الوقت المطلوب",
     duration: "المدة",
+    activity: "نوع النشاط",
+    work: "عمل",
+    breakActivity: "استراحة",
+    meal: "وجبة",
+    recovery: "أهلية التعافي",
+    recoveryUnknown: "غير معروفة",
+    recoveryEligible: "مؤهلة",
+    recoveryNotEligible: "غير مؤهلة",
+    recoveryHelp: "تُحسب الاستراحة كتعافٍ حراري فقط بعد تأكيد المشرف لظروف مظللة أو مبردة مناسبة.",
+    suggested: "مقترح",
+    useSuggestion: "استخدام الاقتراح",
+    timing: "أولوية الوقت",
+    flexible: "مرن",
+    preferred: "مفضل",
+    fixed: "ثابت",
+    mustComplete: "يجب إكماله",
+    operationalNotes: "ملاحظات تشغيلية",
+    shiftAttention: "تفاصيل الوردية تحتاج انتباهًا",
+    editShift: "تعديل تفاصيل الوردية",
     workload: "عبء العمل",
     area: "منطقة العمل",
     canSplit: "قابلة للتقسيم؟",
@@ -257,7 +298,18 @@ export function HeatShiftWorkflow() {
       const response = await fetch("/api/parse-plan", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: state.plan.planText }),
+        body: JSON.stringify({
+          text: state.plan.planText,
+          context: {
+            siteName: state.plan.siteName || undefined,
+            locationName: state.plan.city || undefined,
+            shiftDate: state.plan.shiftDate || undefined,
+            shiftStart: state.plan.shiftStart || undefined,
+            shiftEnd: state.plan.shiftEnd || undefined,
+            crewSize: state.plan.crewSize === "" ? undefined : Number(state.plan.crewSize),
+            nonAcclimatizedWorkers: state.plan.nonAcclimatizedWorkers === "" ? undefined : Number(state.plan.nonAcclimatizedWorkers),
+          },
+        }),
       });
       const payload = await response.json() as { data?: ExtractedPlan; metadata?: { actualModel?: string | null }; error?: { message?: string; code?: string } };
       if (!response.ok || !payload.data) throw new Error(payload.error?.message || payload.error?.code || "Plan extraction is unavailable.");
@@ -370,8 +422,8 @@ function ShiftSetup({ state, t, dispatch, analyze, manual }: { state: WorkflowSt
         <fieldset className="section-block">
           <legend>{t.details}</legend>
           <div className="shift-fields">
-            <label><span className="form-label">{t.city}</span><select className="form-control" value={state.plan.city} onChange={(event) => set("city", event.target.value)} aria-invalid={Boolean(state.errors.city)}><option value="">{t.select}</option>{cities.map((city) => <option key={city} value={city}>{displayCity(city, state.language)}</option>)}</select><ErrorText state={state} name="city" /></label>
-            {fields.map(([field, label, type]) => <label key={field}><span className="form-label">{label}</span><input className="form-control" dir={type === "text" ? undefined : "ltr"} type={type} step={type === "time" ? 300 : undefined} min={type === "number" ? (field === "crewSize" ? 1 : 0) : undefined} value={state.plan[field]} onChange={(event) => set(field, event.target.value)} aria-invalid={Boolean(state.errors[field])} /><ErrorText state={state} name={field} /></label>)}
+            <label><span className="form-label">{t.city}</span><select id="plan-city" className="form-control" value={state.plan.city} onChange={(event) => set("city", event.target.value)} aria-invalid={Boolean(state.errors.city)}><option value="">{t.select}</option>{cities.map((city) => <option key={city} value={city}>{displayCity(city, state.language)}</option>)}</select><ErrorText state={state} name="city" /></label>
+            {fields.map(([field, label, type]) => <label key={field}><span className="form-label">{label}</span><input id={`plan-${field}`} className="form-control" dir={type === "text" ? undefined : "ltr"} type={type} step={type === "time" ? 300 : undefined} min={type === "number" ? (field === "crewSize" ? 1 : 0) : undefined} value={state.plan[field]} onChange={(event) => set(field, event.target.value)} aria-invalid={Boolean(state.errors[field])} /><ErrorText state={state} name={field} /></label>)}
           </div>
         </fieldset>
 
@@ -406,6 +458,14 @@ function ShiftSetup({ state, t, dispatch, analyze, manual }: { state: WorkflowSt
 
 function TaskPlan({ state, t, dispatch, next }: { state: WorkflowState; t: UiCopy; dispatch: WorkflowDispatch; next: () => void }) {
   const notice = state.planSource === "ai" ? `${state.tasks.length} ${t.structured}` : state.planSource === "sample" ? t.sampleNotice : t.manualNotice;
+  const shiftFields: Array<[keyof PlanForm, string]> = [["siteName", t.site], ["city", t.location], ["shiftDate", t.date], ["shiftStart", t.start], ["shiftEnd", t.end], ["crewSize", t.crew], ["nonAcclimatizedWorkers", t.newWorkers]];
+  const shiftErrors = {...validatePlanDetails(state.plan), ...state.errors};
+  const shiftIssues = shiftFields.filter(([field]) => Boolean(shiftErrors[field]));
+  const editShift = () => {
+    const first = shiftIssues[0]?.[0] ?? "siteName";
+    dispatch({ type: "setStep", step: "describe" });
+    requestAnimationFrame(() => document.getElementById(`plan-${first}`)?.focus());
+  };
   return (
     <section aria-labelledby="task-plan-title" className="workspace-main">
       <header className="section-heading task-plan-heading">
@@ -415,11 +475,12 @@ function TaskPlan({ state, t, dispatch, next }: { state: WorkflowState; t: UiCop
       {state.planSource === "ai" && state.aiModel && <p className="model-note">{t.modelNote} <span dir="ltr">{state.aiModel}</span>. {t.reviewRequired}</p>}
       {state.assumptions.length > 0 && <Info title={t.assumptions} items={state.assumptions} />}
       {state.missingInformation.length > 0 && <Info title={t.missing} items={state.missingInformation} />}
+      {shiftIssues.length > 0 && <section className="shift-attention" role="alert" aria-labelledby="shift-attention-title"><div><h2 id="shift-attention-title">{t.shiftAttention}</h2><ul>{shiftIssues.map(([field, label]) => <li key={field}><strong>{label}:</strong> {displayError(shiftErrors[field], state.language)}</li>)}</ul></div><button className="button-secondary" onClick={editShift}>{t.editShift}</button></section>}
       <ErrorText state={state} name="tasks" />
       <div className="task-table-wrap">
         <table className="task-table">
           <caption className="sr-only">{t.taskPlan}</caption>
-          <thead><tr><th>{t.task}</th><th>{t.requestedTime}</th><th>{t.duration}</th><th>{t.workload}</th><th>{t.area}</th><th>{t.canSplit}</th><th>{t.validation}</th><th>{t.delete}</th></tr></thead>
+          <thead><tr><th>{t.task}</th><th>{t.activity}</th><th>{t.requestedTime}</th><th>{t.duration}</th><th>{t.workload}</th><th>{t.area}</th><th>{t.canSplit}</th><th>{t.validation}</th><th>{t.delete}</th></tr></thead>
           <tbody>{state.tasks.map((task, index) => <TaskRow key={task.id} state={state} task={task} index={index} t={t} dispatch={dispatch} />)}</tbody>
         </table>
       </div>
@@ -437,20 +498,27 @@ function TaskRow({ state, task, index, t, dispatch }: { state: WorkflowState; ta
   const update = (field: keyof Omit<DraftWorkTask, "id">, value: DraftWorkTask[keyof Omit<DraftWorkTask, "id">]) => dispatch({ type: "updateTask", id: task.id, field, value });
   const error = (field: string) => state.errors[`task-${task.id}-${field}`];
   const hasErrors = ["nameEn", "nameAr", "durationMinutes", "workload", "environment", "splittable", "requestedTime"].some((field) => Boolean(error(field)));
-  const complete = Boolean(task.nameEn && task.nameAr && task.durationMinutes && task.workload && task.environment && task.splittable !== null) && !hasErrors;
+  const kind = task.activityKind ?? "work";
+  const complete = Boolean(task.nameEn && task.nameAr && task.durationMinutes && (kind !== "work" || (task.workload && task.environment && task.splittable !== null))) && !hasErrors;
   const fieldError = (field: string) => error(field) ? <p role="alert" className="field-error">{displayError(error(field), state.language)}</p> : null;
+  const evidence = Object.entries(task.evidence ?? {});
   return (
     <tr data-testid={`task-row-${index}`}>
-      <td data-label={t.task} className="task-name-cell"><span className="row-number">{String(index + 1).padStart(2, "0")}</span><label><span>{t.enName}</span><input className="table-control" value={task.nameEn} onChange={(event) => update("nameEn", event.target.value)} aria-invalid={Boolean(error("nameEn"))} />{fieldError("nameEn")}</label><label><span>{t.arName}</span><input className="table-control" lang="ar" dir="rtl" value={task.nameAr} onChange={(event) => update("nameAr", event.target.value)} aria-invalid={Boolean(error("nameAr"))} />{fieldError("nameAr")}</label></td>
+      <td data-label={t.task} className="task-name-cell"><span className="row-number">{String(index + 1).padStart(2, "0")}</span><label><span>{t.enName}</span><input className="table-control" value={task.nameEn} onChange={(event) => update("nameEn", event.target.value)} aria-invalid={Boolean(error("nameEn"))} />{fieldError("nameEn")}</label><label><span>{t.arName}</span><input className="table-control" lang="ar" dir="rtl" value={task.nameAr} onChange={(event) => update("nameAr", event.target.value)} aria-invalid={Boolean(error("nameAr"))} />{fieldError("nameAr")}</label>{evidence.length > 0 && <details className="task-evidence"><summary>{state.language === "ar" ? "الأدلة" : "Source evidence"}</summary><ul>{evidence.map(([field, item]) => <li key={field}><strong>{field}:</strong> {item.evidence} <em>{item.source.replaceAll("_", " ")}</em></li>)}</ul></details>}</td>
+      <td data-label={t.activity}><label><span className="sr-only">{t.activity}</span><select aria-label={t.activity} className="table-control" value={kind} onChange={(event) => update("activityKind", event.target.value as DraftWorkTask["activityKind"])}><option value="work">{t.work}</option><option value="break">{t.breakActivity}</option><option value="meal">{t.meal}</option></select></label><label><span>{t.timing}</span><select aria-label={t.timing} className="table-control" value={task.timingPreference ?? "flexible"} onChange={(event) => update("timingPreference", event.target.value as DraftWorkTask["timingPreference"])}><option value="flexible">{t.flexible}</option><option value="preferred">{t.preferred}</option><option value="fixed">{t.fixed}</option></select></label>{kind === "work" && <label className="check-line"><input type="checkbox" checked={task.mustSchedule ?? false} onChange={(event) => update("mustSchedule", event.target.checked)} />{t.mustComplete}</label>}{kind === "work" && <label><span>{t.operationalNotes}</span><textarea aria-label={`${t.operationalNotes} ${index + 1}`} className="table-control" rows={2} value={(task.operationalNotes ?? []).join("\n")} onChange={(event) => update("operationalNotes", event.target.value.split(/\n/).map(value=>value.trim()).filter(Boolean))} /></label>}</td>
       <td data-label={t.requestedTime}><div className="time-pair"><label><span>{t.startOptional}</span><input className="table-control" type="time" step="300" dir="ltr" value={task.requestedStart ?? ""} onChange={(event) => update("requestedStart", event.target.value)} /></label><label><span>{t.endOptional}</span><input className="table-control" type="time" step="300" dir="ltr" value={task.requestedEnd ?? ""} onChange={(event) => update("requestedEnd", event.target.value)} /></label></div>{fieldError("requestedTime")}</td>
-      <td data-label={t.duration}><label><span className="sr-only">{t.durationMinutes}</span><input aria-label={t.durationMinutes} className="table-control numeric" type="number" min="5" step="5" dir="ltr" value={task.durationMinutes ?? ""} onChange={(event) => update("durationMinutes", event.target.value === "" ? null : Number(event.target.value))} aria-invalid={Boolean(error("durationMinutes"))} /></label>{fieldError("durationMinutes")}</td>
-      <td data-label={t.workload}><label><span className="sr-only">{t.workload}</span><select aria-label={t.workload} className="table-control" value={task.workload} onChange={(event) => update("workload", event.target.value as DraftWorkTask["workload"])} aria-invalid={Boolean(error("workload"))}><option value="">{t.incomplete}</option><option value="heavy">{displayWorkload("heavy", state.language)}</option><option value="light">{displayWorkload("light", state.language)}</option></select></label>{fieldError("workload")}</td>
-      <td data-label={t.area}><label><span className="sr-only">{t.environment}</span><select aria-label={t.environment} className="table-control" value={task.environment} onChange={(event) => update("environment", event.target.value as DraftWorkTask["environment"])} aria-invalid={Boolean(error("environment"))}><option value="">{t.incomplete}</option><option value="direct_sun">{displayEnvironment("direct_sun", state.language)}</option><option value="shaded_outdoor">{displayEnvironment("shaded_outdoor", state.language)}</option><option value="conditioned_indoor">{displayEnvironment("conditioned_indoor", state.language)}</option></select></label>{fieldError("environment")}<small>{t.indoorNote}</small></td>
-      <td data-label={t.canSplit}><label><span className="sr-only">{t.splitQuestion}</span><select aria-label={t.splitQuestion} className="table-control" value={task.splittable === null ? "" : String(task.splittable)} onChange={(event) => update("splittable", event.target.value === "" ? null : event.target.value === "true")} aria-invalid={Boolean(error("splittable"))}><option value="">{t.incomplete}</option><option value="true">{t.yes}</option><option value="false">{t.no}</option></select></label>{fieldError("splittable")}</td>
+      <td data-label={t.duration}><label><span className="sr-only">{t.durationMinutes}</span><input aria-label={t.durationMinutes} className="table-control numeric" type="number" min="5" step="5" dir="ltr" value={task.durationMinutes ?? ""} onChange={(event) => update("durationMinutes", event.target.value === "" ? null : Number(event.target.value))} aria-invalid={Boolean(error("durationMinutes"))} /></label>{task.durationMinutes ? <strong className="human-duration">{formatDuration(task.durationMinutes, state.language)}</strong> : null}{task.durationMinutes ? <small>{task.durationMinutes} min</small> : null}{fieldError("durationMinutes")}</td>
+      <td data-label={kind === "work" ? t.workload : t.recovery}>{kind === "work" ? <><label><span className="sr-only">{t.workload}</span><select aria-label={t.workload} className="table-control" value={task.workload} onChange={(event) => update("workload", event.target.value as DraftWorkTask["workload"])} aria-invalid={Boolean(error("workload"))}><option value="">{t.incomplete}</option><option value="heavy">{displayWorkload("heavy", state.language)}</option><option value="light">{displayWorkload("light", state.language)}</option></select></label>{task.suggestedWorkload && !task.workload && <Suggestion label={`${t.suggested}: ${displayWorkload(task.suggestedWorkload,state.language)}`} action={t.useSuggestion} onUse={() => update("workload", task.suggestedWorkload!)} />}{fieldError("workload")}</> : <><label><span className="sr-only">{t.recovery}</span><select aria-label={t.recovery} className="table-control" value={task.recoveryEligibility ?? "unknown"} onChange={(event) => update("recoveryEligibility", event.target.value as DraftWorkTask["recoveryEligibility"])}><option value="unknown">{t.recoveryUnknown}</option><option value="eligible">{t.recoveryEligible}</option><option value="not_eligible">{t.recoveryNotEligible}</option></select></label><small>{t.recoveryHelp}</small></>}</td>
+      <td data-label={t.area}>{kind === "work" ? <><label><span className="sr-only">{t.environment}</span><select aria-label={t.environment} className="table-control" value={task.environment} onChange={(event) => update("environment", event.target.value as DraftWorkTask["environment"])} aria-invalid={Boolean(error("environment"))}><option value="">{t.incomplete}</option><option value="direct_sun">{displayEnvironment("direct_sun", state.language)}</option><option value="shaded_outdoor">{displayEnvironment("shaded_outdoor", state.language)}</option><option value="conditioned_indoor">{displayEnvironment("conditioned_indoor", state.language)}</option></select></label>{task.suggestedEnvironment && !task.environment && <Suggestion label={`${t.suggested}: ${displayEnvironment(task.suggestedEnvironment,state.language)}`} action={t.useSuggestion} onUse={() => update("environment", task.suggestedEnvironment!)} />}{fieldError("environment")}<small>{t.indoorNote}</small></> : <span>—</span>}</td>
+      <td data-label={t.canSplit}>{kind === "work" ? <><label><span className="sr-only">{t.splitQuestion}</span><select aria-label={t.splitQuestion} className="table-control" value={task.splittable === null ? "" : String(task.splittable)} onChange={(event) => update("splittable", event.target.value === "" ? null : event.target.value === "true")} aria-invalid={Boolean(error("splittable"))}><option value="">{t.incomplete}</option><option value="true">{t.yes}</option><option value="false">{t.no}</option></select></label>{task.suggestedSplittable !== undefined && task.splittable === null && <Suggestion label={`${t.suggested}: ${task.suggestedSplittable?t.yes:t.no}`} action={t.useSuggestion} onUse={() => update("splittable", task.suggestedSplittable!)} />}{fieldError("splittable")}</> : <span>—</span>}</td>
       <td data-label={t.validation}><span className={`validation-state ${complete ? "complete" : "incomplete"}`}>{complete ? <Check aria-hidden="true" /> : <AlertTriangle aria-hidden="true" />}{complete ? t.complete : t.incomplete}</span></td>
       <td data-label={t.delete}><button className="icon-button danger" aria-label={`${t.delete} ${index + 1}`} onClick={() => dispatch({ type: "removeTask", id: task.id })}><Trash2 aria-hidden="true" /></button></td>
     </tr>
   );
+}
+
+function Suggestion({ label, action, onUse }: { label: string; action: string; onUse: () => void }) {
+  return <div className="suggestion"><span>{label}</span><button type="button" onClick={onUse}>{action}</button></div>;
 }
 
 function Conditions({ state, t, peak, apparentPeak, dispatch, generate }: { state: WorkflowState; t: UiCopy; peak: number | null; apparentPeak: number | null; dispatch: WorkflowDispatch; generate: () => void }) {

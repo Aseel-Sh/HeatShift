@@ -56,6 +56,25 @@ describe("POST /api/parse-plan", () => {
     });
   });
 
+  it("imports deterministic schedule rows even when AI is not configured", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "");
+    const response = await POST(new Request("http://localhost/api/parse-plan", {
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({
+        text:"6:30-9:00 Excavation\n9:00-9:15 Break",
+        context:{siteName:"North utility site",locationName:"Riyadh",shiftDate:"2026-07-20",shiftStart:"06:00",shiftEnd:"16:30",crewSize:8,nonAcclimatizedWorkers:2},
+      }),
+    }));
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.metadata.actualModel).toBeNull();
+    expect(payload.data.tasks).toMatchObject([
+      {activityKind:"work",requestedStart:"06:30",requestedEnd:"09:00",durationMinutes:150},
+      {activityKind:"break",requestedStart:"09:00",requestedEnd:"09:15",durationMinutes:15},
+    ]);
+  });
+
   it("rejects unsupported content types", async () => {
     const response = await POST(
       new Request("http://localhost/api/parse-plan", {

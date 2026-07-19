@@ -60,3 +60,5 @@ User-facing content must use qualified terms such as “safer shift” and “pl
 - Original-plan findings, generated-schedule capacity, worker readiness, and applied rules are separate concepts.
 - `conditioned_indoor` means a cooled area outside the direct-heat/TWL cycle model. Heat-exposed indoor environments require a separate site assessment.
 - Missing AI safety fields are not defaulted; verification must complete them before scheduling.
+- Structured schedule rows are normalized deterministically, with derived durations and field-level evidence, before optional model enrichment.
+- Work, break, and meal activities remain distinct during import and verification; only work activities require workload, environment, and splitting decisions.

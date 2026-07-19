@@ -93,3 +93,86 @@ test("editing a sample invalidates it and requests weather for the edited city",
   await expect(page.getByText("City-center model forecast — preliminary planning only.")).toBeVisible();
   await expect(page.getByText(/Jeddah · Forecast date/)).toBeVisible();
 });
+
+test("imports the exact structured plan with contextual fields, activities, evidence, and readable durations", async ({ page }) => {
+  const regressionText = `Crew A - Riyadh
+Start 6:00 AM
+
+6:00-6:30 Toolbox talk + prep
+6:30-9:00 Excavation
+9:00-9:15 Break
+9:15-11:30 Rebar + forms
+11:30-12:00 Lunch
+12:00-2:30 Concrete pour
+2:30-3:00 Finish + curing
+3:00-4:00 Cleanup
+
+Need concrete completed today. Pump booked only today.`;
+  let posted: Record<string, unknown> | undefined;
+  await page.unroute("**/api/parse-plan");
+  await page.route("**/api/parse-plan", async (route) => {
+    posted = route.request().postDataJSON();
+    const rows = [
+      ["Toolbox talk + prep", "حديث السلامة والتجهيز", "work", "06:00", "06:30", 30, "light"],
+      ["Excavation", "الحفر", "work", "06:30", "09:00", 150, "heavy"],
+      ["Break", "استراحة", "break", "09:00", "09:15", 15],
+      ["Rebar + forms", "حديد التسليح والقوالب", "work", "09:15", "11:30", 135, "heavy"],
+      ["Lunch", "غداء", "meal", "11:30", "12:00", 30],
+      ["Concrete pour", "صب الخرسانة", "work", "12:00", "14:30", 150, "heavy"],
+      ["Finish + curing", "الإنهاء والمعالجة", "work", "14:30", "15:00", 30, "light"],
+      ["Cleanup", "التنظيف", "work", "15:00", "16:00", 60, "light"],
+    ];
+    const tasks = rows.map(([nameEn, nameAr, activityKind, requestedStart, requestedEnd, durationMinutes, suggestedWorkload], index) => ({
+      nameEn, nameAr, activityKind, requestedStart, requestedEnd, durationMinutes,
+      recoveryEligibility: activityKind === "work" ? undefined : "unknown",
+      timingPreference: "preferred",
+      mustSchedule: index === 5,
+      operationalNotes: index === 5 ? ["Pump booked only today."] : [],
+      suggestedWorkload,
+      evidence: { durationMinutes: { value: durationMinutes, evidence: regressionText.split("\n")[index + 3], source: "deterministic_parser" } },
+    }));
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { siteName:"North utility site", city:"riyadh", shiftDate:"2026-07-20", shiftStart:"06:00", shiftEnd:"16:30", crewSize:8, nonAcclimatizedWorkers:2, tasks, assumptions:[], missingInformation:[] } }) });
+  });
+  await page.getByLabel("Site name").fill("North utility site");
+  await page.getByLabel("City").selectOption("riyadh");
+  await page.getByLabel("Shift date").fill("2026-07-20");
+  await page.getByLabel("Shift start").fill("06:00");
+  await page.getByLabel("Shift end").fill("16:30");
+  await page.getByLabel("Crew size").fill("8");
+  await page.getByLabel("Non-acclimatized workers").fill("2");
+  await page.getByLabel("Import work plan").fill(regressionText);
+  await page.getByRole("button", { name: "Structure task list" }).click();
+
+  expect(posted).toMatchObject({ context: { siteName:"North utility site", locationName:"riyadh", shiftDate:"2026-07-20", shiftStart:"06:00", shiftEnd:"16:30", crewSize:8, nonAcclimatizedWorkers:2 } });
+  await expect(page.getByTestId(/^task-row-/)).toHaveCount(8);
+  await expect(page.getByLabel("Activity").nth(2)).toHaveValue("break");
+  await expect(page.getByLabel("Activity").nth(4)).toHaveValue("meal");
+  await expect(page.getByText("2 hr 30 min")).toHaveCount(2);
+  await expect(page.getByText("1 hr")).toBeVisible();
+  await expect(page.getByText("Pump booked only today.")).toBeVisible();
+  await expect(page.getByText("Shift details need attention")).toHaveCount(0);
+  await expect(page.getByText("Crew size not stated")).toHaveCount(0);
+  await expect(page.getByText("Shift end not stated")).toHaveCount(0);
+  const excavation = page.getByTestId("task-row-1");
+  await expect(excavation.getByText(/Suggested: Heavy/)).toBeVisible();
+  await excavation.getByRole("button", { name: "Use suggestion" }).click();
+  await expect(excavation.getByLabel("Workload")).toHaveValue("heavy");
+});
+
+test("shows all missing shift details and returns focus to the first invalid setup field", async ({ page }) => {
+  await page.unroute("**/api/parse-plan");
+  await page.route("**/api/parse-plan", route => route.fulfill({ status:200, contentType:"application/json", body:JSON.stringify({ data:{ tasks:[{ nameEn:"Inspection", nameAr:"فحص", activityKind:"work", durationMinutes:30, workload:"light", environment:"shaded_outdoor", splittable:false, recoveryEligibility:"unknown", mustSchedule:false, operationalNotes:[], timingPreference:"flexible" }], assumptions:[], missingInformation:[] } }) }));
+  await page.getByLabel("Import work plan").fill("Inspect the material storage area before work.");
+  await page.getByRole("button", { name:"Structure task list" }).click();
+  await page.getByRole("button", { name:"Continue to conditions" }).click();
+  const panel = page.getByRole("alert").filter({ hasText:"Shift details need attention" });
+  await expect(panel).toContainText("Site name");
+  await expect(panel).toContainText("Location");
+  await expect(panel).toContainText("Shift date");
+  await expect(panel).toContainText("Shift start");
+  await expect(panel).toContainText("Shift end");
+  await expect(panel).toContainText("Crew size");
+  await expect(panel).toContainText("Non-acclimatized workers");
+  await panel.getByRole("button", { name:"Edit shift details" }).click();
+  await expect(page.getByLabel("Site name")).toBeFocused();
+});

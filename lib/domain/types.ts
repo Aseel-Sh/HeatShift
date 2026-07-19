@@ -27,6 +27,13 @@ export const workEnvironmentSchema = z.enum([
 ]);
 export type WorkEnvironment = z.infer<typeof workEnvironmentSchema>;
 
+export const activityKindSchema = z.enum(["work", "break", "meal"]);
+export type ActivityKind = z.infer<typeof activityKindSchema>;
+export const recoveryEligibilitySchema = z.enum(["unknown", "eligible", "not_eligible"]);
+export type RecoveryEligibility = z.infer<typeof recoveryEligibilitySchema>;
+export const timingPreferenceSchema = z.enum(["fixed", "preferred", "flexible"]);
+export type TimingPreference = z.infer<typeof timingPreferenceSchema>;
+
 export const measurementModeSchema = z.enum(["forecast", "onsite_twl"]);
 export type MeasurementMode = z.infer<typeof measurementModeSchema>;
 
@@ -47,6 +54,10 @@ export const workTaskSchema = z.object({
   workload: workloadSchema,
   environment: workEnvironmentSchema,
   splittable: z.boolean(),
+  activityKind: z.literal("work").optional(),
+  mustSchedule: z.boolean().optional(),
+  operationalNotes: z.array(nonEmptyStringSchema).optional(),
+  timingPreference: timingPreferenceSchema.optional(),
   requestedStart: timeSchema.optional(),
   requestedEnd: timeSchema.optional(),
 });

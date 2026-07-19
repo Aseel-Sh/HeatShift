@@ -52,3 +52,7 @@ Production hosting remains deferred. The current scheduler intentionally remains
 | Conditioned indoor only | Cooled indoor work does not receive outdoor TWL cycles; heat-exposed indoor work needs separate assessment. |
 | Reducer-owned monotonic IDs | Add/delete/add operations cannot reuse IDs or corrupt task/block mappings. |
 | Invalidate derived sample state | Material edits clear sample forecast, sample conditions, and prior results before continuation. |
+| Deterministic schedule-row parsing before AI | Simple time ranges, rollover, duration arithmetic, break/meal recognition, and explicit operational constraints should not depend on model quality. |
+| Authoritative form context | Supervisor-entered shift fields win over imported text and suppress resolved missing-information messages. |
+| Field-level import evidence | Each retained task fact cites its own source line and provenance; inferred workload, environment, or splitting values remain suggestions requiring review. |
+| Non-work activity drafts | Breaks and meals retain time and recovery eligibility without being mislabeled as light work or passed into the unchanged work scheduler. |

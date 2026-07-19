@@ -65,6 +65,8 @@ The scheduler uses the existing rule functions rather than duplicating policy th
 
 ## Server integration API
 
+Plan import has a deterministic preprocessing stage. It parses recognizable schedule rows into normalized requested times, derived minute durations, activity kinds, timing preferences, and field-level evidence before OpenRouter is called. The provider may translate names or suggest unverified workload/environment/splitting values, but it cannot replace parser-backed timing or authoritative form context.
+
 `POST /api/parse-plan` and `GET /api/weather` are thin HTTP adapters. They validate request boundaries, invoke server-only services, and map internal failures to typed responses without stack traces. OpenRouter output and Open-Meteo payloads are both locally validated before use. Integration setup and failure behavior are documented in `docs/INTEGRATIONS.md`.
 
 ## Client workflow
@@ -72,5 +74,7 @@ The scheduler uses the existing rule functions rather than duplicating policy th
 One typed React reducer owns plan fields, verified tasks, extraction notes, conditions, forecast status, language, and the basic result invocation. Manual values already entered by the supervisor take precedence over overlapping extracted values. Demo loading bypasses both APIs, and only the local deterministic scheduler is called by Generate.
 
 ## Verification and provenance boundaries
+
+The draft activity model distinguishes work, breaks, and meals. Work requires verified workload, environment, and splitting permission. Breaks and meals retain requested timing, duration, and supervisor-controlled recovery eligibility without being converted into fake work. Only verified work activities cross the existing `ShiftPlan` scheduler boundary in this iteration; the scheduler algorithm itself is unchanged.
 
 `DraftWorkTask` is intentionally distinct from validated `WorkTask`. Drafts can retain unknown AI fields and optional original requested times; conversion occurs only after form validation. `evaluateOriginalPlan` is a pure evaluator whose `OriginalPlanConflict[]` never contains scheduler-capacity or worker-readiness findings. Sample plan, sample forecast, live forecast, AI-extracted, manual, and supervisor-entered TWL provenance are tracked explicitly. Material sample edits invalidate sample-derived forecast, conditions, and results.
