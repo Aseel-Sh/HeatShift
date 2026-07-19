@@ -57,6 +57,51 @@ describe("domain boundary schemas", () => {
       }),
     ).toEqual({ measurementMode: "onsite_twl", twlZone: "high" });
   });
+
+  it("rejects overnight shifts for the MVP", () => {
+    const result = shiftPlanSchema.safeParse({
+      siteName: "Night works yard",
+      city: "riyadh",
+      shiftDate: "2026-07-18",
+      shiftStart: "22:00",
+      shiftEnd: "06:00",
+      crewSize: 4,
+      nonAcclimatizedWorkers: 0,
+      tasks: [],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: ["shiftEnd"] }),
+      ]),
+    );
+  });
+
+  it("rejects inputs that cannot be represented by five-minute slots", () => {
+    const result = shiftPlanSchema.safeParse({
+      siteName: "Yard",
+      city: "riyadh",
+      shiftDate: "2026-07-18",
+      shiftStart: "06:02",
+      shiftEnd: "08:00",
+      crewSize: 4,
+      nonAcclimatizedWorkers: 0,
+      tasks: [
+        {
+          id: "task-1",
+          nameEn: "Inspect equipment",
+          nameAr: "فحص المعدات",
+          durationMinutes: 7,
+          workload: "light",
+          environment: "indoor",
+          splittable: true,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("official source metadata", () => {

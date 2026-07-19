@@ -3,7 +3,10 @@ import { z } from "zod";
 const nonEmptyStringSchema = z.string().trim().min(1);
 const timeSchema = z
   .string()
-  .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, "Expected time in HH:mm format");
+  .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/, "Expected time in HH:mm format")
+  .refine((time) => Number(time.slice(3)) % 5 === 0, {
+    message: "Time must align to a five-minute slot",
+  });
 
 export const saudiCitySchema = z.enum([
   "riyadh",
@@ -34,23 +37,34 @@ export const workTaskSchema = z.object({
   id: nonEmptyStringSchema,
   nameEn: nonEmptyStringSchema,
   nameAr: nonEmptyStringSchema,
-  durationMinutes: z.number().int().positive(),
+  durationMinutes: z
+    .number()
+    .int()
+    .positive()
+    .refine((minutes) => minutes % 5 === 0, {
+      message: "Duration must be a multiple of five minutes",
+    }),
   workload: workloadSchema,
   environment: workEnvironmentSchema,
   splittable: z.boolean(),
 });
 export type WorkTask = z.infer<typeof workTaskSchema>;
 
-export const shiftPlanSchema = z.object({
-  siteName: nonEmptyStringSchema,
-  city: saudiCitySchema,
-  shiftDate: z.iso.date(),
-  shiftStart: timeSchema,
-  shiftEnd: timeSchema,
-  crewSize: z.number().int().positive(),
-  nonAcclimatizedWorkers: z.number().int().nonnegative(),
-  tasks: z.array(workTaskSchema),
-});
+export const shiftPlanSchema = z
+  .object({
+    siteName: nonEmptyStringSchema,
+    city: saudiCitySchema,
+    shiftDate: z.iso.date(),
+    shiftStart: timeSchema,
+    shiftEnd: timeSchema,
+    crewSize: z.number().int().positive(),
+    nonAcclimatizedWorkers: z.number().int().nonnegative(),
+    tasks: z.array(workTaskSchema),
+  })
+  .refine((plan) => plan.shiftStart < plan.shiftEnd, {
+    message: "Overnight and zero-length shifts are not supported in the MVP",
+    path: ["shiftEnd"],
+  });
 export type ShiftPlan = z.infer<typeof shiftPlanSchema>;
 
 export const siteConditionsSchema = z.object({

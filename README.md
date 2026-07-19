@@ -2,7 +2,7 @@
 
 HeatShift is a planning application for supervisors preparing a single outdoor crew's next shift in Saudi Arabia. It will turn an unstructured plan into a safer executable schedule using deterministic rules. It is planning guidance only and does not guarantee safety or regulatory compliance.
 
-This repository contains the stable project foundation, application shell, validated domain models, and deterministic Saudi heat-planning rules. The scheduler, Gemini extraction, weather integration, and production planning workflow are intentionally not implemented yet.
+This repository contains the stable project foundation, application shell, validated domain models, deterministic Saudi heat-planning rules, and the pure five-minute scheduling engine. Gemini extraction, weather fetching, and the production planning workflow are intentionally not implemented yet.
 
 ## Local setup
 
@@ -40,9 +40,9 @@ npm run build
 
 - `app/` — Next.js App Router pages and future route handlers
 - `components/` — UI grouped by product area
-- `lib/` — validated domain models, pure rules, and future integration boundaries; no scheduler yet
+- `lib/` — validated domain models, pure rules, deterministic scheduler, and future integration boundaries
 - `data/` — official source metadata and future deterministic demo fixtures
 - `tests/` — Vitest unit tests and Playwright end-to-end tests
 - `docs/` — product scope, architecture, decisions, and progress
 
-See [Product scope](docs/PRODUCT_SCOPE.md), [Architecture](docs/ARCHITECTURE.md), and [Progress](docs/PROGRESS.md).
+See [Product scope](docs/PRODUCT_SCOPE.md), [Architecture](docs/ARCHITECTURE.md), [Scheduler](docs/SCHEDULER.md), and [Progress](docs/PROGRESS.md).

@@ -17,6 +17,9 @@
 | Discriminated guidance results | Hydration output distinguishes a planning range, a minimum, and preliminary guidance; work/rest output distinguishes continuous work, cycles, and preliminary guidance. |
 | Stable source IDs in rule output | Rule results remain compact and deterministic while UI layers can resolve human-readable official source metadata separately. |
 | End-exclusive midday time boundary | The restricted interval is represented as 12:00 inclusive to 15:00 exclusive, matching the requirement that work at 15:00 is permitted. |
+| Five-minute discrete scheduler | Every current time and cycle rule divides into five-minute units, enabling exact capacity and overlap accounting. |
+| Stable greedy scheduling | Fixed task priority, stable input-order ties, cooler-temperature ranking, and chronological final ties make results reproducible without an optimizer. |
+| Separate restriction and crew occupancy masks | Direct-sun restrictions can overlap indoor work while crew work and rest remain mutually exclusive. |
 
 ## Visual system
 
@@ -24,4 +27,4 @@ The shell uses a warm neutral background, deep navy text, and amber emphasis. Re
 
 ## Deferred decisions
 
-Provider contracts, schedule algorithms, localization strategy, and production hosting will be decided in later iterations. No current rule implementation performs scheduling or constrains those future choices.
+Provider contracts, localization strategy, and production hosting will be decided in later iterations. The current scheduler intentionally remains a bounded single-crew greedy strategy rather than a general optimization framework.

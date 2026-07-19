@@ -13,7 +13,7 @@ The intended future request flow is:
 5. A deterministic domain engine applies restrictions and work/rest rules.
 6. The UI presents a safer shift plan and a planning report with clear limitations.
 
-The application shell, boundary schemas, source metadata, and deterministic heat-planning rules now exist. Plan sequencing and task placement remain deferred to the scheduler iteration.
+The application shell, boundary schemas, source metadata, deterministic heat-planning rules, and pure five-minute scheduler now exist. External integrations and the workflow UI remain deferred.
 
 ## Directory boundaries
 
@@ -24,7 +24,7 @@ The application shell, boundary schemas, source metadata, and deterministic heat
 - `components/schedule/`: future generated schedule UI
 - `components/report/`: future planning report UI
 - `lib/ai/`: future Gemini structured-extraction adapter
-- `lib/domain/`: Zod boundary schemas and pure deterministic heat-planning rules
+- `lib/domain/`: Zod boundary schemas, pure deterministic heat-planning rules, and the single-crew scheduler
 - `lib/weather/`: future weather-provider adapter
 - `lib/i18n/`: future English and Arabic message handling
 - `data/`: official source metadata and future versioned deterministic demo fixtures
@@ -51,7 +51,10 @@ The public domain entry point is `lib/domain/index.ts`. Current pure functions c
 - forecast temperature categorization;
 - TWL work/rest planning guidance;
 - hydration planning as either a range, a minimum, or preliminary guidance;
-- critical high-TWL conflicts for non-acclimatized workers; and
-- intermediate/high-TWL lone-work warnings.
+- critical high-TWL conflicts for non-acclimatized workers;
+- intermediate/high-TWL lone-work warnings; and
+- deterministic five-minute task placement, crew-rest blocks, capacity conflicts, and schedule metrics.
 
 Every rule result contains a stable source ID. Human-readable source metadata is stored separately in `data/official-sources.ts`; domain functions make no network calls.
+
+The scheduler uses the existing rule functions rather than duplicating policy thresholds. Its public API and limitations are documented in `docs/SCHEDULER.md`.

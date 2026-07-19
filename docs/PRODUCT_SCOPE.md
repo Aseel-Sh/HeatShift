@@ -28,7 +28,6 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 
 ## Out of scope for this iteration
 
-- Task sequencing and schedule generation
 - Gemini integration or prompts
 - Weather API integration
 - Functional language switching
@@ -43,8 +42,11 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - Site-verified TWL work/rest and hydration planning guidance
 - High-TWL non-acclimatized-worker conflicts
 - Intermediate/high-TWL outdoor lone-work warnings
+- Deterministic five-minute, single-crew schedule generation
+- Priority-based placement, forecast temperature preference, indoor midday preference, and contiguous non-splittable tasks
+- TWL work/rest packages, exact unscheduled capacity, schedule metrics, and preliminary results
 
-These pure rules evaluate supplied inputs only. They do not fetch conditions, assign workers, or place tasks on a schedule.
+These pure modules evaluate supplied inputs only. They do not fetch conditions, assign individual workers, or model parallel crews.
 
 ## Safety language
 
