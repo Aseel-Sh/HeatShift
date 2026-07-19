@@ -1,3 +1,3 @@
 # Data fixtures
 
-This directory contains human-readable official source metadata used by deterministic rule results. It is also reserved for the built-in deterministic demo scenario, which remains deferred to a later workflow iteration.
+This directory contains human-readable official source metadata, fixed coordinates for the five supported Saudi cities, and an explicitly labeled deterministic Riyadh demo scenario. The demo fixture is returned through an internal service without network calls.

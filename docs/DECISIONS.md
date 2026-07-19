@@ -20,6 +20,11 @@
 | Five-minute discrete scheduler | Every current time and cycle rule divides into five-minute units, enabling exact capacity and overlap accounting. |
 | Stable greedy scheduling | Fixed task priority, stable input-order ties, cooler-temperature ranking, and chronological final ties make results reproducible without an optimizer. |
 | Separate restriction and crew occupancy masks | Direct-sun restrictions can overlap indoor work while crew work and rest remain mutually exclusive. |
+| Server-only Gemini adapter | The API key remains outside browser bundles, and a missing key disables only extraction rather than the application. |
+| Double validation for AI output | Gemini structured output constrains generation, while local Zod parsing remains the trusted boundary. |
+| Fixed Open-Meteo city coordinates | Five supported city IDs resolve deterministically without maps, geocoding, or user-location tracking. |
+| No weather fallback values | Empty, unavailable, malformed, or timed-out forecasts return typed errors instead of invented data. |
+| Network-free demo service | The core scenario remains repeatable when provider access, credentials, or connectivity are unavailable. |
 
 ## Visual system
 

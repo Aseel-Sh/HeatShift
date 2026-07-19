@@ -75,12 +75,46 @@ Validation:
 - Purity audit — no React, Next.js, AI, network, database, clock, or random-number use in `lib/domain`
 - Safety-language audit — none of the prohibited phrases are present
 
-Deferred by scope:
+Deferred by that iteration's scope:
 
 - Gemini integration
 - Weather network calls
 - Full workflow UI
 - Worker-level assignment or parallel crews
 - Deterministic demo fixture
+
+Blockers: none.
+
+## Server integrations and demo iteration
+
+Status: complete on 2026-07-18.
+
+Implemented:
+
+- Server-only `@google/genai` structured plan extraction service
+- Locally validated extraction schema, model instructions, assumptions, and missing-information output
+- `POST /api/parse-plan` with JSON-only input, meaningful-length validation, 5000-character text limit, 10 KiB body limit, disconnect/timeout aborts, and typed errors
+- Graceful `AI_NOT_CONFIGURED` behavior when `GEMINI_API_KEY` is absent
+- Fixed coordinates for Riyadh, Jeddah, Dammam, Mecca, and Medina
+- Open-Meteo hourly retrieval using the `Asia/Riyadh` timezone
+- Strict normalization into `ForecastHour[]` without fallback or fabricated values
+- `GET /api/weather` validation and typed unavailable, empty, range, and timeout errors
+- Explicitly labeled deterministic Riyadh demo fixture and network-free internal service
+- Integration setup, security boundaries, fields, failure behavior, and free-tier limitations in `docs/INTEGRATIONS.md`
+
+Validation:
+
+- `npm run lint` — passed
+- `npm run typecheck` — passed
+- `npm run test` — passed, 12 files and 80 tests
+- `npm run build` — passed, including both dynamic API routes
+- `git diff --check` — passed
+- Automated integration tests use injected fake clients or mocked fetch implementations; no external network calls
+- Security audit — no browser-exposed Gemini variable, plan-text logging, API-key logging, or stack-trace responses
+
+Deferred by scope:
+
+- Complete multi-step workflow UI
+- Authentication, persistence, uploads, or worker-level assignment
 
 Blockers: none.

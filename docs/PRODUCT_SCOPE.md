@@ -28,8 +28,6 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 
 ## Out of scope for this iteration
 
-- Gemini integration or prompts
-- Weather API integration
 - Functional language switching
 - Plan entry, verification, conditions, schedule, and report workflows
 - Production deployment
@@ -45,6 +43,9 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - Deterministic five-minute, single-crew schedule generation
 - Priority-based placement, forecast temperature preference, indoor midday preference, and contiguous non-splittable tasks
 - TWL work/rest packages, exact unscheduled capacity, schedule metrics, and preliminary results
+- Server-only Gemini structured plan extraction with local schema validation
+- Open-Meteo hourly forecast retrieval for five supported Saudi cities
+- Explicitly labeled deterministic Riyadh demo data available without network calls
 
 These pure modules evaluate supplied inputs only. They do not fetch conditions, assign individual workers, or model parallel crews.
 

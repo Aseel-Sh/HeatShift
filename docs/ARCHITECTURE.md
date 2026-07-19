@@ -13,7 +13,7 @@ The intended future request flow is:
 5. A deterministic domain engine applies restrictions and work/rest rules.
 6. The UI presents a safer shift plan and a planning report with clear limitations.
 
-The application shell, boundary schemas, source metadata, deterministic heat-planning rules, and pure five-minute scheduler now exist. External integrations and the workflow UI remain deferred.
+The application shell, boundary schemas, source metadata, deterministic heat-planning rules, pure five-minute scheduler, server integrations, and offline demo data now exist. The complete workflow UI remains deferred.
 
 ## Directory boundaries
 
@@ -23,11 +23,13 @@ The application shell, boundary schemas, source metadata, deterministic heat-pla
 - `components/conditions/`: future forecast and site-verified TWL UI
 - `components/schedule/`: future generated schedule UI
 - `components/report/`: future planning report UI
-- `lib/ai/`: future Gemini structured-extraction adapter
+- `lib/ai/`: server-side Gemini structured-extraction adapter and extraction schemas
 - `lib/domain/`: Zod boundary schemas, pure deterministic heat-planning rules, and the single-crew scheduler
-- `lib/weather/`: future weather-provider adapter
+- `lib/weather/`: Open-Meteo adapter and pure response normalization
+- `lib/server/`: server environment validation and shared typed integration errors
+- `lib/demo/`: network-free deterministic demo service
 - `lib/i18n/`: future English and Arabic message handling
-- `data/`: official source metadata and future versioned deterministic demo fixtures
+- `data/`: official source metadata, fixed city coordinates, and deterministic demo fixtures
 - `tests/unit/`: fast deterministic tests
 - `tests/e2e/`: browser-level user-flow tests
 
@@ -58,3 +60,7 @@ The public domain entry point is `lib/domain/index.ts`. Current pure functions c
 Every rule result contains a stable source ID. Human-readable source metadata is stored separately in `data/official-sources.ts`; domain functions make no network calls.
 
 The scheduler uses the existing rule functions rather than duplicating policy thresholds. Its public API and limitations are documented in `docs/SCHEDULER.md`.
+
+## Server integration API
+
+`POST /api/parse-plan` and `GET /api/weather` are thin HTTP adapters. They validate request boundaries, invoke server-only services, and map internal failures to typed responses without stack traces. Gemini output and Open-Meteo payloads are both locally validated before use. Integration setup and failure behavior are documented in `docs/INTEGRATIONS.md`.
