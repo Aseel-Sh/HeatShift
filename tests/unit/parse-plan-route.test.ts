@@ -38,7 +38,7 @@ describe("POST /api/parse-plan", () => {
   });
 
   it("returns AI_NOT_CONFIGURED when the server key is absent", async () => {
-    vi.stubEnv("GEMINI_API_KEY", "");
+    vi.stubEnv("OPENROUTER_API_KEY", "");
     const response = await POST(
       new Request("http://localhost/api/parse-plan", {
         method: "POST",

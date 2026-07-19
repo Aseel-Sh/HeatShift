@@ -7,7 +7,7 @@ HeatShift is a single Next.js App Router application. The browser UI and any fut
 The intended future request flow is:
 
 1. A supervisor describes one crew's plan.
-2. Gemini extracts that text into a strictly validated structure; it does not make safety decisions.
+2. A swappable AI provider extracts that text into a strictly validated structure; it does not make safety decisions.
 3. The supervisor verifies the extracted tasks and manually entered site information.
 4. Forecast conditions and site-verified TWL information remain visibly separate inputs.
 5. A deterministic domain engine applies restrictions and work/rest rules.
@@ -24,7 +24,7 @@ The boundary schemas, source metadata, deterministic heat-planning rules, pure f
 - `components/conditions/`: future forecast and site-verified TWL UI
 - `components/schedule/`: future generated schedule UI
 - `components/report/`: future planning report UI
-- `lib/ai/`: server-side Gemini structured-extraction adapter and extraction schemas
+- `lib/ai/`: provider-neutral extraction service, OpenRouter adapter, and extraction schemas
 - `lib/domain/`: Zod boundary schemas, pure deterministic heat-planning rules, and the single-crew scheduler
 - `lib/weather/`: Open-Meteo adapter and pure response normalization
 - `lib/server/`: server environment validation and shared typed integration errors
@@ -43,7 +43,7 @@ No data is persisted server-side. The product handles one crew without worker na
 
 ## Safety model
 
-Gemini is limited to structured plan extraction. Forecast data informs advance planning, while manually verified on-site TWL data represents site conditions; the product must never collapse them into one concept. All restrictions, work/rest decisions, and schedule changes are deterministic and testable.
+AI is limited to structured plan extraction. Forecast data informs advance planning, while manually verified on-site TWL data represents site conditions; the product must never collapse them into one concept. All restrictions, work/rest decisions, schedule changes, hydration totals, and briefings are deterministic and testable.
 
 HeatShift provides planning guidance. It must never claim to guarantee safety or regulatory compliance.
 
@@ -65,7 +65,7 @@ The scheduler uses the existing rule functions rather than duplicating policy th
 
 ## Server integration API
 
-`POST /api/parse-plan` and `GET /api/weather` are thin HTTP adapters. They validate request boundaries, invoke server-only services, and map internal failures to typed responses without stack traces. Gemini output and Open-Meteo payloads are both locally validated before use. Integration setup and failure behavior are documented in `docs/INTEGRATIONS.md`.
+`POST /api/parse-plan` and `GET /api/weather` are thin HTTP adapters. They validate request boundaries, invoke server-only services, and map internal failures to typed responses without stack traces. OpenRouter output and Open-Meteo payloads are both locally validated before use. Integration setup and failure behavior are documented in `docs/INTEGRATIONS.md`.
 
 ## Client workflow
 

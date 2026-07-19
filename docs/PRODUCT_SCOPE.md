@@ -20,17 +20,16 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - No chatbot
 - No drag-and-drop
 - No voice or image upload in the core MVP
-- Gemini is used only for structured plan extraction
+- AI is used only for structured plan extraction
 - Safety decisions are deterministic
 - Forecast planning and site-verified TWL planning are shown as separate concepts
 - The app works with a built-in deterministic demo scenario
 - The app never describes itself as guaranteeing safety or regulatory compliance
 
-## Out of scope for this iteration
+## Out of scope
 
-- Functional language switching
-- Plan entry, verification, conditions, schedule, and report workflows
 - Production deployment
+- Authentication, persistence, uploads, worker-level scheduling, and live monitoring
 
 ## Implemented domain scope
 
@@ -43,9 +42,11 @@ The core MVP will support one supervisor planning one crew's shift. It will prov
 - Deterministic five-minute, single-crew schedule generation
 - Priority-based placement, forecast temperature preference, indoor midday preference, and contiguous non-splittable tasks
 - TWL work/rest packages, exact unscheduled capacity, schedule metrics, and preliminary results
-- Server-only Gemini structured plan extraction with local schema validation
+- Server-only OpenRouter structured plan extraction behind a provider-neutral interface with local schema validation
 - Open-Meteo hourly forecast retrieval for five supported Saudi cities
 - Explicitly labeled deterministic Riyadh demo data available without network calls
+- English/Arabic Describe, Verify, Conditions, results, briefing, and print workflow
+- Deterministic crew hydration planning totals derived from scheduled outdoor exposure
 
 These pure modules evaluate supplied inputs only. They do not fetch conditions, assign individual workers, or model parallel crews.
 

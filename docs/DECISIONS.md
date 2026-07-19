@@ -9,10 +9,10 @@
 | Zod at external and untrusted boundaries | Makes future extraction and weather payload validation explicit. |
 | Vitest for unit tests and Playwright for end-to-end tests | Separates fast deterministic checks from browser-level confidence. |
 | No database or authentication | The MVP plans one crew and does not need accounts or server persistence. |
-| Gemini only extracts structured plan data | Probabilistic output is isolated from safety decisions. |
+| AI only extracts structured plan data | Probabilistic output is isolated from safety decisions. |
 | Deterministic safety engine | Restrictions and work/rest decisions must be explainable, reproducible, and testable. |
 | Forecast and site-verified TWL are separate | Forecasts support advance planning; site-verified readings represent observed local conditions. |
-| Built-in deterministic demo required | The core experience must remain demonstrable without Gemini, weather services, or secrets. |
+| Built-in deterministic demo required | The core experience must remain demonstrable without AI, weather services, or secrets. |
 | Qualified safety language only | The product provides guidance and cannot guarantee safety or regulatory compliance. |
 | Discriminated guidance results | Hydration output distinguishes a planning range, a minimum, and preliminary guidance; work/rest output distinguishes continuous work, cycles, and preliminary guidance. |
 | Stable source IDs in rule output | Rule results remain compact and deterministic while UI layers can resolve human-readable official source metadata separately. |
@@ -20,8 +20,9 @@
 | Five-minute discrete scheduler | Every current time and cycle rule divides into five-minute units, enabling exact capacity and overlap accounting. |
 | Stable greedy scheduling | Fixed task priority, stable input-order ties, cooler-temperature ranking, and chronological final ties make results reproducible without an optimizer. |
 | Separate restriction and crew occupancy masks | Direct-sun restrictions can overlap indoor work while crew work and rest remain mutually exclusive. |
-| Server-only Gemini adapter | The API key remains outside browser bundles, and a missing key disables only extraction rather than the application. |
-| Double validation for AI output | Gemini structured output constrains generation, while local Zod parsing remains the trusted boundary. |
+| Provider-neutral extraction boundary | Business logic depends on a small chat-completions interface rather than a provider SDK. |
+| OpenRouter free router by default | `openrouter/free` avoids paid-model defaults and routes to available free models supporting requested capabilities. |
+| Double validation for AI output | Provider structured output constrains generation, while local Zod parsing remains the trusted boundary. |
 | Fixed Open-Meteo city coordinates | Five supported city IDs resolve deterministically without maps, geocoding, or user-location tracking. |
 | No weather fallback values | Empty, unavailable, malformed, or timed-out forecasts return typed errors instead of invented data. |
 | Network-free demo service | The core scenario remains repeatable when provider access, credentials, or connectivity are unavailable. |

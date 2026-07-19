@@ -1,4 +1,4 @@
-import { extractPlanWithGemini } from "../../../lib/ai/gemini-plan-extractor";
+import { extractPlan } from "../../../lib/ai/plan-extractor";
 import { parsePlanRequestSchema } from "../../../lib/ai/plan-extraction-schema";
 import {
   errorResponse,
@@ -44,7 +44,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const environment = getServerEnvironment();
-  if (!environment.gemini.enabled || !environment.gemini.apiKey) {
+  if (!environment.ai.enabled || !environment.ai.apiKey) {
     return errorResponse(
       "AI_NOT_CONFIGURED",
       "AI plan extraction is not configured.",
@@ -59,9 +59,9 @@ export async function POST(request: Request): Promise<Response> {
   });
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const plan = await extractPlanWithGemini(input.data.text, {
-      apiKey: environment.gemini.apiKey,
-      model: environment.gemini.model,
+    const plan = await extractPlan(input.data.text, {
+      apiKey: environment.ai.apiKey,
+      model: environment.ai.model,
       signal: controller.signal,
     });
     return Response.json({ data: plan });

@@ -52,7 +52,7 @@ The engine uses fixed task priorities, stable input-order tie breaking, numeric 
 - Forecast records influence ordering but are not site-verified TWL measurements.
 - The scheduler does not assign individual workers or model parallel crews.
 - The scheduler does not fetch forecasts or verify field conditions.
-- The deterministic demo fixture and workflow UI remain deferred.
+- The results UI presents scheduler output but does not turn the greedy strategy into a general optimization engine.
 
 ## Safety and regulatory language
 

@@ -39,7 +39,7 @@ describe("workflow state", () => {
     });
 
     expect(updated.tasks[0].nameEn).toBe("Edited trenching");
-    expect(removed.tasks).toHaveLength(3);
+    expect(removed.tasks).toHaveLength(getDemoScenario().shiftPlan.tasks.length - 1);
   });
 
   it("validates shift order and crew composition", () => {

@@ -37,7 +37,7 @@ Validation:
 Deferred by that iteration's scope:
 
 - Scheduler and task placement
-- Gemini integration
+- AI extraction integration
 - Weather fetching
 - Full planning workflow UI
 - Deterministic demo fixture
@@ -73,7 +73,7 @@ Deferred by scope:
 - Polished schedule results and report screen
 - Persistence, authentication, uploads, worker-level assignment, or live monitoring
 
-Blockers: none. A Gemini key is optional for demo/manual use and required only for live AI extraction.
+Blockers: none. An OpenRouter key is optional for demo/manual use and required only for live AI extraction.
 
 ## Deterministic scheduler iteration
 
@@ -108,7 +108,7 @@ Validation:
 
 Deferred by that iteration's scope:
 
-- Gemini integration
+- AI extraction integration
 - Weather network calls
 - Full workflow UI
 - Worker-level assignment or parallel crews
@@ -122,10 +122,10 @@ Status: complete on 2026-07-18.
 
 Implemented:
 
-- Server-only `@google/genai` structured plan extraction service
+- Server-only structured plan extraction service
 - Locally validated extraction schema, model instructions, assumptions, and missing-information output
 - `POST /api/parse-plan` with JSON-only input, meaningful-length validation, 5000-character text limit, 10 KiB body limit, disconnect/timeout aborts, and typed errors
-- Graceful `AI_NOT_CONFIGURED` behavior when `GEMINI_API_KEY` is absent
+- Graceful `AI_NOT_CONFIGURED` behavior when the AI key is absent
 - Fixed coordinates for Riyadh, Jeddah, Dammam, Mecca, and Medina
 - Open-Meteo hourly retrieval using the `Asia/Riyadh` timezone
 - Strict normalization into `ForecastHour[]` without fallback or fabricated values
@@ -141,7 +141,7 @@ Validation:
 - `npm run build` — passed, including both dynamic API routes
 - `git diff --check` — passed
 - Automated integration tests use injected fake clients or mocked fetch implementations; no external network calls
-- Security audit — no browser-exposed Gemini variable, plan-text logging, API-key logging, or stack-trace responses
+- Security audit — no browser-exposed AI variable, plan-text logging, API-key logging, or stack-trace responses
 
 Deferred by scope:
 
@@ -149,3 +149,31 @@ Deferred by scope:
 - Authentication, persistence, uploads, or worker-level assignment
 
 Blockers: none.
+
+## OpenRouter migration and results iteration
+
+Status: complete on 2026-07-19.
+
+Implemented:
+
+- Provider-neutral AI extraction interface with an OpenRouter OpenAI-compatible adapter
+- `openrouter/free` default, server-only environment validation, strict structured output, local Zod validation, and friendly rate-limit/provider failures
+- Removed the provider-specific SDK and all legacy provider configuration
+- Polished Before/After results report using only deterministic scheduler output
+- Chronological work, recovery, restriction, and unscheduled timeline with visible reason details
+- Capacity and non-acclimatized-worker critical warnings
+- Forecast-only versus site-verified TWL/cycle distinction
+- Crew hydration minimum/range derived from scheduled outdoor exposure without turning minimum guidance into an exact prescription
+- Deterministic English and Arabic supervisor briefings
+- Official source references without endorsement language
+- Edit, conditions, recalculate, start-over, and browser-print actions
+- Print stylesheet retaining warnings, sources, schedule, hydration details, and briefing in black and white
+- Demo fixture coverage for the midday restriction, cooler heavy work, 20/40 cycles, indoor midday placement, new-worker warning, and unscheduled capacity
+
+Validation:
+
+- Provider, report-model, scheduler, workflow, and route unit coverage
+- Ten results E2E scenarios plus the existing workflow suite, with integrations mocked
+- Full lint, strict typecheck, unit, browser, production build, and diff checks completed
+
+Blockers: none. Live AI extraction requires an optional server-only `OPENROUTER_API_KEY`; demo and manual paths require no key.

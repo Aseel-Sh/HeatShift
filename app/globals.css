@@ -59,3 +59,13 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+@media print {
+  @page { margin: 12mm; size: A4 portrait; }
+  html, body { background: white !important; color: black !important; font-size: 10pt; }
+  .report-actions { display: none !important; }
+  .results-report { color: black !important; }
+  .results-report section, .results-report article, .results-report li, .results-report details { break-inside: avoid; box-shadow: none !important; }
+  .results-report a { color: black !important; text-decoration: underline; }
+  .results-report details > * { display: block !important; }
+}

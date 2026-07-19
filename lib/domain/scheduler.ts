@@ -262,6 +262,14 @@ export function generateSchedule(
           .map((_, index) => index)
           .filter((index) => index + pattern.length <= slots.length)
           .sort((left, right) => {
+            if (restrictionActive && task.environment === "indoor") {
+              const middayWorkSlots = (startIndex: number) => pattern.reduce(
+                (count, type, offset) => count + (type === "work" && restrictedSlots.has(startIndex + offset) ? 1 : 0),
+                0,
+              );
+              const preferenceDifference = middayWorkSlots(right) - middayWorkSlots(left);
+              if (preferenceDifference !== 0) return preferenceDifference;
+            }
             if (
               task.environment !== "direct_sun" ||
               sortedForecast.length === 0

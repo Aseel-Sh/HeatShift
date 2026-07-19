@@ -28,7 +28,7 @@ test("loads demo scenario and reaches Conditions without integration calls", asy
   await expect(page.getByLabel("Hourly forecast")).toBeVisible(); expect(calls).toBe(0);
 });
 
-test("manually creates a task without Gemini", async ({ page }) => {
+test("manually creates a task without AI", async ({ page }) => {
   await fillPlan(page); await page.getByRole("button", { name: "Create tasks manually" }).click();
   await page.getByRole("button", { name: "Add task" }).click();
   await page.getByLabel("English name").fill("Manual cleanup"); await page.getByLabel("Arabic name").fill("تنظيف يدوي");

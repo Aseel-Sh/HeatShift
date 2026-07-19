@@ -9,7 +9,7 @@ import type {
 import type { ScheduleResult } from "../domain/scheduler-types";
 
 export type Language = "en" | "ar";
-export type WorkflowStep = "describe" | "verify" | "conditions";
+export type WorkflowStep = "describe" | "verify" | "conditions" | "results";
 
 export interface PlanForm {
   siteName: string;
@@ -62,7 +62,8 @@ export type WorkflowAction =
   | { type: "weatherLoading" }
   | { type: "weatherSuccess"; forecast: ForecastHour[] }
   | { type: "weatherError"; error: string }
-  | { type: "setScheduleResult"; result: ScheduleResult };
+  | { type: "setScheduleResult"; result: ScheduleResult }
+  | { type: "startOver" };
 
 export function createInitialWorkflowState(): WorkflowState {
   return {
@@ -218,7 +219,9 @@ export function workflowReducer(
         forecast: [],
       };
     case "setScheduleResult":
-      return { ...state, scheduleResult: action.result };
+      return { ...state, step: "results", scheduleResult: action.result };
+    case "startOver":
+      return { ...createInitialWorkflowState(), language: state.language };
   }
 }
 

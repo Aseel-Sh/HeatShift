@@ -30,6 +30,7 @@ describe("deterministic demo scenario", () => {
     );
     expect(first.shiftPlan.tasks.map((task) => task.nameEn)).toEqual([
       "Heavy trenching",
+      "Contiguous concrete placement",
       "Indoor equipment preparation",
       "Shaded material inspection",
       "Direct-sun cleanup",
