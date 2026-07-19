@@ -382,7 +382,7 @@ Implemented:
 - Allowed explicitly eligible breaks/meals to satisfy partial or complete recovery without adding duplicate recovery blocks; unknown or ineligible activities receive no credit.
 - Added explicit critical infeasibility for fixed or must-schedule activities that cannot fit without breaking a hard constraint.
 - Added bounded movement, ordering swaps, adjacent-block merging, eligible-recovery alignment, and safe-gap filling across candidate construction.
-- Added the exact confirmed construction regression fixture. Its must-schedule concrete pour is fully scheduled; lower-priority excavation, curing, cleanup, rebar/forms, and toolbox work retain exact unscheduled minutes.
+- Added the exact confirmed construction regression fixture. This historical result was superseded by the release regression below after the concrete pour was confirmed non-splittable and predecessor links were entered.
 - Changed results language to “Selected safer schedule” and visibly reports “Selected from 6 deterministic candidate schedules.”
 - Added `docs/OPTIMIZATION.md` and updated scheduler, architecture, scope, decisions, and README documentation.
 
@@ -401,3 +401,22 @@ Regression result:
 Final validation: lint passed; strict typecheck passed; 183 unit tests across 24 files passed; 40 Playwright tests passed; production build passed.
 
 Blockers: none. The bounded search is deterministic and explainable but does not claim global optimality.
+
+## Exact production work-plan release regression
+
+Status: complete on 2026-07-19.
+
+- Replayed the supplied North utility site plan from import through results against an optimized production build in Chromium.
+- Verified live Riyadh location search and retained coordinates; used deterministic intercepted weather for repeatable schedule evidence.
+- Found and fixed two release blockers: missing predecessor-confirmation controls and must-schedule cycle placement bypassing a non-splittable constraint.
+- Added editable finish-to-start dependency controls and dangling-reference cleanup on task deletion.
+- Corrected the scheduler so non-splittable must-schedule work is either placed as a valid contiguous activity or reported wholly unscheduled.
+- Added exact production E2E evidence for import, classification, dependencies, schedule rules, linked intervals, mobile containment, Arabic RTL, and print media.
+- Added a fixed concrete-pump-window infeasibility unit regression.
+- Added `docs/REGRESSION_WORK_PLAN_QA.md` with manual observations, automated proof boundaries, exact import/schedule output, candidate comparison, operational/UI concerns, screenshots, and release judgment.
+
+Corrected regression result: 6 candidates evaluated; `critical_must_schedule_first` selected by deterministic tie break; 0 hard violations; 150 must-schedule minutes and 250 other minutes unscheduled; 390 movement minutes; 6 splits; 3 order inversions; 0 heat penalty. All candidate strategies tied on the exposed score.
+
+Final validation: lint passed; strict typecheck passed; 188 unit tests across 25 files passed; 45 Playwright tests passed; optimized production build passed. The exact production-browser regression also passed against the final build.
+
+Blockers: no code/test blocker remains. The confirmed plan remains operationally infeasible and therefore requires supervisor intervention; this is the expected honest product outcome, not a release-test failure.

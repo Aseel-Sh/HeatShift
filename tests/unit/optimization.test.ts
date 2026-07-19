@@ -191,15 +191,18 @@ describe("deterministic bounded schedule optimization",()=>{
     expect(selected.optimizationSummary.hardConstraintViolations).toBe(0);
   });
 
-  it("prioritizes the confirmed must-complete concrete pour in the exact regression plan",()=>{
+  it("reports the confirmed non-splittable concrete pour honestly when its required cycle cannot fit",()=>{
     const result=generateSchedule(REGRESSION_SHIFT_PLAN,REGRESSION_SITE_CONDITIONS,[]);
     const candidates=generateScheduleCandidates(REGRESSION_SHIFT_PLAN,REGRESSION_SITE_CONDITIONS,[]);
     const concrete=result.unscheduled.find(item=>item.taskId==="concrete")?.unscheduledMinutes??0;
     const cleanup=result.unscheduled.find(item=>item.taskId==="cleanup")?.unscheduledMinutes??0;
-    expect(concrete).toBe(0);
+    expect(concrete).toBe(150);
     expect(cleanup).toBeGreaterThan(0);
-    expect(result.optimizationSummary).toEqual({candidatesEvaluated:6,selectedStrategy:"critical_must_schedule_first",hardConstraintViolations:0,unscheduledMustScheduleMinutes:0,unscheduledOtherMinutes:355,movementMinutes:535,splitCount:9,orderInversions:4,heatExposurePenalty:0});
-    expect(candidates.filter(candidate=>candidate.strategy!=="critical_must_schedule_first").some(candidate=>candidate.optimizationSummary.unscheduledMustScheduleMinutes>0)).toBe(true);
+    expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
+    expect(result.optimizationSummary.unscheduledMustScheduleMinutes).toBe(150);
+    expect(result.blocks.filter(block=>block.taskId==="concrete"&&block.type==="work")).toHaveLength(0);
+    const selectedCandidate=candidates.find(candidate=>candidate.strategy===result.optimizationSummary.selectedStrategy)!;
+    expect(candidates.every(candidate=>compareScheduleCandidates(selectedCandidate,candidate)<=0)).toBe(true);
     expect(validateScheduleHardConstraints(REGRESSION_SHIFT_PLAN,REGRESSION_SITE_CONDITIONS,result)).toEqual([]);
     expect(REGRESSION_SHIFT_PLAN.tasks.find(task=>task.id==="concrete")?.operationalNotes).toEqual(["Pump booked only today."]);
     expect(result.explanationSummary).toContain("Pump booked only today.");
@@ -214,6 +217,17 @@ describe("deterministic bounded schedule optimization",()=>{
     expect(result.optimizationSummary.unscheduledMustScheduleMinutes).toBe(20);
     expect(result.unscheduled).toContainEqual(expect.objectContaining({taskId:"must",unscheduledMinutes:20}));
     expect(result.explanationSummary).toContain("must-schedule work could not fit");
+    expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
+  });
+
+  it("reports a fixed concrete-pump window inside the direct-sun restriction as infeasible",()=>{
+    const plan=shiftPlanSchema.parse({siteName:"Fixed pump window",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-07-20",shiftStart:"06:00",shiftEnd:"16:30",crewSize:8,nonAcclimatizedWorkers:0,tasks:[
+      {id:"concrete",nameEn:"Concrete pour",nameAr:"صب الخرسانة",durationMinutes:150,workload:"heavy",environment:"direct_sun",splittable:false,mustSchedule:true,timingPreference:"fixed",requestedStart:"12:00",requestedEnd:"14:30",operationalNotes:["Pump window confirmed 12:00–14:30."]},
+    ]});
+    const result=generateSchedule(plan,{measurementMode:"onsite_twl",twlZone:"high"},[]);
+    expect(result.blocks.filter(block=>block.taskId==="concrete"&&block.type==="work")).toHaveLength(0);
+    expect(result.unscheduled).toContainEqual(expect.objectContaining({taskId:"concrete",unscheduledMinutes:150}));
+    expect(result.conflicts).toContainEqual(expect.objectContaining({code:"FIXED_ACTIVITY_INFEASIBLE",taskId:"concrete",severity:"critical"}));
     expect(result.optimizationSummary.hardConstraintViolations).toBe(0);
   });
 

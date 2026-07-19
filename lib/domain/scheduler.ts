@@ -398,7 +398,7 @@ function generateCandidateSchedule(
       ? ({ kind: "continuous" } as const)
       : getWorkRestGuidance(siteConditions.twlZone, task.workload);
 
-    if(workRestGuidance.kind==="cycle"&&task.mustSchedule){
+    if(workRestGuidance.kind==="cycle"&&task.mustSchedule&&task.splittable){
       let workInCycle=0,recoveryRemaining=0;
       for(let index=earliestStartIndex;index<slots.length&&scheduledSlots<requiredSlots;index+=1){
         const slot=slots[index];

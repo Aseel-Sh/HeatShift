@@ -96,7 +96,7 @@ export function workflowReducer(state: WorkflowState, action: WorkflowAction): W
       if(action.field==="activityKind") for(const key of Object.keys(errors)) if(key.startsWith(`task-${action.id}-`)) errors[key]="";
       return {...state,...invalidateSample(state),tasks:state.tasks.map(task=>task.id===action.id?{...task,[action.field]:action.value}:task),errors};
     }
-    case "removeTask": return {...state,...invalidateSample(state),tasks:state.tasks.filter(task=>task.id!==action.id)};
+    case "removeTask": return {...state,...invalidateSample(state),tasks:state.tasks.filter(task=>task.id!==action.id).map(task=>({...task,predecessorTaskIds:(task.predecessorTaskIds??[]).filter(id=>id!==action.id)}))};
     case "setConditions": return {...state,...(state.isDemo?{isDemo:false,planSource:"manual",forecast:[],forecastSource:"none",weatherMetadata:null,weatherStatus:"idle",weatherError:null}:{}),conditions:action.conditions,scheduleResult:null};
     case "weatherLoading": return {...state,weatherStatus:"loading",weatherError:null,forecast:[],forecastSource:"none",weatherMetadata:null};
     case "weatherSuccess": return {...state,weatherStatus:"success",weatherError:null,forecast:action.forecast,forecastSource:"live",weatherMetadata:action.metadata,derivedDataInvalidated:false};
