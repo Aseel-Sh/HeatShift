@@ -78,4 +78,24 @@ describe("workflow state", () => {
       ]),
     ).toHaveProperty("task-task-1-durationMinutes");
   });
+
+  it("fills untouched plan fields and does not invent a missing extracted duration", () => {
+    const state = workflowReducer(createInitialWorkflowState(), {
+      type: "applyExtraction",
+      extraction: {
+        shiftStart: "07:00",
+        shiftEnd: "15:00",
+        tasks: [{ nameEn: "Unspecified task", nameAr: "مهمة غير محددة" }],
+        assumptions: [],
+        missingInformation: ["Task duration was not stated."],
+      },
+    });
+
+    expect(state.plan.shiftStart).toBe("07:00");
+    expect(state.plan.shiftEnd).toBe("15:00");
+    expect(state.tasks[0].durationMinutes).toBe(0);
+    expect(validateVerifiedPlan(state.plan, state.tasks)).toHaveProperty(
+      "task-extracted-task-1-durationMinutes",
+    );
+  });
 });

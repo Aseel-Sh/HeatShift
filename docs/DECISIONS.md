@@ -37,4 +37,4 @@ The shell uses a warm neutral background, deep navy text, and amber emphasis. Re
 
 ## Deferred decisions
 
-Production hosting and the polished results/report presentation will be decided in later iterations. The current scheduler intentionally remains a bounded single-crew greedy strategy rather than a general optimization framework.
+Production hosting remains deferred. The current scheduler intentionally remains a bounded single-crew greedy strategy rather than a general optimization framework.

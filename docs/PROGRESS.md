@@ -177,3 +177,33 @@ Validation:
 - Full lint, strict typecheck, unit, browser, production build, and diff checks completed
 
 Blockers: none. Live AI extraction requires an optional server-only `OPENROUTER_API_KEY`; demo and manual paths require no key.
+
+## Adversarial QA and reliability iteration
+
+Status: complete on 2026-07-19.
+
+Implemented and verified:
+
+- Full severity-ranked before/after audit in `docs/QA_REPORT.md`
+- Text-first AI extraction without requiring duplicate manual entry
+- Untouched extracted shift values no longer overridden by placeholder times
+- Missing AI task duration remains visibly invalid instead of becoming an invented five-minute value
+- Programmatically linked form/task errors with `aria-invalid` and alert semantics
+- Failure-only Playwright screenshots, traces, and videos
+- Focused E2E argument forwarding and support for inspecting an already-running app
+- Adversarial AI, weather, form, responsive, keyboard, refresh, duplicate-action, console, network, and safe-rendering browser coverage
+- Exact noon/15:00, entirely restricted shift, multiple-heavy-task, capacity, and preliminary scheduler edge coverage
+- Repository, browser bundle, logging, input-limit, and tracked-secret audits
+
+Final status:
+
+- No critical issue remains
+- No high issue remains
+- Demo and manual workflows complete reliably
+- Demo workflow produces no console error, page error, failed network request, or uncaught error
+- `npm run lint`, `npm run typecheck`, and `npm run build` pass
+- `npm run test` passes: 96 tests across 15 files
+- `npm run test:e2e` passes: 33 browser tests
+- One medium limitation remains documented: local reducer state resets on browser refresh
+
+Blockers: none.

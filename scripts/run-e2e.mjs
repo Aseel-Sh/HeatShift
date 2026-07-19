@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
 import process from "node:process";
 
+const testArgs = process.argv.slice(2);
+
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--hostname", "127.0.0.1"], {
   stdio: ["ignore", "pipe", "pipe"],
   detached: process.platform !== "win32",
@@ -40,7 +42,7 @@ let exitCode = 1;
 try {
   await waitForServer();
   exitCode = await new Promise((resolve, reject) => {
-    const tests = spawn(process.execPath, ["node_modules/@playwright/test/cli.js", "test"], {
+    const tests = spawn(process.execPath, ["node_modules/@playwright/test/cli.js", "test", ...testArgs], {
       stdio: "inherit",
       env: { ...process.env, HEATSHIFT_E2E_EXTERNAL_SERVER: "1" },
     });

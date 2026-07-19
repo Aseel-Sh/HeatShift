@@ -88,4 +88,19 @@ describe("POST /api/parse-plan", () => {
       },
     });
   });
+
+  it("enforces the encoded 10 KiB request-body limit", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/parse-plan", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: "工".repeat(5000) }),
+      }),
+    );
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({
+      error: { code: "INVALID_INPUT", message: "Request body is too large." },
+    });
+  });
 });
