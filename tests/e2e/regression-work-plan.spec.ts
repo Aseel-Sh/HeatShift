@@ -41,6 +41,8 @@ async function enterExactPlan(page: Page) {
 async function confirmClassifications(page: Page) {
   const rows = page.getByTestId(/^task-row-/);
   await expect(rows).toHaveCount(8);
+  await expect(rows.nth(0).locator(".task-main-row").getByText("Normal", { exact: true })).toBeVisible();
+  await expect(rows.nth(5).locator(".task-main-row").getByText("Required today", { exact: true })).toBeVisible();
   for (let index = 0; index < 8; index += 1) {
     const expand = rows.nth(index).getByRole("button", { name: /^Expand details:/ });
     if (await expand.isVisible()) await expand.click();
@@ -103,7 +105,7 @@ test("exact supervisor plan imports, confirms, and schedules in the production w
   await expect(page.getByText("Shift end not stated")).toHaveCount(0);
   await expect(rows.nth(2).getByLabel("Activity")).toHaveValue("break");
   await expect(rows.nth(4).getByLabel("Activity")).toHaveValue("meal");
-  await expect(rows.nth(5).getByRole("checkbox", { name: "Must complete" })).toBeChecked();
+  await expect(rows.nth(5).getByRole("checkbox", { name: "Required today" })).toBeChecked();
   await expect(rows.nth(5).getByLabel("Operational notes 6")).toHaveValue("Pump booked only today.");
   await rows.nth(5).getByText("Source evidence").click();
   await expect(rows.nth(5).getByText("Need concrete completed today.", { exact: false })).toBeVisible();
@@ -118,15 +120,22 @@ test("exact supervisor plan imports, confirms, and schedules in the production w
   await expect(rows.nth(5).getByRole("checkbox", { name: "After Rebar + forms" })).toBeChecked();
   await expect(rows.nth(6).getByRole("checkbox", { name: "After Concrete pour" })).toBeChecked();
   await expect(rows.nth(7).getByRole("checkbox", { name: "After Finish + curing" })).toBeChecked();
-  await page.screenshot({ path: "artifacts/regression-work-plan/02-supervisor-confirmed.png", fullPage: true });
+  await page.screenshot({ path: "artifacts/regression-work-plan/02-supervisor-confirmed-plan-views.png", fullPage: true });
   await page.getByRole("button", { name: "Continue to conditions" }).click();
   expect(weatherUrl).toContain("latitude=24.6877");
   expect(weatherUrl).toContain("longitude=46.7219");
+  expect(weatherUrl).toContain("timezone=Asia%2FRiyadh");
   await expect(page.getByText("Model forecast for selected coordinates — preliminary planning only.")).toBeVisible();
   await expect(page.getByText("This is not an on-site measurement. TWL is not calculated from the weather forecast.")).toBeVisible();
+  await expect(page.getByText(/2026-07-19 · 15:00 · Saudi Arabia Standard Time \(UTC\+3\)/)).toBeVisible();
   await page.getByText("Low", { exact: true }).click();
   await page.getByRole("button", { name: "Generate safer shift" }).click();
-  await expect(page.getByRole("heading", { name: "Selected safer schedule", exact: true })).toBeVisible();
+  await expect(page.locator("h1")).toHaveText("Generated safer schedule");
+  await expect(page.locator(".result-timezone")).toContainText("All schedule times use Saudi Arabia Standard Time (Asia/Riyadh, UTC+3).");
+  await expect(page.getByTestId("generated-execution-list").getByText("Required today", { exact: true })).not.toHaveCount(0);
+  await expect(page.getByText("high priority", { exact: false })).toHaveCount(0);
+  await page.locator(".selection-details").getByText("How this schedule was selected", { exact: true }).click();
+  await expect(page.locator(".selection-details")).toContainText("Required-today activities are prioritized before normal activities, but HeatShift will not violate restrictions, recovery rules, fixed timing, or dependencies to force them into the shift.");
 
   for (const name of ["Excavation", "Concrete pour", "Cleanup"]) {
     const taskId = await page.locator("[data-requested-id]", { hasText: name }).getAttribute("data-requested-id");
@@ -140,13 +149,14 @@ test("exact supervisor plan imports, confirms, and schedules in the production w
   await expect(page.getByText("globally optimal", { exact: false })).toHaveCount(0);
   await expect(page.getByText("Time not specified", { exact: true })).toHaveCount(0);
   await expect(page.getByText("This shift cannot accommodate all planned work under the selected conditions.")).toBeVisible();
+  await expect(page.locator(".required-incomplete")).toContainText("Required-today work remains incomplete.");
   await expect(page.getByRole("heading", { name: "Plan outcome" })).toBeVisible();
   await expect(page.getByText("Forecast heat category:", { exact: true })).toBeVisible();
   await expect(page.getByText("Applied TWL zone:", { exact: true })).toBeVisible();
   await expect(page.getByText(/Low TWL provides continuous-work guidance/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "No requested time" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Could not be scheduled" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Requested versus selected" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Original requested versus generated" })).toBeVisible();
   await expect(page.getByRole("row", { name: /Concrete pour.*2 hr 30 min.*1 hr 30 min.*1 hr/ })).toBeVisible();
   await page.screenshot({ path: "artifacts/regression-work-plan/03-selected-schedule.png", fullPage: true });
 
@@ -160,7 +170,7 @@ test("exact supervisor plan imports, confirms, and schedules in the production w
   await page.screenshot({ path: "artifacts/regression-work-plan/04-excavation-linked.png", fullPage: true });
 
   await page.locator("[data-requested-id]", { hasText: "Concrete pour" }).click();
-  await expect(page.locator(".block-drawer").getByText("Required", { exact: true })).toBeVisible();
+  await expect(page.locator(".block-drawer").getByText("Required today", { exact: true })).toBeVisible();
   await expect(page.locator(".block-drawer").getByText("Pump booked only today.")).toBeVisible();
   await page.screenshot({ path: "artifacts/regression-work-plan/05-concrete-details.png", fullPage: true });
 
@@ -170,7 +180,11 @@ test("exact supervisor plan imports, confirms, and schedules in the production w
 
   await page.getByRole("button", { name: "العربية" }).click();
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await expect(page.getByRole("heading", { name: "الجدول المختار لوردية أكثر أمانًا", exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByTestId("generated-plan-section")
+      .getByRole("heading", { name: "الجدول المُنشأ لوردية أكثر أمانًا", exact: true }),
+  ).toBeVisible();
   await page.screenshot({ path: "artifacts/regression-work-plan/07-arabic.png", fullPage: true });
 
   await page.emulateMedia({ media: "print" });

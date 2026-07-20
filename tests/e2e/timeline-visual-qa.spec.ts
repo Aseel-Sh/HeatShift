@@ -7,7 +7,7 @@ async function openDemoResults(page: Page) {
   await page.getByRole("button", { name: "View sample shift" }).click();
   await page.getByRole("button", { name: "Continue to conditions" }).click();
   await page.getByRole("button", { name: "Generate safer shift" }).click();
-  await expect(page.getByRole("heading", { name: "Selected safer schedule", exact: true })).toBeVisible();
+  await expect(page.locator("h1")).toHaveText("Generated safer schedule");
 }
 
 test("captures the requested-versus-safer timeline at required viewports", async ({ page }) => {
@@ -34,9 +34,9 @@ test("captures Arabic chronology and print output", async ({ page }) => {
   await page.getByRole("button", { name: "عرض وردية نموذجية" }).click();
   await page.getByRole("button", { name: "متابعة إلى الظروف" }).click();
   await page.getByRole("button", { name: "إنشاء وردية أكثر أمانًا" }).click();
-  await expect(page.locator(".requested-row-label").getByText("حفر خندق ثقيل", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("requested-shift-board").locator(".requested-row-label").getByText("حفر خندق ثقيل", { exact: true })).toBeVisible();
   await page.locator(".timeline-section").screenshot({ path: `${root}/arabic-result.png` });
-  await expect(page.getByTestId("shift-board")).toHaveAttribute("dir", "ltr");
+  await expect(page.getByTestId("requested-shift-board")).toHaveAttribute("dir", "ltr");
 
   await page.emulateMedia({ media: "print" });
   await page.screenshot({ path: `${root}/print-output.png`, fullPage: true });

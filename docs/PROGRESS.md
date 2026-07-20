@@ -96,6 +96,24 @@ Deferred by that iteration's scope:
 
 Blockers: none.
 
+## Consistent plan views, honest priority, and Saudi operational time
+
+Status: complete on 2026-07-19.
+
+- Added independent accessible Timeline / Execution list switches for the original requested plan and generated safer schedule, with desktop and mobile defaults matched to their reading contexts.
+- Added chronological requested and generated execution lists, preserved generated recovery only in the generated view, and made print include both lists plus one compact comparison timeline.
+- Standardized the two plan identities in English and Arabic so the input plan cannot be mistaken for the generated output.
+- Replaced vague must-schedule user language with the two honest priority states `Required today` and `Normal`, including incomplete-required-work warning and constraint-aware prioritization explanation.
+- Standardized operational dates and clock values on `Asia/Riyadh` (`UTC+3`, no daylight-saving adjustment) across setup, weather, results, briefings, and print.
+- Required Open-Meteo requests to use `timezone=Asia/Riyadh`, avoided second conversion of localized forecast hours, and converted retrieval timestamps from internal UTC to labeled Saudi local time.
+- Added browser coverage in both `America/Chicago` and `Asia/Riyadh` to prove that device time zone does not change visible shift, requested, generated, forecast, restriction, retrieval, or print values.
+
+Production-browser verification found independent switches, correct responsive defaults, exact bilingual labels, Saudi-time metadata, no page-level overflow, and no console warnings or errors.
+
+Final validation: lint passed; strict typecheck passed; 200 unit tests across 27 files passed; 48 Playwright tests passed; optimized production build passed.
+
+Blockers: none.
+
 ## Correctness and product-integrity repair
 
 - Added nullable/blank `DraftWorkTask` safety fields with validation-gated `WorkTask` conversion.

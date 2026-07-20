@@ -1,5 +1,6 @@
 import type { ScheduleResult } from "../domain/scheduler-types";
 import type { ShiftPlan, SiteConditions } from "../domain/types";
+import { saudiTimeZoneSentence } from "../i18n/saudi-time";
 
 export interface HydrationPlan {
   kind: "rates";
@@ -46,6 +47,7 @@ export function buildBriefings(plan: ShiftPlan, conditions: SiteConditions, resu
   return {
     en: [
       `${plan.siteName} — ${plan.shiftDate}. Shift ${plan.shiftStart}–${plan.shiftEnd}.`,
+      saudiTimeZoneSentence("en"),
       regulation,
       conditions.measurementMode === "onsite_twl" ? `Supervisor-entered TWL zone: ${conditions.twlZone}.` : "Forecast-only mode: exact recovery cycles are not based on a supervisor-entered TWL zone.",
       result.isPreliminary ? "Some regulatory or work/rest guidance remains preliminary." : `Applied work/rest guidance: ${cycles}.`,
@@ -57,6 +59,7 @@ export function buildBriefings(plan: ShiftPlan, conditions: SiteConditions, resu
     ],
     ar: [
       `${plan.siteName} — ${plan.shiftDate}. الوردية ${plan.shiftStart}–${plan.shiftEnd}.`,
+      saudiTimeZoneSentence("ar"),
       result.regulatoryGuidanceAvailable ? (restriction ? "يُقيّد العمل تحت الشمس المباشرة من 12:00 إلى 15:00." : "لا تنطبق فترة تقييد 2026 على هذه الوردية.") : "لا يتوفر إعداد تقييد موثّق في HeatShift لهذا التاريخ.",
       conditions.measurementMode === "onsite_twl" ? `نطاق TWL أدخله المشرف: ${conditions.twlZone}.` : "وضع التوقعات فقط: دورات التعافي الدقيقة لا تستند إلى نطاق TWL أدخله المشرف.",
       result.isPreliminary ? "تظل بعض إرشادات التنظيم أو العمل والراحة أولية." : `إرشادات العمل والراحة المطبقة: ${cyclesAr}.`,

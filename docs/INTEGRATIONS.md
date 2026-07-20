@@ -47,7 +47,7 @@ OpenRouter documents the [free router](https://openrouter.ai/docs/guides/routing
 
 `GET /api/locations?q=<query>&language=en|ar` uses Open-Meteo Geocoding without an API key. Queries must contain 2–100 characters. The adapter validates upstream records, keeps Saudi Arabia (`countryCode=SA`) results only, returns no more than eight, applies a six-second timeout, and briefly caches successful searches. Empty results remain empty; malformed, timed-out, and failed responses return typed errors without exposing upstream details. Riyadh, Jeddah, Dammam, Mecca, and Medina remain quick presets and network-free fallback choices rather than the only production locations.
 
-`GET /api/weather?latitude=<latitude>&longitude=<longitude>&date=YYYY-MM-DD&timezone=<timezone>&locationName=<name>` uses the selected `SiteLocation` coordinates and timezone. It requests:
+`GET /api/weather?latitude=<latitude>&longitude=<longitude>&date=YYYY-MM-DD&timezone=Asia%2FRiyadh&locationName=<name>` uses the selected `SiteLocation` coordinates. The MVP accepts only `Asia/Riyadh` (`UTC+3`, without daylight-saving adjustment) and requests Open-Meteo data in that zone. It requests:
 
 - `temperature_2m` → `temperatureCelsius`
 - `apparent_temperature` → `apparentTemperatureCelsius`
@@ -57,6 +57,8 @@ OpenRouter documents the [free router](https://openrouter.ai/docs/guides/routing
 The service validates array lengths and every normalized hour. It never substitutes, interpolates, or fabricates missing weather. Invalid coordinates, dates, timezones, unavailable dates, empty forecasts, malformed responses, upstream failures, and timeouts return typed errors. Response metadata includes the selected name, latitude, longitude, forecast timezone, requested date, and retrieval time.
 
 The full requested day's hourly forecast is retained for deterministic scheduling lookup. A 06:30 slot uses the latest forecast at or before that slot, so the 06:00 point is preserved. A separate shift-filtered subset drives the displayed strip, peak temperature, peak apparent temperature, and shift summary; values after an early shift cannot inflate those metrics.
+
+Open-Meteo's returned hourly strings are already Saudi local clock values because the request specifies `Asia/Riyadh`; HeatShift does not convert them a second time or apply the browser's time zone. Retrieval timestamps remain UTC internally and are formatted for users as a Saudi local date and time with the explicit `Saudi Arabia Standard Time (UTC+3)` label.
 
 Forecast values support advance planning. The UI labels them “Model forecast for selected coordinates — preliminary planning only,” shows coordinate and retrieval metadata, and explicitly states that the model forecast is not an on-site measurement. Forecast data remains separate from the supervisor-entered TWL zone and does not replace qualified field procedures. HeatShift does not calculate TWL from ordinary forecast values.
 

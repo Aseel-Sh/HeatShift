@@ -33,7 +33,7 @@ export function buildPlanOutcome(plan: ShiftPlan, conditions: SiteConditions, re
     if (blocks.filter((block) => block.type === "work").length > 1) changed.push(language === "ar" ? `قُسّم ${name} إلى فترات عمل متعددة.` : `${name} was split into multiple work periods.`);
   }
   const mustComplete = plan.tasks.filter((task) => isWorkActivity(task) && task.mustSchedule);
-  if (mustComplete.length) changed.push(language === "ar" ? `${mustComplete.map((task) => task.nameAr).join("، ")} محدد كعمل يجب إكماله وأُعطي الأولوية قبل العمل العادي.` : `${mustComplete.map((task) => task.nameEn).join(", ")} is marked must-complete and was prioritized before normal-priority work.`);
+  if (mustComplete.length) changed.push(language === "ar" ? `${mustComplete.map((task) => task.nameAr).join("، ")} محدد كعمل مطلوب اليوم وأُعطي الأولوية قبل العمل العادي.` : `${mustComplete.map((task) => task.nameEn).join(", ")} is marked Required today and was prioritized before normal work.`);
   if (!changed.length) changed.push(language === "ar" ? "حُفظت الأنشطة المجدولة ضمن توقيتها المطلوب حيث أمكن." : "Scheduled activities were kept at their requested times where capacity allowed.");
 
   const incomplete = result.unscheduled.map((item) => {
@@ -50,7 +50,7 @@ export function buildPlanOutcome(plan: ShiftPlan, conditions: SiteConditions, re
   else reasons.push(language === "ar" ? "طُبّقت دورة العمل والتعافي المحددة زمنيًا حسب نطاق TWL الذي أدخله المشرف." : "Timed work/recovery cycles were applied from the supervisor-entered TWL zone.");
   if (plan.tasks.some((task) => (task.predecessorTaskIds?.length ?? 0) > 0)) reasons.push(language === "ar" ? "حُفظ تسلسل الإنشاء المؤكد؛ لم يبدأ أي نشاط تابع قبل اكتمال سابقه." : "Confirmed construction sequence was preserved; no successor began before its predecessor was complete.");
   if (result.unscheduled.some((item) => item.reasonCode.includes("DEPENDENCY"))) reasons.push(language === "ar" ? "بقيت الأنشطة التابعة دون جدولة عندما لم يكتمل النشاط السابق." : "Dependent activities remained unscheduled when their predecessor could not be completed.");
-  if (plan.tasks.some((task) => isWorkActivity(task) && task.mustSchedule)) reasons.push(language === "ar" ? "أُعطيت الأولوية للعمل المؤكد كعمل يجب إكماله قبل العمل العادي." : "Confirmed must-complete work was prioritized ahead of normal-priority work.");
+  if (plan.tasks.some((task) => isWorkActivity(task) && task.mustSchedule)) reasons.push(language === "ar" ? "أُعطيت الأولوية للعمل المؤكد المطلوب اليوم قبل العمل العادي، دون خرق القيود أو قواعد التعافي أو التوقيت الثابت أو التبعيات." : "Required-today activities were prioritized before normal activities without overriding restrictions, recovery rules, fixed timing, or dependencies.");
 
   const nextActions: string[] = [];
   if (result.unscheduled.length) {

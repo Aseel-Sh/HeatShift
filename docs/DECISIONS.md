@@ -27,6 +27,7 @@
 | Double validation for AI output | Provider structured output constrains generation, while local Zod parsing remains the trusted boundary. |
 | Searchable Saudi site locations | Open-Meteo geocoding results are validated, filtered to Saudi Arabia, capped at eight, and retained as coordinates; the five original cities remain quick presets and offline/demo fallbacks. |
 | Coordinate-based weather | Forecast requests use the selected location's latitude, longitude, and timezone. The full requested day is retained for slot lookup while display and peak metrics use a shift-filtered subset. |
+| One Saudi operational time zone | Same-day shift dates and clock values remain local `YYYY-MM-DD` and `HH:mm` values in `Asia/Riyadh` (`UTC+3`, no daylight-saving adjustment). Browser location never reinterprets operational times, and Open-Meteo localized hours are not converted twice. |
 | No weather fallback values | Empty, unavailable, malformed, or timed-out forecasts return typed errors instead of invented data. |
 | Versioned restriction configuration | The source-backed midday restriction is represented with full 2026 effective dates and is not silently reused for a later year. Unsupported years keep ordinary scheduling but are marked preliminary with regulatory guidance unavailable. |
 | Rate-first hydration guidance | The UI presents the configured range or minimum per worker per hour; it does not imply an exact medical prescription or extrapolate an unsupported crew total. |

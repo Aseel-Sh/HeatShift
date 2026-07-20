@@ -115,7 +115,7 @@ export function displayReason(code: string, language: Language): string {
 
 export function displayOriginalFinding(code: string, language: Language): { title: string; description: string } {
   return originalFindingNames[code]?.[language] ?? {
-    title: language === "ar" ? "ملاحظة على الخطة المطلوبة" : "Requested-plan finding",
+    title: language === "ar" ? "ملاحظة على الخطة الأصلية المطلوبة" : "Original requested-plan finding",
     description: language === "ar" ? "تتطلب هذه الملاحظة مراجعة المشرف." : "This finding requires supervisor review.",
   };
 }

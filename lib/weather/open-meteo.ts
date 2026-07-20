@@ -2,6 +2,7 @@ import { z } from "zod";
 import { SAUDI_CITIES } from "../../data/cities";
 import { forecastHourSchema, type ForecastHour, type SaudiCity } from "../domain/types";
 import { IntegrationError } from "../server/api-errors";
+import { SAUDI_TIME_ZONE } from "../i18n/saudi-time";
 
 const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -10,7 +11,7 @@ export const weatherQuerySchema = z.object({
   latitude: z.coerce.number().min(16).max(33),
   longitude: z.coerce.number().min(34).max(56),
   date: z.iso.date(),
-  timezone: z.string().trim().min(1).max(64).regex(/^[A-Za-z_+\-]+(?:\/[A-Za-z0-9_+\-]+)*$/),
+  timezone: z.literal(SAUDI_TIME_ZONE),
   locationName: z.string().trim().min(1).max(160),
 });
 
@@ -100,7 +101,7 @@ export async function fetchCityWeather(
   options: WeatherServiceOptions = {},
 ): Promise<ForecastHour[]> {
   const cityRecord = SAUDI_CITIES[city];
-  return fetchLocationWeather({latitude:cityRecord.latitude,longitude:cityRecord.longitude,timezone:cityRecord.timezone,date},options);
+  return fetchLocationWeather({latitude:cityRecord.latitude,longitude:cityRecord.longitude,timezone:SAUDI_TIME_ZONE,date},options);
 }
 
 export interface CoordinateWeatherRequest { latitude:number; longitude:number; timezone:string; date:string }

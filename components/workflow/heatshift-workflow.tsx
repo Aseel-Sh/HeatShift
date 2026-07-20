@@ -35,6 +35,7 @@ import {
 } from "@/lib/i18n/operations-display";
 import { toScheduleActivities, type DraftWorkTask } from "@/lib/workflow/draft-task";
 import { formatDuration } from "@/lib/workflow/format-duration";
+import { formatSaudiRetrievedAt, SAUDI_TIME_ZONE, saudiTimeZoneSentence } from "@/lib/i18n/saudi-time";
 import { filterForecastForShift } from "@/lib/weather/forecast-display";
 import {
   createInitialWorkflowState,
@@ -101,7 +102,7 @@ const copy = {
     flexible: "Flexible",
     preferred: "Preferred",
     fixed: "Fixed",
-    mustComplete: "Must complete",
+    mustComplete: "Required today",
     operationalNotes: "Operational notes",
     dependencies: "Must happen after",
     dependencySuggestion: "Suggested from work-plan order; confirm before scheduling.",
@@ -224,7 +225,7 @@ const copy = {
     flexible: "مرن",
     preferred: "مفضل",
     fixed: "ثابت",
-    mustComplete: "يجب إكماله",
+    mustComplete: "مطلوب اليوم",
     operationalNotes: "ملاحظات تشغيلية",
     dependencies: "يجب أن يحدث بعد",
     dependencySuggestion: "اقتراح من ترتيب خطة العمل؛ أكّده قبل الجدولة.",
@@ -376,11 +377,11 @@ export function HeatShiftWorkflow() {
     dispatch({ type: "weatherLoading" });
     try {
       const location=state.plan.location!;
-      const parameters=new URLSearchParams({latitude:String(location.latitude),longitude:String(location.longitude),date:state.plan.shiftDate,timezone:location.timezone,locationName:location.name});
+      const parameters=new URLSearchParams({latitude:String(location.latitude),longitude:String(location.longitude),date:state.plan.shiftDate,timezone:SAUDI_TIME_ZONE,locationName:location.name});
       const response = await fetch(`/api/weather?${parameters}`);
       const payload = await response.json() as { data?: { locationName?:string;latitude?:number;longitude?:number;timezone?:string;date?:string;retrievedAt?:string;hours?:ForecastHour[] }; error?: { message?: string } };
       if (!response.ok || !payload.data?.hours?.length) throw new Error(payload.error?.message || "Weather is unavailable.");
-      if(!payload.data.locationName||payload.data.latitude===undefined||payload.data.longitude===undefined||!payload.data.timezone||!payload.data.date||!payload.data.retrievedAt)throw new Error("Weather metadata is unavailable.");
+      if(!payload.data.locationName||payload.data.latitude===undefined||payload.data.longitude===undefined||payload.data.timezone!==SAUDI_TIME_ZONE||!payload.data.date||!payload.data.retrievedAt)throw new Error("Weather metadata is unavailable.");
       dispatch({type:"weatherSuccess",forecast:payload.data.hours,metadata:{locationName:payload.data.locationName,latitude:payload.data.latitude,longitude:payload.data.longitude,timezone:payload.data.timezone,date:payload.data.date,retrievedAt:payload.data.retrievedAt}});
     } catch (error) {
       dispatch({ type: "weatherError", error: error instanceof Error ? error.message : "Weather is unavailable." });
@@ -461,6 +462,7 @@ function ShiftSetup({ state, t, dispatch, analyze, manual }: { state: WorkflowSt
         <header className="section-heading"><div><p>01 / {t.steps[0]}</p><h1 id="setup-title">{t.setupTitle}</h1><span>{t.setupIntro}</span></div></header>
         <fieldset className="section-block">
           <legend>{t.details}</legend>
+          <p className="timezone-notice">{saudiTimeZoneSentence(state.language)}</p>
           <div className="shift-fields">
             <LocationPicker language={state.language} value={state.plan.location} error={state.errors.location} onSelect={location=>dispatch({type:"selectLocation",location})} onClear={()=>dispatch({type:"clearLocation"})}/>
             {fields.map(([field, label, type]) => <label key={field}><span className="form-label">{label}</span><input id={`plan-${field}`} className="form-control" dir={type === "text" ? undefined : "ltr"} type={type} step={type === "time" ? 300 : undefined} min={type === "number" ? (field === "crewSize" ? 1 : 0) : undefined} value={state.plan[field]} onChange={(event) => set(field, event.target.value)} aria-invalid={Boolean(state.errors[field])} /><ErrorText state={state} name={field} /></label>)}
@@ -562,7 +564,7 @@ function TaskRow({ state, task, index, t, dispatch }: { state: WorkflowState; ta
   return (
     <tbody id={`task-row-${task.id}`} data-testid={`task-row-${index}`} className={expanded?"is-expanded":""}>
       <tr className="task-main-row">
-        <td data-label={t.task} className="task-summary"><span className="row-number">{String(index+1).padStart(2,"0")}</span><strong>{state.language==="ar"?task.nameAr:task.nameEn||t.incomplete}</strong><small>{state.language==="ar"?task.nameEn:task.nameAr}</small>{kind==="work"&&task.mustSchedule&&<span className="must-badge">{t.mustComplete}</span>}</td>
+        <td data-label={t.task} className="task-summary"><span className="row-number">{String(index+1).padStart(2,"0")}</span><strong>{state.language==="ar"?task.nameAr:task.nameEn||t.incomplete}</strong><small>{state.language==="ar"?task.nameEn:task.nameAr}</small>{kind==="work"&&<span className={`priority-badge ${task.mustSchedule?"required":"normal"}`}>{task.mustSchedule?t.mustComplete:(state.language==="ar"?"عادي":"Normal")}</span>}</td>
         <td data-label={t.activity}><label><span className="sr-only">{t.activity}</span><select aria-label={t.activity} className="table-control" value={kind} onChange={(event)=>update("activityKind",event.target.value as DraftWorkTask["activityKind"])}><option value="work">{t.work}</option><option value="break">{t.breakActivity}</option><option value="meal">{t.meal}</option></select></label></td>
         <td data-label={t.requestedTime}><div className="time-pair compact"><label><span className="sr-only">{t.startOptional}</span><input data-field="requestedTime" aria-label={t.startOptional} className="table-control" type="time" step="300" dir="ltr" value={task.requestedStart??""} onChange={(event)=>update("requestedStart",event.target.value)} /></label><label><span className="sr-only">{t.endOptional}</span><input aria-label={t.endOptional} className="table-control" type="time" step="300" dir="ltr" value={task.requestedEnd??""} onChange={(event)=>update("requestedEnd",event.target.value)} /></label></div>{fieldError("requestedTime")}</td>
         <td data-label={t.duration}><label><span className="sr-only">{t.durationMinutes}</span><input data-field="durationMinutes" aria-label={t.durationMinutes} className="table-control numeric" type="number" min="5" step="5" dir="ltr" value={task.durationMinutes??""} onChange={(event)=>update("durationMinutes",event.target.value===""?null:Number(event.target.value))} aria-invalid={Boolean(error("durationMinutes"))} /></label>{task.durationMinutes&&<small>{formatDuration(task.durationMinutes,state.language)}</small>}{fieldError("durationMinutes")}</td>
@@ -585,12 +587,12 @@ function Suggestion({label,apply,dismiss,onApply,onDismiss}:{label:string;apply:
   return <div className="suggestion-chip"><span>{label}</span><button type="button" onClick={onApply}>{apply}</button><button type="button" onClick={onDismiss}>{dismiss}</button></div>;
 }
 
-function displayEvidenceField(field:string,language:Language){const labels:Record<string,{en:string;ar:string}>={durationMinutes:{en:"Duration",ar:"المدة"},mustSchedule:{en:"Must complete",ar:"يجب إكماله"},operationalNotes:{en:"Operational notes",ar:"ملاحظات تشغيلية"},requestedStart:{en:"Requested start",ar:"البداية المطلوبة"},requestedEnd:{en:"Requested end",ar:"النهاية المطلوبة"}};return labels[field]?.[language]??(language==="ar"?"حقل مستخرج":"Extracted field");}
+function displayEvidenceField(field:string,language:Language){const labels:Record<string,{en:string;ar:string}>={durationMinutes:{en:"Duration",ar:"المدة"},mustSchedule:{en:"Required today",ar:"مطلوب اليوم"},operationalNotes:{en:"Operational notes",ar:"ملاحظات تشغيلية"},requestedStart:{en:"Requested start",ar:"البداية المطلوبة"},requestedEnd:{en:"Requested end",ar:"النهاية المطلوبة"}};return labels[field]?.[language]??(language==="ar"?"حقل مستخرج":"Extracted field");}
 function displayEvidenceSource(source:string,language:Language){if(source==="deterministic_parser")return language==="ar"?"استخراج حتمي":"Deterministic extraction";if(source==="explicit_model_extraction")return language==="ar"?"استخراج صريح من النص":"Explicit text extraction";return language==="ar"?"اقتراح يحتاج إلى مراجعة":"Suggestion requiring review";}
 
 function Conditions({ state, t, peak, apparentPeak, dispatch, generate }: { state: WorkflowState; t: UiCopy; peak: number | null; apparentPeak: number | null; dispatch: WorkflowDispatch; generate: () => void }) {
   const shiftHours = filterForecastForShift(state.forecast,state.plan.shiftStart,state.plan.shiftEnd);
-  const retrieved = state.weatherMetadata ? new Date(state.weatherMetadata.retrievedAt).toLocaleString(state.language === "ar" ? "ar-SA" : "en-GB") : null;
+  const retrieved = state.weatherMetadata ? formatSaudiRetrievedAt(state.weatherMetadata.retrievedAt, state.language) : null;
   const category = peak === null ? "—" : displayTemperatureCategory(classifyForecastTemperature(peak).category, state.language);
   const options: Array<{ zone: TwlZone; label: string; cycle: string }> = [
     { zone: "none", label: t.noTwl, cycle: t.preliminaryCycle },
@@ -606,7 +608,7 @@ function Conditions({ state, t, peak, apparentPeak, dispatch, generate }: { stat
         {state.weatherStatus === "loading" && <div className="weather-skeleton" role="status"><LoaderCircle aria-hidden="true" /><strong>{t.loadingWeather}</strong><div /><div /><div /><div /></div>}
         {state.weatherStatus === "error" && <div role="alert" className="weather-error"><AlertTriangle aria-hidden="true" /><div><strong>{t.unavailable}</strong><p>{displayError(state.weatherError ?? "Weather is unavailable.", state.language)}</p><p>{t.fallback}</p></div></div>}
         {state.weatherStatus === "success" && <>
-          <div className="forecast-header"><div><strong>{t.cityForecast}</strong>{state.weatherMetadata && <p>{state.weatherMetadata.locationName} · <span dir="ltr">{state.weatherMetadata.latitude.toFixed(4)}, {state.weatherMetadata.longitude.toFixed(4)}</span> · {state.weatherMetadata.timezone} · {t.forecastDate}: <span dir="ltr">{state.weatherMetadata.date}</span> · {t.retrieved}: <span dir="ltr">{retrieved}</span></p>}<p>{t.forecastMeasurement}</p><a href="https://open-meteo.com/" target="_blank" rel="noreferrer" className="source-link">{t.weatherAttribution}</a></div><dl><div><dt>{t.peak}</dt><dd dir="ltr">{peak === null ? "—" : `${peak.toFixed(1)}°C`}</dd></div><div><dt>{t.apparentPeak}</dt><dd dir="ltr">{apparentPeak === null ? "—" : `${apparentPeak.toFixed(1)}°C`}</dd></div><div><dt>{t.risk}</dt><dd>{category}</dd></div></dl></div>
+          <div className="forecast-header"><div><strong>{t.cityForecast}</strong>{state.weatherMetadata && <p>{state.weatherMetadata.locationName} · <span dir="ltr">{state.weatherMetadata.latitude.toFixed(4)}, {state.weatherMetadata.longitude.toFixed(4)}</span> · {t.forecastDate}: <span dir="ltr">{state.weatherMetadata.date}</span> · {t.retrieved}: <span dir="ltr">{retrieved}</span></p>}<p className="timezone-notice">{saudiTimeZoneSentence(state.language)}</p><p>{t.forecastMeasurement}</p><a href="https://open-meteo.com/" target="_blank" rel="noreferrer" className="source-link">{t.weatherAttribution}</a></div><dl><div><dt>{t.peak}</dt><dd dir="ltr">{peak === null ? "—" : `${peak.toFixed(1)}°C`}</dd></div><div><dt>{t.apparentPeak}</dt><dd dir="ltr">{apparentPeak === null ? "—" : `${apparentPeak.toFixed(1)}°C`}</dd></div><div><dt>{t.risk}</dt><dd>{category}</dd></div></dl></div>
           <div className="forecast-strip" aria-label={t.hourlyForecast} role="region" tabIndex={0}>
             <table><caption className="sr-only">{t.hourlyForecast}</caption><thead><tr><th>{state.language === "ar" ? "المقياس" : "Measure"}</th>{shiftHours.map((hour) => <th key={hour.time} className={isRestrictedHour(state.plan.shiftDate, hour.time) ? "restricted-hour" : ""} dir="ltr">{hour.time}</th>)}</tr></thead><tbody>
               <tr><th>{t.temperature}</th>{shiftHours.map((hour) => <td key={hour.time} className={isRestrictedHour(state.plan.shiftDate, hour.time) ? "restricted-hour" : ""} dir="ltr">{hour.temperatureCelsius.toFixed(1)}°</td>)}</tr>

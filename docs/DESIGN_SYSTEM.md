@@ -64,6 +64,12 @@ The requested plan and safer shift share one chronological, left-to-right ruler 
 
 Selecting a requested or generated block reveals its original time, planned time, workload, environment, translated rule explanation, planning consequence, and source where applicable. A complete text alternative follows the visual board for screen-reader and narrow-screen use.
 
+### Plan identity and views
+
+The two plans always use deliberately distinct headings: **Original requested plan** and **Generated safer schedule** (Arabic: **الخطة الأصلية المطلوبة** and **الجدول المُنشأ لوردية أكثر أمانًا**). Each section has an independent, keyboard-operable Timeline / Execution list tab set; changing one never changes the other or recalculates the schedule. Desktop defaults to requested Timeline and generated Execution list. Mobile defaults both sections to Execution list. Print always includes both execution lists plus one compact timeline comparison regardless of the on-screen choices.
+
+Priority has only two user-facing states: **Required today / مطلوب اليوم** and **Normal / عادي**. Both are text-labeled and appear in review, comparisons, execution lists, block details, and unscheduled work. No color or invented three-level priority model carries this meaning.
+
 ### Scale and containment
 
 - Desktop results default to the **1 hour** detail scale at 140 pixels per hour.

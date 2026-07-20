@@ -273,3 +273,19 @@ Updated evidence:
 | `artifacts/final-timeline-polish/print-output.png` | Print layout remains monochrome-readable with aligned requested and selected lanes. |
 
 Automated proof: the four restriction-date cases pass, responsive scale/helper assertions pass, all 197 unit tests and all 45 Playwright tests pass, and the optimized production build succeeds.
+
+## Plan-view, priority, and Saudi-time verification — 2026-07-19
+
+Manual optimized-production observations:
+
+- At 1440×900, Original requested plan opened in Timeline and Generated safer schedule opened in Execution list. Switching either tab did not affect the other.
+- At 390×844, both sections opened in Execution list and the page retained zero document-level horizontal overflow.
+- Generated execution displayed chronological recovery rows; requested execution contained only original activities and no generated recovery.
+- English and Arabic headings unmistakably distinguished the original plan from the generated schedule. Arabic retained RTL document flow with left-to-right operational chronology.
+- Required-today and Normal labels appeared as text, and the constraint-aware priority explanation did not promise forced completion.
+- Setup, conditions, result header, and print used the Saudi Arabia Standard Time label. A UTC retrieval timestamp was displayed as the corresponding Saudi local date/time without exposing raw ISO text.
+- The browser console contained no warnings or errors during the production sample journey.
+
+Automated browser runs under both `America/Chicago` and `Asia/Riyadh` proved identical visible operational schedule values, forecast hours, restriction times, retrieval display, and print content.
+
+Final automated result: lint passed; strict typecheck passed; 200 unit tests across 27 files passed; 48 Playwright tests passed; optimized production build passed.

@@ -58,7 +58,7 @@ test("demo is console-clean, network-clean, and stable under duplicate Generate"
   await page.getByRole("button", { name: "View sample shift" }).click();
   await page.getByRole("button", { name: "Continue to conditions" }).click();
   await page.getByRole("button", { name: "Generate safer shift" }).dblclick();
-  await expect(page.getByRole("heading", { name: "Selected safer schedule", exact:true })).toBeVisible();
+  await expect(page.locator("h1")).toHaveText("Generated safer schedule");
   expect(consoleErrors).toEqual([]); expect(pageErrors).toEqual([]); expect(failedRequests).toEqual([]);
 });
 

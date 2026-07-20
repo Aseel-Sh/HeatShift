@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { siteLocationSchema, type SiteLocation } from "../domain/types";
 import { IntegrationError } from "../server/api-errors";
+import { SAUDI_TIME_ZONE } from "../i18n/saudi-time";
 
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const DEFAULT_TIMEOUT_MS = 6_000;
@@ -33,7 +34,7 @@ export function normalizeGeocodingResponse(payload:unknown):SiteLocation[] {
     if(result.country_code!=="SA") continue;
     const location=siteLocationSchema.safeParse({
       id:result.id!==undefined?`geocoding-${result.id}`:`geocoding-${result.latitude}-${result.longitude}`,
-      name:result.name,admin1:result.admin1,countryCode:"SA",latitude:result.latitude,longitude:result.longitude,timezone:result.timezone,source:"geocoding",
+      name:result.name,admin1:result.admin1,countryCode:"SA",latitude:result.latitude,longitude:result.longitude,timezone:SAUDI_TIME_ZONE,source:"geocoding",
     });
     if(!location.success) throw new IntegrationError("LOCATION_UNAVAILABLE","Location search is temporarily unavailable.",502);
     locations.push(location.data);

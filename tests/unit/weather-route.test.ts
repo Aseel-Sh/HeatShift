@@ -6,6 +6,7 @@ describe("GET /api/weather", () => {
     ["91", "46.6", "2026-07-20", "Asia/Riyadh"],
     ["24.7", "181", "2026-07-20", "Asia/Riyadh"],
     ["24.7", "46.6", "20-07-2026", "Asia/Riyadh"],
+    ["24.7", "46.6", "2026-07-20", "America/Chicago"],
     ["24.7", "46.6", "2026-07-20", "../../etc/passwd"],
   ])("rejects invalid coordinate/date/timezone input", async (latitude,longitude,date,timezone) => {
     const response = await GET(
