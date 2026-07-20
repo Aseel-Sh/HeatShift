@@ -448,3 +448,19 @@ Corrected regression result: 6 candidates evaluated; `critical_must_schedule_fir
 Final validation: lint passed; strict typecheck passed; 188 unit tests across 25 files passed; 45 Playwright tests passed; optimized production build passed. The exact production-browser regression also passed against the final build.
 
 Blockers: no code/test blocker remains. The confirmed plan remains operationally infeasible and therefore requires supervisor intervention; this is the expected honest product outcome, not a release-test failure.
+
+## Final timeline release polish
+
+Status: complete on 2026-07-19.
+
+- The detailed timeline now defaults to `1 hour` at viewport widths of 768 px and above, while mobile continues to default to `Fit shift`.
+- Added concise bilingual scale guidance, retained the three existing scale controls, increased requested-lane height, and strengthened the shared selected-state treatment without changing represented durations.
+- Kept horizontal scrolling inside the timeline, with sticky requested labels and a sticky time ruler where supported by the scrolling region.
+- Made requested-plan outcome wording consult the configured midday-restriction evaluator before attributing a move to the 12:00–15:00 restriction.
+- Added boundary coverage for 2026-07-20, 2026-06-14, 2026-09-16, and unsupported 2027-07-20 dates.
+- Corrected the current Arabic setup assumption to `سياق توقعات الإحداثيات المحددة`.
+- Captured the focused desktop, tablet, mobile, Arabic, and print evidence under `artifacts/final-timeline-polish/`.
+
+Final validation: lint passed; strict typecheck passed; 197 unit tests across 26 files passed; 45 Playwright tests passed; optimized production build passed. Production-browser checks at 1440×900, 768×1024, and 390×844 found no page-level overflow or console warnings/errors.
+
+Blockers: none.

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const root = "artifacts/timeline-qa";
+const root = "artifacts/final-timeline-polish";
 
 async function openDemoResults(page: Page) {
   await page.goto("/");
@@ -14,10 +14,7 @@ test("captures the requested-versus-safer timeline at required viewports", async
   await page.setViewportSize({ width: 1440, height: 900 });
   await openDemoResults(page);
   await page.screenshot({ path: `${root}/desktop-1440x900.png` });
-  await page.locator(".shift-board-scroll").screenshot({ path: `${root}/regression-requested-and-safer.png` });
   await page.locator('[data-requested-id="demo-trenching"]').click();
-  await page.locator(".timeline-section").screenshot({ path: `${root}/selected-multi-interval-task.png` });
-  await page.getByTestId("heat-ribbon").screenshot({ path: `${root}/heat-ribbon.png` });
 
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.screenshot({ path: `${root}/tablet-768x1024.png`, fullPage: true });

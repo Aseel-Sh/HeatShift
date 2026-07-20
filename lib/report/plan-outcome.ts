@@ -1,4 +1,5 @@
 import { isWorkActivity, type ShiftPlan, type SiteConditions } from "../domain/types";
+import { evaluateMiddayRestriction } from "../domain/midday-restriction";
 import type { ScheduleResult } from "../domain/scheduler-types";
 import { formatDuration } from "../workflow/format-duration";
 
@@ -13,12 +14,17 @@ const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.sl
 
 export function buildPlanOutcome(plan: ShiftPlan, conditions: SiteConditions, result: ScheduleResult, language: "en" | "ar"): PlanOutcome {
   const changed: string[] = [];
+  const middayRestrictionActive = evaluateMiddayRestriction({
+    date: plan.shiftDate,
+    time: "12:00",
+    environment: "direct_sun",
+  }).restrictedWindowActive;
   for (const task of plan.tasks) {
     const blocks = result.blocks.filter((block) => block.taskId === task.id && (block.type === "work" || block.type === "break" || block.type === "meal"));
     if (!blocks.length) continue;
     const name = language === "ar" ? task.nameAr : task.nameEn;
     const overlapsRestriction = isWorkActivity(task) && task.environment === "direct_sun" && task.requestedStart && task.requestedEnd && task.requestedStart < "15:00" && task.requestedEnd > "12:00";
-    if (overlapsRestriction && blocks.every((block) => block.end <= "12:00" || block.start >= "15:00")) {
+    if (middayRestrictionActive && overlapsRestriction && blocks.every((block) => block.end <= "12:00" || block.start >= "15:00")) {
       changed.push(language === "ar" ? `نُقل ${name} خارج تقييد الشمس المباشرة 12:00–15:00.` : `${name} was moved outside the 12:00–15:00 direct-sun restriction.`);
     } else if (task.requestedStart && blocks[0].start !== task.requestedStart) {
       const delta = minutes(blocks[0].start) - minutes(task.requestedStart);

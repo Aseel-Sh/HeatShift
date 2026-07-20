@@ -118,6 +118,7 @@ const copy = {
     oneHour: "1 hour",
     thirtyMinutes: "30 minutes",
     zoom: "Timeline scale",
+    scaleHelp: "Fit shift shows an overview. Use 1 hour or 30 minutes for task details.",
     scrollHint: "Swipe horizontally for timeline detail",
     heat: "Forecast heat",
     apparent: "Apparent",
@@ -247,6 +248,7 @@ const copy = {
     oneHour: "ساعة واحدة",
     thirtyMinutes: "30 دقيقة",
     zoom: "مقياس المخطط الزمني",
+    scaleHelp: "تعرض ملاءمة الوردية نظرة عامة. استخدم ساعة واحدة أو 30 دقيقة لتفاصيل الأنشطة.",
     scrollHint: "اسحب أفقياً لرؤية تفاصيل المخطط",
     heat: "حرارة التوقعات",
     apparent: "المحسوسة",
@@ -385,7 +387,7 @@ function ShiftBoard({ plan, result, forecast, originalConflicts, language, selec
   const [scale, setScale] = useState<TimelineScale>("hour");
   const scrollRegion = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 640px)");
+    const media = window.matchMedia("(max-width: 767px)");
     const applyMobileDefault = () => { if (media.matches) setScale((current) => current === "hour" ? "fit" : current); };
     const timer = window.setTimeout(applyMobileDefault, 0);
     return () => window.clearTimeout(timer);
@@ -419,8 +421,11 @@ function ShiftBoard({ plan, result, forecast, originalConflicts, language, selec
   const categoryLabel = (category: "low" | "intermediate" | "high" | "high_risk") => category === "low" ? t.lower : category === "intermediate" ? t.intermediate : category === "high" ? t.high : t.highRisk;
   return (
     <>
-      <div className="timeline-controls print:hidden" role="group" aria-label={t.zoom}>
-        {([['fit', t.fitShift], ['hour', t.oneHour], ['half-hour', t.thirtyMinutes]] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={scale === value} onClick={() => setScale(value)}>{label}</button>)}
+      <div className="timeline-scale-row print:hidden">
+        <div className="timeline-controls" role="group" aria-label={t.zoom}>
+          {([['fit', t.fitShift], ['hour', t.oneHour], ['half-hour', t.thirtyMinutes]] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={scale === value} onClick={() => setScale(value)}>{label}</button>)}
+        </div>
+        <p className="timeline-scale-help">{t.scaleHelp}</p>
       </div>
       <p className="timeline-scroll-hint print:hidden">↔ {t.scrollHint}</p>
       <p className="sr-only">{t.restrictionA11y}</p>

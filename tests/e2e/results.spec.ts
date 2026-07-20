@@ -36,10 +36,15 @@ test("timeline scales, heat ribbon, and page containment remain usable", async (
   await page.setViewportSize({ width: 1440, height: 900 });
   await openDemoResults(page);
   await expect(page.getByRole("button", { name: "1 hour" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("Fit shift shows an overview. Use 1 hour or 30 minutes for task details.", { exact: true })).toBeVisible();
   await expect(page.getByTestId("heat-ribbon")).toHaveAttribute("aria-label", /30.5°C.*Lower \/ caution.*46.7°C.*High risk/);
   await page.getByRole("button", { name: "30 minutes" }).click();
   await expect(page.getByRole("button", { name: "30 minutes" })).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.reload();
+  await openDemoResults(page);
+  await expect(page.getByRole("button", { name: "1 hour" })).toHaveAttribute("aria-pressed", "true");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await openDemoResults(page);
@@ -107,6 +112,7 @@ test("print report control and printable layout are present", async ({ page }) =
 
 test("Arabic mode shows the deterministic Arabic briefing", async ({ page }) => {
   await page.goto("/"); await page.getByRole("button", { name: "العربية" }).click();
+  await expect(page.getByText("سياق توقعات الإحداثيات المحددة", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "عرض وردية نموذجية" }).click();
   await page.getByRole("button", { name: "متابعة إلى الظروف" }).click();
   await page.getByRole("button", { name: "إنشاء وردية أكثر أمانًا" }).click();

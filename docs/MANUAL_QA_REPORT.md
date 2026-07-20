@@ -248,3 +248,28 @@ Status: **verified**.
 - **Live weather demonstration:** suitable with a fallback explanation, but introduces an upstream dependency.
 - **Live AI demonstration:** not suitable to record in its current free-router configuration.
 - **Deployed application:** not assessed; no deployment was tested.
+
+## Final timeline polish verification — 2026-07-19
+
+Manual production-browser observations:
+
+- At 1440×900 and 768×1024, the detailed timeline opened in `1 hour` mode and kept horizontal overflow inside its own region.
+- At 390×844, the timeline opened in `Fit shift` mode, displayed the horizontal-scroll hint, and did not create page-level horizontal overflow.
+- Requested labels retained sticky positioning; the time ruler reports sticky positioning within the timeline scroller.
+- Narrow blocks retained proportional widths, remained keyboard/selectable controls, and exposed full activity names and intervals through accessible labels and details.
+- The shared amber-and-navy selected treatment visibly connected requested and generated blocks without animation.
+- Arabic mode remained RTL while timeline chronology stayed left-to-right. The scale helper and `سياق توقعات الإحداثيات المحددة` assumption rendered correctly.
+- Browser console inspection found no warnings or errors during the sample workflow.
+- The print-media capture remained legible in black and white and retained the schedule, restriction hatch, warnings, sources, and briefing.
+
+Updated evidence:
+
+| Screenshot | Observation |
+| --- | --- |
+| `artifacts/final-timeline-polish/desktop-1440x900.png` | Desktop result uses the detailed one-hour scale without page overflow. |
+| `artifacts/final-timeline-polish/tablet-768x1024.png` | The 768 px breakpoint retains the one-hour detailed default and contained board scrolling. |
+| `artifacts/final-timeline-polish/mobile-390x844.png` | Mobile uses Fit shift and keeps the report inside the viewport. |
+| `artifacts/final-timeline-polish/arabic-result.png` | Arabic labels and helper copy remain readable while chronology remains left-to-right. |
+| `artifacts/final-timeline-polish/print-output.png` | Print layout remains monochrome-readable with aligned requested and selected lanes. |
+
+Automated proof: the four restriction-date cases pass, responsive scale/helper assertions pass, all 197 unit tests and all 45 Playwright tests pass, and the optimized production build succeeds.
