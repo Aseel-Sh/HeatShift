@@ -4,6 +4,22 @@ import { saudiCitySchema, workloadSchema, workEnvironmentSchema } from "../domai
 const optionalTextSchema = z.string().trim().min(1).optional();
 const timeSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
 
+const legacyMessageArabic: Record<string,string> = {
+  "Crew size not stated": "لم يُذكر حجم الفريق.",
+  "Shift start not stated": "لم يُذكر وقت بدء الوردية.",
+  "Shift end not stated": "لم يُذكر وقت انتهاء الوردية.",
+  "Task classifications need review": "تحتاج تصنيفات الأنشطة إلى مراجعة المشرف.",
+  "Task details missing": "بعض تفاصيل النشاط غير مكتملة.",
+  "Task duration was not stated.": "لم تُذكر مدة النشاط.",
+};
+const messageCode=(value:string)=>value.toUpperCase().replace(/[^A-Z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,64)||"SUPERVISOR_REVIEW_REQUIRED";
+export const extractionMessageSchema=z.union([
+  z.object({code:z.string().trim().min(1),messageEn:z.string().trim().min(1),messageAr:z.string().trim().min(1)}).strict(),
+  z.string().trim().min(1).transform((messageEn)=>({code:messageCode(messageEn),messageEn,messageAr:legacyMessageArabic[messageEn]??"معلومة مستخرجة تتطلب مراجعة المشرف."})),
+]);
+export type ExtractionMessage=z.infer<typeof extractionMessageSchema>;
+export const toExtractionMessage=(message:string):ExtractionMessage=>extractionMessageSchema.parse(message);
+
 export const parsePlanRequestSchema = z.object({
   text: z
     .string()
@@ -68,8 +84,8 @@ export const extractedPlanSchema = z
     crewSize: z.number().int().positive().optional(),
     nonAcclimatizedWorkers: z.number().int().nonnegative().optional(),
     tasks: z.array(extractedTaskSchema),
-    assumptions: z.array(z.string().trim().min(1)),
-    missingInformation: z.array(z.string().trim().min(1)),
+    assumptions: z.array(extractionMessageSchema),
+    missingInformation: z.array(extractionMessageSchema),
   })
   .strict();
 export type ExtractedPlan = z.infer<typeof extractedPlanSchema>;
@@ -117,8 +133,8 @@ export const extractedPlanJsonSchema = {
         },
       },
     },
-    assumptions: { type: "array", items: { type: "string" } },
-    missingInformation: { type: "array", items: { type: "string" } },
+    assumptions: { type: "array", items: { type: "object", additionalProperties:false, required:["code","messageEn","messageAr"], properties:{code:{type:"string"},messageEn:{type:"string"},messageAr:{type:"string"}} } },
+    missingInformation: { type: "array", items: { type: "object", additionalProperties:false, required:["code","messageEn","messageAr"], properties:{code:{type:"string"},messageEn:{type:"string"},messageAr:{type:"string"}} } },
   },
   required: ["tasks", "assumptions", "missingInformation"],
 } as const;

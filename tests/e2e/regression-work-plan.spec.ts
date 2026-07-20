@@ -41,6 +41,10 @@ async function enterExactPlan(page: Page) {
 async function confirmClassifications(page: Page) {
   const rows = page.getByTestId(/^task-row-/);
   await expect(rows).toHaveCount(8);
+  for (let index = 0; index < 8; index += 1) {
+    const expand = rows.nth(index).getByRole("button", { name: /^Expand details:/ });
+    if (await expand.isVisible()) await expand.click();
+  }
   const choices = [
     ["light", "conditioned_indoor", "false"],
     ["heavy", "direct_sun", "true"],
@@ -60,7 +64,10 @@ async function confirmClassifications(page: Page) {
   }
   await rows.nth(2).getByLabel("Recovery eligibility").selectOption("eligible");
   await rows.nth(4).getByLabel("Recovery eligibility").selectOption("eligible");
-  for (const index of [1, 3, 5, 6, 7]) await rows.nth(index).getByRole("button", { name: "Confirm suggestion" }).click();
+  for (const index of [1, 3, 5, 6, 7]) {
+    const apply = rows.nth(index).getByRole("button", { name: "Apply" }).first();
+    if (await apply.isVisible()) await apply.click();
+  }
 }
 
 test.beforeEach(async ({ page }) => {
@@ -89,6 +96,7 @@ test("exact supervisor plan imports, confirms, and schedules in the production w
 
   const rows = page.getByTestId(/^task-row-/);
   await expect(rows).toHaveCount(8);
+  for (let index = 0; index < 8; index += 1) await rows.nth(index).getByRole("button", { name: /^Expand details:/ }).click();
   await expect(page.getByText("Shift details need attention")).toHaveCount(0);
   await expect(page.getByText("Crew size not stated")).toHaveCount(0);
   await expect(page.getByText("Shift start not stated")).toHaveCount(0);
@@ -135,10 +143,10 @@ test("exact supervisor plan imports, confirms, and schedules in the production w
   await expect(page.getByRole("heading", { name: "Plan outcome" })).toBeVisible();
   await expect(page.getByText("Forecast heat category:", { exact: true })).toBeVisible();
   await expect(page.getByText("Applied TWL zone:", { exact: true })).toBeVisible();
-  await expect(page.getByText("0 min because the supervisor-entered Low TWL zone uses continuous-work guidance.")).toBeVisible();
+  await expect(page.getByText(/Low TWL provides continuous-work guidance/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "No requested time" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Could not be scheduled" })).toBeVisible();
-  await expect(page.getByText("1 hr 30 min / 2 hr 30 min")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Requested versus selected" })).toBeVisible();
   await expect(page.getByRole("row", { name: /Concrete pour.*2 hr 30 min.*1 hr 30 min.*1 hr/ })).toBeVisible();
   await page.screenshot({ path: "artifacts/regression-work-plan/03-selected-schedule.png", fullPage: true });
 

@@ -3,7 +3,9 @@ import { OpenRouterClient, type ChatCompletionsClient } from "./provider";
 import {
   extractedPlanJsonSchema,
   extractedPlanSchema,
+  toExtractionMessage,
   type ExtractedPlan,
+  type ExtractionMessage,
   type ParsePlanRequest,
 } from "./plan-extraction-schema";
 import {
@@ -21,7 +23,7 @@ const SYSTEM_INSTRUCTION = `You extract structured work-plan facts only.
 - Classify obvious breaks and meals as break or meal, never as light work.
 - Workload, environment, and splittability may be returned as suggested fields when inferred from an activity name. Suggestions are not verified facts.
 - Mark mustSchedule only for an explicit must-complete statement. Keep equipment constraints as notes unless an exact equipment time is stated.
-- Put unresolved interpretation decisions in assumptions and genuinely absent information in missingInformation.
+- Put unresolved interpretation decisions in assumptions and genuinely absent information in missingInformation. Every message must contain a stable code, concise messageEn, and concise messageAr.
 - Translate task names into concise Arabic.
 - Never make safety or scheduling decisions.
 - Return only schema-valid JSON.`;
@@ -54,7 +56,7 @@ function cityFromLocation(location?: string): ExtractedPlan["city"] {
   return (Object.entries(CITY_ALIASES).find(([, aliases]) => aliases.some((alias) => normalized === alias || normalized.includes(alias)))?.[0] as ExtractedPlan["city"]) ?? undefined;
 }
 
-function removeResolvedMissing(items: string[], context: ParsePlanRequest["context"]): string[] {
+function removeResolvedMissing(items: ExtractionMessage[], context: ParsePlanRequest["context"]): ExtractionMessage[] {
   const resolved: RegExp[] = [];
   if (context.siteName?.trim()) resolved.push(/site/i);
   if (cityFromLocation(context.locationName)) resolved.push(/city|location/i);
@@ -63,7 +65,7 @@ function removeResolvedMissing(items: string[], context: ParsePlanRequest["conte
   if (context.shiftEnd) resolved.push(/shift end|end time|complete shift times/i);
   if (context.crewSize !== undefined) resolved.push(/crew size|workers? count|crew.*stated/i);
   if (context.nonAcclimatizedWorkers !== undefined) resolved.push(/new.worker|non.acclimatized/i);
-  return items.filter((item) => !resolved.some((pattern) => pattern.test(item)));
+  return items.filter((item) => !resolved.some((pattern) => pattern.test(`${item.code} ${item.messageEn}`)));
 }
 
 function sourceLineForTask(text: string, taskName: string): string | undefined {
@@ -195,7 +197,7 @@ function mergeExtraction(modelPlan: ExtractedPlan, text: string, context: ParseP
     assumptions: removeResolvedMissing(modelPlan.assumptions, context),
     missingInformation: [
       ...removeResolvedMissing(modelPlan.missingInformation, context),
-      ...parsedRows.ambiguities,
+      ...parsedRows.ambiguities.map(toExtractionMessage),
     ],
   };
 }

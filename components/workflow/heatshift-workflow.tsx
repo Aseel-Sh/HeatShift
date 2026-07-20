@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import type { Dispatch } from "react";
 import {
   AlertTriangle,
@@ -9,6 +9,8 @@ import {
   Check,
   ClipboardList,
   CloudSun,
+  ChevronDown,
+  ChevronUp,
   FileInput,
   LoaderCircle,
   Plus,
@@ -20,6 +22,7 @@ import { ResultsPage } from "@/components/report/results-page";
 import { LocationPicker } from "@/components/workflow/location-picker";
 import { getDemoScenario } from "@/lib/demo/get-demo-scenario";
 import type { ExtractedPlan } from "@/lib/ai/plan-extraction-schema";
+import type { ExtractionMessage } from "@/lib/ai/plan-extraction-schema";
 import { evaluateMiddayRestriction } from "@/lib/domain/midday-restriction";
 import { generateSchedule } from "@/lib/domain/scheduler";
 import { classifyForecastTemperature } from "@/lib/domain/temperature-category";
@@ -93,7 +96,7 @@ const copy = {
     recoveryNotEligible: "Not eligible",
     recoveryHelp: "A break counts toward heat recovery only after the supervisor confirms appropriate shaded or cooled conditions.",
     suggested: "Suggested",
-    useSuggestion: "Use suggestion",
+    useSuggestion: "Apply",
     timing: "Timing",
     flexible: "Flexible",
     preferred: "Preferred",
@@ -110,6 +113,17 @@ const copy = {
     area: "Work area",
     canSplit: "Can split?",
     validation: "Validation",
+    status: "Status",
+    expand: "Expand details",
+    collapse: "Collapse details",
+    ready: "Ready",
+    needsDecisions: "Needs {count} decisions",
+    needsDependencyReview: "Needs dependency review",
+    conflictStatus: "Conflict",
+    taskHelp: "Work-area guidance",
+    taskHelpText: "Indoor / cooled area means a genuinely conditioned recovery or work location. Heat-exposed indoor work requires a separate site assessment.",
+    suggestionsTitle: "Suggestions to review",
+    dismiss: "Dismiss",
     delete: "Delete",
     enName: "English name",
     arName: "Arabic name",
@@ -205,7 +219,7 @@ const copy = {
     recoveryNotEligible: "غير مؤهلة",
     recoveryHelp: "تُحسب الاستراحة كتعافٍ حراري فقط بعد تأكيد المشرف لظروف مظللة أو مبردة مناسبة.",
     suggested: "مقترح",
-    useSuggestion: "استخدام الاقتراح",
+    useSuggestion: "تطبيق",
     timing: "أولوية الوقت",
     flexible: "مرن",
     preferred: "مفضل",
@@ -222,6 +236,17 @@ const copy = {
     area: "منطقة العمل",
     canSplit: "قابلة للتقسيم؟",
     validation: "التحقق",
+    status: "الحالة",
+    expand: "توسيع التفاصيل",
+    collapse: "طي التفاصيل",
+    ready: "جاهز",
+    needsDecisions: "يحتاج إلى {count} قرارات",
+    needsDependencyReview: "يحتاج إلى مراجعة التبعية",
+    conflictStatus: "تعارض",
+    taskHelp: "إرشادات منطقة العمل",
+    taskHelpText: "تعني المنطقة الداخلية / المبرّدة موقع عمل أو تعافٍ مكيّفًا فعليًا. يحتاج العمل الداخلي المعرّض للحرارة إلى تقييم منفصل للموقع.",
+    suggestionsTitle: "اقتراحات للمراجعة",
+    dismiss: "تجاهل",
     delete: "حذف",
     enName: "الاسم الإنجليزي",
     arName: "الاسم العربي",
@@ -488,15 +513,16 @@ function TaskPlan({ state, t, dispatch, next }: { state: WorkflowState; t: UiCop
       </header>
       <div role="status" className="review-status"><Check aria-hidden="true" /><span>{notice}</span></div>
       {state.planSource === "ai" && state.aiModel && <p className="model-note">{t.modelNote} <span dir="ltr">{state.aiModel}</span>. {t.reviewRequired}</p>}
-      {state.assumptions.length > 0 && <Info title={t.assumptions} items={state.assumptions} />}
-      {state.missingInformation.length > 0 && <Info title={t.missing} items={state.missingInformation} />}
+      {state.assumptions.length > 0 && <Info title={t.assumptions} items={state.assumptions} language={state.language} />}
+      {state.missingInformation.length > 0 && <Info title={t.missing} items={state.missingInformation} language={state.language} />}
       {shiftIssues.length > 0 && <section className="shift-attention" role="alert" aria-labelledby="shift-attention-title"><div><h2 id="shift-attention-title">{t.shiftAttention}</h2><ul>{shiftIssues.map(([field, label]) => <li key={field}><strong>{label}:</strong> {displayError(shiftErrors[field], state.language)}</li>)}</ul></div><button className="button-secondary" onClick={editShift}>{t.editShift}</button></section>}
       <ErrorText state={state} name="tasks" />
+      <details className="task-page-help"><summary>{t.taskHelp}</summary><p>{t.taskHelpText}</p></details>
       <div className="task-table-wrap">
         <table className="task-table">
           <caption className="sr-only">{t.taskPlan}</caption>
-          <thead><tr><th>{t.task}</th><th>{t.activity}</th><th>{t.requestedTime}</th><th>{t.duration}</th><th>{t.workload}</th><th>{t.area}</th><th>{t.canSplit}</th><th>{t.validation}</th><th>{t.delete}</th></tr></thead>
-          <tbody>{state.tasks.map((task, index) => <TaskRow key={task.id} state={state} task={task} index={index} t={t} dispatch={dispatch} />)}</tbody>
+          <thead><tr><th>{t.task}</th><th>{t.activity}</th><th>{t.requestedTime}</th><th>{t.duration}</th><th>{t.workload} / {t.recovery}</th><th>{t.area}</th><th>{t.status}</th><th>{t.expand}</th></tr></thead>
+          {state.tasks.map((task, index) => <TaskRow key={task.id} state={state} task={task} index={index} t={t} dispatch={dispatch} />)}
         </table>
       </div>
       <button className="add-task-row" onClick={() => dispatch({ type: "addTask" })}><Plus aria-hidden="true" />{t.add}</button>
@@ -505,39 +531,62 @@ function TaskPlan({ state, t, dispatch, next }: { state: WorkflowState; t: UiCop
   );
 }
 
-function Info({ title, items }: { title: string; items: string[] }) {
-  return <details className="compact-details"><summary>{title} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></details>;
+function Info({ title, items, language }: { title: string; items: ExtractionMessage[]; language: Language }) {
+  return <details className="compact-details"><summary>{title} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item.code}>{language === "ar" ? item.messageAr : item.messageEn}</li>)}</ul></details>;
 }
 
 function TaskRow({ state, task, index, t, dispatch }: { state: WorkflowState; task: DraftWorkTask; index: number; t: UiCopy; dispatch: WorkflowDispatch }) {
+  const [expanded,setExpanded]=useState(!task.nameEn && !task.nameAr);
+  const [dismissed,setDismissed]=useState<Set<string>>(()=>new Set());
   const update = (field: keyof Omit<DraftWorkTask, "id">, value: DraftWorkTask[keyof Omit<DraftWorkTask, "id">]) => dispatch({ type: "updateTask", id: task.id, field, value });
   const error = (field: string) => state.errors[`task-${task.id}-${field}`];
-  const hasErrors = ["nameEn", "nameAr", "durationMinutes", "workload", "environment", "splittable", "requestedTime", "dependencies"].some((field) => Boolean(error(field)));
   const kind = task.activityKind ?? "work";
-  const complete = Boolean(task.nameEn && task.nameAr && task.durationMinutes && (kind !== "work" || (task.workload && task.environment && task.splittable !== null))) && !hasErrors;
   const fieldError = (field: string) => error(field) ? <p role="alert" className="field-error">{displayError(error(field), state.language)}</p> : null;
   const evidence = Object.entries(task.evidence ?? {});
   const predecessorOptions = state.tasks.filter((candidate) => candidate.id !== task.id && (candidate.activityKind ?? "work") === "work");
   const suggestedPredecessors = predecessorOptions.filter((candidate) => (task.suggestedPredecessorTaskIds ?? []).includes(candidate.id));
   const togglePredecessor = (id: string, checked: boolean) => update("predecessorTaskIds", checked ? [...new Set([...(task.predecessorTaskIds ?? []), id])] : (task.predecessorTaskIds ?? []).filter((candidate) => candidate !== id));
+  const decisionFields=[!task.nameEn?"nameEn":null,!task.nameAr?"nameAr":null,!task.durationMinutes?"durationMinutes":null,kind==="work"&&!task.workload?"workload":null,kind==="work"&&!task.environment?"environment":null,kind==="work"&&task.splittable===null?"splittable":null,(task.requestedStart&&!task.requestedEnd)||(!task.requestedStart&&task.requestedEnd)?"requestedTime":null].filter((field):field is string=>Boolean(field));
+  const errorFields=["nameEn","nameAr","durationMinutes","workload","environment","splittable","requestedTime","dependencies"].filter((field)=>Boolean(error(field)));
+  const dependencyReview=kind==="work"&&suggestedPredecessors.some((candidate)=>!(task.predecessorTaskIds??[]).includes(candidate.id))&&!dismissed.has("dependency");
+  const status=errorFields.length?t.conflictStatus:decisionFields.length?t.needsDecisions.replace("{count}",String(decisionFields.length)):dependencyReview?t.needsDependencyReview:t.ready;
+  const statusClass=errorFields.length?"conflict":decisionFields.length||dependencyReview?"attention":"ready";
+  const openAndFocus=()=>{setExpanded(true);requestAnimationFrame(()=>{const field=errorFields[0]??decisionFields[0]??(dependencyReview?"dependencies":"nameEn");document.getElementById(`task-row-${task.id}`)?.querySelector<HTMLElement>(`[data-field="${field}"]`)?.focus();});};
+  const dismiss=(key:string)=>setDismissed((current)=>new Set([...current,key]));
+  const suggestions=[
+    task.suggestedWorkload&&task.suggestedWorkload!==task.workload&&!dismissed.has("workload")?{key:"workload",label:`${t.suggested}: ${displayWorkload(task.suggestedWorkload,state.language)}`,apply:()=>update("workload",task.suggestedWorkload!)}:null,
+    task.suggestedEnvironment&&task.suggestedEnvironment!==task.environment&&!dismissed.has("environment")?{key:"environment",label:`${t.suggested}: ${displayEnvironment(task.suggestedEnvironment,state.language)}`,apply:()=>update("environment",task.suggestedEnvironment!)}:null,
+    task.suggestedSplittable!==undefined&&task.suggestedSplittable!==task.splittable&&!dismissed.has("splittable")?{key:"splittable",label:`${t.suggested}: ${task.suggestedSplittable?t.yes:t.no}`,apply:()=>update("splittable",task.suggestedSplittable!)}:null,
+    dependencyReview?{key:"dependency",label:`${state.language==="ar"?"التبعية المقترحة":"Suggested dependency"}: ${suggestedPredecessors.map((candidate)=>state.language==="ar"?candidate.nameAr:candidate.nameEn).join(", ")}`,apply:()=>update("predecessorTaskIds",[...new Set([...(task.predecessorTaskIds??[]),...suggestedPredecessors.map((candidate)=>candidate.id)])])}:null,
+  ].filter((item):item is {key:string;label:string;apply:()=>void}=>Boolean(item));
   return (
-    <tr data-testid={`task-row-${index}`}>
-      <td data-label={t.task} className="task-name-cell"><span className="row-number">{String(index + 1).padStart(2, "0")}</span><label><span>{t.enName}</span><input className="table-control" value={task.nameEn} onChange={(event) => update("nameEn", event.target.value)} aria-invalid={Boolean(error("nameEn"))} />{fieldError("nameEn")}</label><label><span>{t.arName}</span><input className="table-control" lang="ar" dir="rtl" value={task.nameAr} onChange={(event) => update("nameAr", event.target.value)} aria-invalid={Boolean(error("nameAr"))} />{fieldError("nameAr")}</label>{evidence.length > 0 && <details className="task-evidence"><summary>{state.language === "ar" ? "الأدلة" : "Source evidence"}</summary><ul>{evidence.map(([field, item]) => <li key={field}><strong>{field}:</strong> {item.evidence} <em>{item.source.replaceAll("_", " ")}</em></li>)}</ul></details>}</td>
-      <td data-label={t.activity}><label><span className="sr-only">{t.activity}</span><select aria-label={t.activity} className="table-control" value={kind} onChange={(event) => update("activityKind", event.target.value as DraftWorkTask["activityKind"])}><option value="work">{t.work}</option><option value="break">{t.breakActivity}</option><option value="meal">{t.meal}</option></select></label><label><span>{t.timing}</span><select aria-label={t.timing} className="table-control" value={task.timingPreference ?? "flexible"} onChange={(event) => update("timingPreference", event.target.value as DraftWorkTask["timingPreference"])}><option value="flexible">{t.flexible}</option><option value="preferred">{t.preferred}</option><option value="fixed">{t.fixed}</option></select></label>{kind === "work" && <label className="check-line"><input type="checkbox" checked={task.mustSchedule ?? false} onChange={(event) => update("mustSchedule", event.target.checked)} />{t.mustComplete}</label>}{kind === "work" && <label><span>{t.operationalNotes}</span><textarea aria-label={`${t.operationalNotes} ${index + 1}`} className="table-control" rows={2} value={(task.operationalNotes ?? []).join("\n")} onChange={(event) => update("operationalNotes", event.target.value.split(/\n/).map(value=>value.trim()).filter(Boolean))} /></label>}{kind === "work" && predecessorOptions.length > 0 && <fieldset className="dependency-selector" aria-invalid={Boolean(error("dependencies"))}><legend>{t.dependencies}</legend>{suggestedPredecessors.length > 0 && !(task.predecessorTaskIds ?? []).some((id) => suggestedPredecessors.some((candidate) => candidate.id === id)) && <Suggestion label={`${t.dependencySuggestion} ${t.afterActivity} ${suggestedPredecessors.map((candidate) => candidate.nameEn).join(", ")}`} action={t.confirmSuggestion} onUse={() => update("predecessorTaskIds", [...new Set([...(task.predecessorTaskIds ?? []), ...suggestedPredecessors.map((candidate) => candidate.id)])])} />}{predecessorOptions.map((candidate) => <label key={candidate.id}><input type="checkbox" checked={(task.predecessorTaskIds ?? []).includes(candidate.id)} onChange={(event) => togglePredecessor(candidate.id, event.target.checked)} />{t.afterActivity} {candidate.nameEn}</label>)}{fieldError("dependencies")}</fieldset>}</td>
-      <td data-label={t.requestedTime}><div className="time-pair"><label><span>{t.startOptional}</span><input className="table-control" type="time" step="300" dir="ltr" value={task.requestedStart ?? ""} onChange={(event) => update("requestedStart", event.target.value)} /></label><label><span>{t.endOptional}</span><input className="table-control" type="time" step="300" dir="ltr" value={task.requestedEnd ?? ""} onChange={(event) => update("requestedEnd", event.target.value)} /></label></div>{fieldError("requestedTime")}</td>
-      <td data-label={t.duration}><label><span className="sr-only">{t.durationMinutes}</span><input aria-label={t.durationMinutes} className="table-control numeric" type="number" min="5" step="5" dir="ltr" value={task.durationMinutes ?? ""} onChange={(event) => update("durationMinutes", event.target.value === "" ? null : Number(event.target.value))} aria-invalid={Boolean(error("durationMinutes"))} /></label>{task.durationMinutes ? <strong className="human-duration">{formatDuration(task.durationMinutes, state.language)}</strong> : null}{task.durationMinutes ? <small>{task.durationMinutes} min</small> : null}{fieldError("durationMinutes")}</td>
-      <td data-label={kind === "work" ? t.workload : t.recovery}>{kind === "work" ? <><label><span className="sr-only">{t.workload}</span><select aria-label={t.workload} className="table-control" value={task.workload} onChange={(event) => update("workload", event.target.value as DraftWorkTask["workload"])} aria-invalid={Boolean(error("workload"))}><option value="">{t.incomplete}</option><option value="heavy">{displayWorkload("heavy", state.language)}</option><option value="light">{displayWorkload("light", state.language)}</option></select></label>{task.suggestedWorkload && !task.workload && <Suggestion label={`${t.suggested}: ${displayWorkload(task.suggestedWorkload,state.language)}`} action={t.useSuggestion} onUse={() => update("workload", task.suggestedWorkload!)} />}{fieldError("workload")}</> : <><label><span className="sr-only">{t.recovery}</span><select aria-label={t.recovery} className="table-control" value={task.recoveryEligibility ?? "unknown"} onChange={(event) => update("recoveryEligibility", event.target.value as DraftWorkTask["recoveryEligibility"])}><option value="unknown">{t.recoveryUnknown}</option><option value="eligible">{t.recoveryEligible}</option><option value="not_eligible">{t.recoveryNotEligible}</option></select></label><small>{t.recoveryHelp}</small></>}</td>
-      <td data-label={t.area}>{kind === "work" ? <><label><span className="sr-only">{t.environment}</span><select aria-label={t.environment} className="table-control" value={task.environment} onChange={(event) => update("environment", event.target.value as DraftWorkTask["environment"])} aria-invalid={Boolean(error("environment"))}><option value="">{t.incomplete}</option><option value="direct_sun">{displayEnvironment("direct_sun", state.language)}</option><option value="shaded_outdoor">{displayEnvironment("shaded_outdoor", state.language)}</option><option value="conditioned_indoor">{displayEnvironment("conditioned_indoor", state.language)}</option></select></label>{task.suggestedEnvironment && !task.environment && <Suggestion label={`${t.suggested}: ${displayEnvironment(task.suggestedEnvironment,state.language)}`} action={t.useSuggestion} onUse={() => update("environment", task.suggestedEnvironment!)} />}{fieldError("environment")}<small>{t.indoorNote}</small></> : <span>—</span>}</td>
-      <td data-label={t.canSplit}>{kind === "work" ? <><label><span className="sr-only">{t.splitQuestion}</span><select aria-label={t.splitQuestion} className="table-control" value={task.splittable === null ? "" : String(task.splittable)} onChange={(event) => update("splittable", event.target.value === "" ? null : event.target.value === "true")} aria-invalid={Boolean(error("splittable"))}><option value="">{t.incomplete}</option><option value="true">{t.yes}</option><option value="false">{t.no}</option></select></label>{task.suggestedSplittable !== undefined && task.splittable === null && <Suggestion label={`${t.suggested}: ${task.suggestedSplittable?t.yes:t.no}`} action={t.useSuggestion} onUse={() => update("splittable", task.suggestedSplittable!)} />}{fieldError("splittable")}</> : <span>—</span>}</td>
-      <td data-label={t.validation}><span className={`validation-state ${complete ? "complete" : "incomplete"}`}>{complete ? <Check aria-hidden="true" /> : <AlertTriangle aria-hidden="true" />}{complete ? t.complete : t.incomplete}</span></td>
-      <td data-label={t.delete}><button className="icon-button danger" aria-label={`${t.delete} ${index + 1}`} onClick={() => dispatch({ type: "removeTask", id: task.id })}><Trash2 aria-hidden="true" /></button></td>
-    </tr>
+    <tbody id={`task-row-${task.id}`} data-testid={`task-row-${index}`} className={expanded?"is-expanded":""}>
+      <tr className="task-main-row">
+        <td data-label={t.task} className="task-summary"><span className="row-number">{String(index+1).padStart(2,"0")}</span><strong>{state.language==="ar"?task.nameAr:task.nameEn||t.incomplete}</strong><small>{state.language==="ar"?task.nameEn:task.nameAr}</small>{kind==="work"&&task.mustSchedule&&<span className="must-badge">{t.mustComplete}</span>}</td>
+        <td data-label={t.activity}><label><span className="sr-only">{t.activity}</span><select aria-label={t.activity} className="table-control" value={kind} onChange={(event)=>update("activityKind",event.target.value as DraftWorkTask["activityKind"])}><option value="work">{t.work}</option><option value="break">{t.breakActivity}</option><option value="meal">{t.meal}</option></select></label></td>
+        <td data-label={t.requestedTime}><div className="time-pair compact"><label><span className="sr-only">{t.startOptional}</span><input data-field="requestedTime" aria-label={t.startOptional} className="table-control" type="time" step="300" dir="ltr" value={task.requestedStart??""} onChange={(event)=>update("requestedStart",event.target.value)} /></label><label><span className="sr-only">{t.endOptional}</span><input aria-label={t.endOptional} className="table-control" type="time" step="300" dir="ltr" value={task.requestedEnd??""} onChange={(event)=>update("requestedEnd",event.target.value)} /></label></div>{fieldError("requestedTime")}</td>
+        <td data-label={t.duration}><label><span className="sr-only">{t.durationMinutes}</span><input data-field="durationMinutes" aria-label={t.durationMinutes} className="table-control numeric" type="number" min="5" step="5" dir="ltr" value={task.durationMinutes??""} onChange={(event)=>update("durationMinutes",event.target.value===""?null:Number(event.target.value))} aria-invalid={Boolean(error("durationMinutes"))} /></label>{task.durationMinutes&&<small>{formatDuration(task.durationMinutes,state.language)}</small>}{fieldError("durationMinutes")}</td>
+        <td data-label={kind==="work"?t.workload:t.recovery}>{kind==="work"?<><label><span className="sr-only">{t.workload}</span><select data-field="workload" aria-label={t.workload} className="table-control" value={task.workload} onChange={(event)=>update("workload",event.target.value as DraftWorkTask["workload"])} aria-invalid={Boolean(error("workload"))}><option value="">{t.incomplete}</option><option value="heavy">{displayWorkload("heavy",state.language)}</option><option value="light">{displayWorkload("light",state.language)}</option></select></label><span className="split-summary">{t.canSplit}: {task.splittable===null?t.incomplete:task.splittable?t.yes:t.no}</span>{fieldError("workload")}</>:<label><span className="sr-only">{t.recovery}</span><select aria-label={t.recovery} className="table-control" value={task.recoveryEligibility??"unknown"} onChange={(event)=>update("recoveryEligibility",event.target.value as DraftWorkTask["recoveryEligibility"])}><option value="unknown">{t.recoveryUnknown}</option><option value="eligible">{t.recoveryEligible}</option><option value="not_eligible">{t.recoveryNotEligible}</option></select></label>}</td>
+        <td data-label={t.area}>{kind==="work"?<><label><span className="sr-only">{t.environment}</span><select data-field="environment" aria-label={t.environment} className="table-control" value={task.environment} onChange={(event)=>update("environment",event.target.value as DraftWorkTask["environment"])} aria-invalid={Boolean(error("environment"))}><option value="">{t.incomplete}</option><option value="direct_sun">{displayEnvironment("direct_sun",state.language)}</option><option value="shaded_outdoor">{displayEnvironment("shaded_outdoor",state.language)}</option><option value="conditioned_indoor">{displayEnvironment("conditioned_indoor",state.language)}</option></select></label>{fieldError("environment")}</>:<span className="sr-only">{state.language==="ar"?"لا ينطبق":"Not applicable"}</span>}</td>
+        <td data-label={t.status}><button type="button" className={`task-status ${statusClass}`} onClick={openAndFocus}>{status}</button></td>
+        <td data-label={t.expand}><button type="button" className="expand-task" aria-expanded={expanded} aria-controls={`task-details-${task.id}`} aria-label={`${expanded?t.collapse:t.expand}: ${state.language==="ar"?task.nameAr:task.nameEn}`} onClick={()=>setExpanded((value)=>!value)}>{expanded?<ChevronUp aria-hidden="true"/>:<ChevronDown aria-hidden="true"/>}</button></td>
+      </tr>
+      {expanded&&<tr className="task-details-row"><td colSpan={8}><div id={`task-details-${task.id}`} className="task-details-grid">
+        <section className="detail-names"><label><span>{t.enName}</span><input data-field="nameEn" className="table-control" value={task.nameEn} onChange={(event)=>update("nameEn",event.target.value)} aria-invalid={Boolean(error("nameEn"))}/>{fieldError("nameEn")}</label><label><span>{t.arName}</span><input data-field="nameAr" className="table-control" lang="ar" dir="rtl" value={task.nameAr} onChange={(event)=>update("nameAr",event.target.value)} aria-invalid={Boolean(error("nameAr"))}/>{fieldError("nameAr")}</label></section>
+        <section><label><span>{t.timing}</span><select className="table-control" aria-label={t.timing} value={task.timingPreference??"flexible"} onChange={(event)=>update("timingPreference",event.target.value as DraftWorkTask["timingPreference"])}><option value="flexible">{t.flexible}</option><option value="preferred">{t.preferred}</option><option value="fixed">{t.fixed}</option></select></label>{kind==="work"&&<><label className="check-line"><input type="checkbox" checked={task.mustSchedule??false} onChange={(event)=>update("mustSchedule",event.target.checked)}/>{t.mustComplete}</label><label><span>{t.canSplit}</span><select data-field="splittable" aria-label={t.splitQuestion} className="table-control" value={task.splittable===null?"":String(task.splittable)} onChange={(event)=>update("splittable",event.target.value===""?null:event.target.value==="true")} aria-invalid={Boolean(error("splittable"))}><option value="">{t.incomplete}</option><option value="true">{t.yes}</option><option value="false">{t.no}</option></select></label>{fieldError("splittable")}</>}</section>
+        {kind==="work"&&<section><label><span>{t.operationalNotes}</span><textarea aria-label={`${t.operationalNotes} ${index+1}`} className="table-control" rows={3} value={(task.operationalNotes??[]).join("\n")} onChange={(event)=>update("operationalNotes",event.target.value.split(/\n/).map((value)=>value.trim()).filter(Boolean))}/></label>{predecessorOptions.length>0&&<fieldset className="dependency-selector" aria-invalid={Boolean(error("dependencies"))}><legend>{t.dependencies}</legend>{predecessorOptions.map((candidate)=><label key={candidate.id}><input data-field="dependencies" type="checkbox" checked={(task.predecessorTaskIds??[]).includes(candidate.id)} onChange={(event)=>togglePredecessor(candidate.id,event.target.checked)}/>{t.afterActivity} {state.language==="ar"?candidate.nameAr:candidate.nameEn}</label>)}{fieldError("dependencies")}</fieldset>}</section>}
+        <section className="detail-review">{suggestions.length>0&&<div className="suggestion-list"><strong>{t.suggestionsTitle}</strong>{suggestions.map((suggestion)=><Suggestion key={suggestion.key} label={suggestion.label} apply={t.useSuggestion} dismiss={t.dismiss} onApply={suggestion.apply} onDismiss={()=>dismiss(suggestion.key)}/>)}</div>}{evidence.length>0&&<details className="task-evidence"><summary>{state.language==="ar"?"أدلة المصدر":"Source evidence"}</summary><ul>{evidence.map(([field,item])=><li key={field}><strong>{displayEvidenceField(field,state.language)}:</strong> {item.evidence}<em>{displayEvidenceSource(item.source,state.language)}</em></li>)}</ul></details>}<button className="icon-button danger" aria-label={`${t.delete} ${index+1}`} onClick={()=>dispatch({type:"removeTask",id:task.id})}><Trash2 aria-hidden="true"/>{t.delete}</button></section>
+      </div></td></tr>}
+    </tbody>
   );
 }
 
-function Suggestion({ label, action, onUse }: { label: string; action: string; onUse: () => void }) {
-  return <div className="suggestion"><span>{label}</span><button type="button" onClick={onUse}>{action}</button></div>;
+function Suggestion({label,apply,dismiss,onApply,onDismiss}:{label:string;apply:string;dismiss:string;onApply:()=>void;onDismiss:()=>void}){
+  return <div className="suggestion-chip"><span>{label}</span><button type="button" onClick={onApply}>{apply}</button><button type="button" onClick={onDismiss}>{dismiss}</button></div>;
 }
+
+function displayEvidenceField(field:string,language:Language){const labels:Record<string,{en:string;ar:string}>={durationMinutes:{en:"Duration",ar:"المدة"},mustSchedule:{en:"Must complete",ar:"يجب إكماله"},operationalNotes:{en:"Operational notes",ar:"ملاحظات تشغيلية"},requestedStart:{en:"Requested start",ar:"البداية المطلوبة"},requestedEnd:{en:"Requested end",ar:"النهاية المطلوبة"}};return labels[field]?.[language]??(language==="ar"?"حقل مستخرج":"Extracted field");}
+function displayEvidenceSource(source:string,language:Language){if(source==="deterministic_parser")return language==="ar"?"استخراج حتمي":"Deterministic extraction";if(source==="explicit_model_extraction")return language==="ar"?"استخراج صريح من النص":"Explicit text extraction";return language==="ar"?"اقتراح يحتاج إلى مراجعة":"Suggestion requiring review";}
 
 function Conditions({ state, t, peak, apparentPeak, dispatch, generate }: { state: WorkflowState; t: UiCopy; peak: number | null; apparentPeak: number | null; dispatch: WorkflowDispatch; generate: () => void }) {
   const shiftHours = filterForecastForShift(state.forecast,state.plan.shiftStart,state.plan.shiftEnd);

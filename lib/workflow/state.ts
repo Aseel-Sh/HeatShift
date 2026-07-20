@@ -1,4 +1,4 @@
-import type { ExtractedPlan } from "../ai/plan-extraction-schema";
+import type { ExtractedPlan, ExtractionMessage } from "../ai/plan-extraction-schema";
 import type { DemoScenario } from "../../data/demo-scenario";
 import { SAUDI_LOCATION_PRESETS } from "../../data/cities";
 import type { ForecastHour, SiteConditions, SiteLocation } from "../domain/types";
@@ -19,7 +19,7 @@ export interface PlanForm {
 export type FormErrors = Record<string, string>;
 export interface WorkflowState {
   language: Language; step: WorkflowStep; plan: PlanForm; touchedPlanFields: Partial<Record<keyof PlanForm, boolean>>;
-  tasks: DraftWorkTask[]; nextTaskId: number; assumptions: string[]; missingInformation: string[];
+  tasks: DraftWorkTask[]; nextTaskId: number; assumptions: ExtractionMessage[]; missingInformation: ExtractionMessage[];
   conditions: SiteConditions; forecast: ForecastHour[]; forecastSource: ForecastSource;
   weatherMetadata: WeatherMetadata | null;
   weatherStatus: "idle" | "loading" | "success" | "error"; weatherError: string | null;

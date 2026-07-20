@@ -43,6 +43,7 @@ test("AI can extract a text-first plan without duplicate requests", async ({ pag
   await page.getByRole("button", { name: "Structure task list" }).dblclick();
 
   await expect(page.getByRole("heading", { name: "Task plan" })).toBeVisible();
+  await page.getByRole("button", { name: /Expand details: Inspection/ }).click();
   await expect(page.getByLabel("English name")).toHaveValue("Inspection");
   await expect(page.getByText("Plan structured using google/gemma-test:free. Review required.")).toBeVisible();
   expect(requests).toBe(1);
@@ -125,6 +126,7 @@ test("responsive layouts, long bilingual names, headings, and keyboard focus rem
   const headingLevels = await page.locator("h1,h2,h3,h4").evaluateAll(elements => elements.map(element => Number(element.tagName.slice(1))));
   expect(headingLevels[0]).toBe(1); expect(headingLevels.some((level, index) => index > 0 && level - headingLevels[index - 1] > 1)).toBe(false);
   await page.getByRole("button", { name: "View sample shift" }).click();
+  await page.getByRole("button", { name: /^Expand details:/ }).first().click();
   await page.getByLabel("English name").first().fill("L".repeat(240)); await page.getByLabel("Arabic name").first().fill("م".repeat(240));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.setViewportSize({ width: 768, height: 1024 }); expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

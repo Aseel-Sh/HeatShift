@@ -32,6 +32,16 @@ Normal text uses combinations that meet the 4.5:1 contrast target. Critical rust
 
 The interface uses the system stack `Segoe UI, Tahoma, Arial, sans-serif` for reliable English and Arabic rendering without a web-font dependency. Headings use heavy weights and compact leading. Operational labels are small, uppercase in English, and letter-spaced; Arabic labels do not rely on letter spacing for hierarchy. Times and numeric metrics use tabular figures and remain left-to-right even inside an Arabic interface.
 
+## Brand mark and wordmark
+
+The original HeatShift mark combines a sun arc, three shift bars, and one visibly advanced bar inside a compact shield-like square. It is an inline SVG, remains legible at favicon size, and keeps its geometry in monochrome print. The adjacent wordmark is language-specific: English displays only `HeatShift`; Arabic displays only `وردية آمنة` with RTL spacing. The mark is decorative when the adjacent wordmark supplies the accessible name.
+
+## Task review
+
+Task review uses a dense primary row for facts a supervisor compares repeatedly: activity type, requested interval, duration, workload or recovery eligibility, work area, completion status, and expand control. White and warm-neutral rows alternate under a solid ink header. Secondary decisions live in one expandable detail row: bilingual names, timing, must-complete state, splitting, dependencies, notes, source evidence, and clearly labeled suggestions.
+
+Suggestions are never styled as confirmed values. Each suggestion is a compact chip with explicit **Apply** and **Dismiss** actions. Status labels use `Ready`, `Needs N decisions`, `Needs dependency review`, and `Conflict`; activating a status expands the row and moves focus to the first unresolved decision. Work-area guidance appears once above the table rather than inside every task.
+
 ## Spacing and shape
 
 - Base spacing increments are approximately 4, 8, 12, 16, 24, and 32 pixels.
@@ -66,13 +76,17 @@ Selecting a requested or generated block reveals its original time, planned time
 
 Every genuinely timed requested activity receives its own row. The fixed label column carries the activity name, type, human-readable duration, requested interval, timing preference, and conflict text. Activities without explicit requested times appear in a separate compact list and are never assigned invented times.
 
-The selected schedule uses one chronological crew lane. Work, recovery, break, meal, and idle periods have independent border patterns and text labels. Block width remains proportional to elapsed time. Narrow blocks use the `W`, `R`, `B`, `M`, or `I` abbreviation while their exact interval and full name remain available through the accessible name, title, details panel, and timeline text alternative.
+The selected schedule uses one chronological crew lane. Work, recovery, break, meal, and idle periods have independent border patterns and text labels. Block width remains proportional to elapsed time. Narrow blocks use a compact visual marker while their exact interval and full name remain available through the accessible name, title, details panel, and timeline text alternative. The legend uses the same fill, border, and hatch as the rendered blocks and only lists types present in the current result.
 
 Selecting a requested activity highlights every associated generated interval, including task-linked recovery. The details panel lists all planned intervals and explicitly reports remaining unscheduled minutes when applicable.
 
 ### Heat and restriction overlays
 
-The temperature ribbon shares the timeline ruler and uses four restrained categories: lower/caution, intermediate, high, and high risk. Every period includes a numeric temperature, category text, apparent-temperature detail, and a screen-reader description. Color is supplementary.
+The compact **Forecast context** ribbon shares the timeline ruler and uses four restrained categories: lower/caution, intermediate, high, and high risk. Every period includes a numeric temperature, category text, apparent-temperature detail, and a screen-reader description. Color is supplementary.
+
+## Result hierarchy
+
+The default report is ordered for a field supervisor: shift identity, plain-language outcome, required actions, requested-versus-selected change table, timeline, detailed findings, hydration, briefing, sources, then collapsed optimization details. The change table is the primary explanation of movement and incomplete work; the proportional timeline is supporting evidence. Candidate count, strategy, movement penalty, and split count stay inside **How HeatShift selected this schedule** and are never presented as a safety score or proof of global optimality.
 
 The direct-sun restriction is a low-opacity aligned hatch with one label above the ruler. The hatch remains visible in monochrome print without obscuring activity text.
 

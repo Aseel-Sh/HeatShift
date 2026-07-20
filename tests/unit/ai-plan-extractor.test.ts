@@ -67,7 +67,11 @@ Need concrete completed today. Pump booked only today.`;
       crewSize: 8,
       nonAcclimatizedWorkers: 2,
     });
-    expect(result.plan.missingInformation).toEqual(["Task classifications need review"]);
+    expect(result.plan.missingInformation).toEqual([{
+      code: "TASK_CLASSIFICATIONS_NEED_REVIEW",
+      messageEn: "Task classifications need review",
+      messageAr: "تحتاج تصنيفات الأنشطة إلى مراجعة المشرف.",
+    }]);
     expect(result.plan.tasks).toHaveLength(8);
     expect(result.plan.tasks.map((task) => task.durationMinutes)).toEqual([30, 150, 15, 135, 30, 150, 30, 60]);
     expect(result.plan.tasks[2]).toMatchObject({ activityKind: "break", recoveryEligibility: "unknown" });

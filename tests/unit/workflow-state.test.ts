@@ -90,7 +90,7 @@ describe("workflow state", () => {
         shiftEnd: "15:00",
         tasks: [{ nameEn: "Unspecified task", nameAr: "مهمة غير محددة" }],
         assumptions: [],
-        missingInformation: ["Task duration was not stated."],
+        missingInformation: [{code:"TASK_DURATION_MISSING",messageEn:"Task duration was not stated.",messageAr:"لم تُذكر مدة النشاط."}],
       },
     });
 

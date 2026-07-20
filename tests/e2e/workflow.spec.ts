@@ -62,6 +62,7 @@ test("manually creates a task without AI", async ({ page }) => {
 
 test("edits a demo task", async ({ page }) => {
   await page.getByRole("button", { name: "View sample shift" }).click();
+  await page.getByRole("button", { name: /^Expand details:/ }).first().click();
   await page.getByLabel("English name").first().fill("Edited heavy trenching");
   await expect(page.getByLabel("English name").first()).toHaveValue("Edited heavy trenching");
 });
@@ -96,6 +97,7 @@ test("missing AI safety fields remain blank and block scheduling", async ({ page
   await page.route("**/api/parse-plan", route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({data:{siteName:"AI Site",city:"riyadh",shiftDate:"2026-07-20",shiftStart:"06:30",shiftEnd:"16:30",crewSize:8,nonAcclimatizedWorkers:0,tasks:[{nameEn:"Unknown",nameAr:"غير محدد"}],assumptions:[],missingInformation:["Task details missing"]}})}));
   await page.getByLabel("Import work plan").fill("Eight workers have an unspecified task tomorrow morning.");
   await page.getByRole("button",{name:"Structure task list"}).click();
+  await page.getByRole("button", { name: /^Expand details:/ }).first().click();
   await expect(page.getByLabel("Duration (minutes)")).toHaveValue("");
   await expect(page.getByLabel("Workload")).toHaveValue("");
   await expect(page.getByLabel("Environment")).toHaveValue("");
@@ -176,13 +178,15 @@ Need concrete completed today. Pump booked only today.`;
   await expect(page.getByLabel("Activity").nth(4)).toHaveValue("meal");
   await expect(page.getByText("2 hr 30 min")).toHaveCount(2);
   await expect(page.getByText("1 hr")).toBeVisible();
+  await page.getByRole("button", { name: /Expand details: Concrete pour/ }).click();
   await expect(page.getByText("Pump booked only today.")).toBeVisible();
   await expect(page.getByText("Shift details need attention")).toHaveCount(0);
   await expect(page.getByText("Crew size not stated")).toHaveCount(0);
   await expect(page.getByText("Shift end not stated")).toHaveCount(0);
   const excavation = page.getByTestId("task-row-1");
+  await excavation.getByRole("button", { name: /Expand details:/ }).click();
   await expect(excavation.getByText(/Suggested: Heavy/)).toBeVisible();
-  await excavation.getByRole("button", { name: "Use suggestion" }).click();
+  await excavation.getByRole("button", { name: "Apply" }).first().click();
   await expect(excavation.getByLabel("Workload")).toHaveValue("heavy");
 });
 

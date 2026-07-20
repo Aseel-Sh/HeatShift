@@ -161,6 +161,23 @@ const copy = {
     noTwlRecovery: "No site TWL: exact recovery cycles were not applied.",
     cycleRecovery: "Recovery blocks reflect the selected site-entered TWL cycle.",
     restrictionA11y: "The hatched vertical band marks 12:00 to 15:00, when configured direct-sun work is restricted.",
+    supervisorActions: "Required supervisor actions",
+    changeTable: "Requested versus selected",
+    activity: "Activity",
+    requested: "Requested",
+    selected: "Selected",
+    changeSummary: "Change",
+    status: "Status",
+    complete: "Fully scheduled",
+    partial: "Partially scheduled",
+    notScheduled: "Not scheduled",
+    unchanged: "Requested timing retained",
+    movedEarlier: "Moved earlier",
+    movedLater: "Moved later",
+    splitChange: "Split into {count} periods",
+    forecastContext: "Forecast context",
+    technicalSummary: "Deterministic candidate comparison; no global-optimality claim is made.",
+    noCapacityChange: "Left unscheduled because no valid capacity remained",
   },
   ar: {
     title: "الجدول المختار لوردية أكثر أمانًا",
@@ -273,6 +290,23 @@ const copy = {
     noTwlRecovery: "لا يوجد TWL من الموقع: لم تُطبق دورات تعافٍ دقيقة.",
     cycleRecovery: "تعكس فترات التعافي دورة TWL التي أدخلها المشرف من الموقع.",
     restrictionA11y: "يمثل الشريط الرأسي المخطط الفترة من 12:00 إلى 15:00 حيث يُقيّد العمل المهيأ تحت الشمس المباشرة.",
+    supervisorActions: "إجراءات المشرف المطلوبة",
+    changeTable: "مقارنة المطلوب بالمختار",
+    activity: "النشاط",
+    requested: "المطلوب",
+    selected: "المختار",
+    changeSummary: "التغيير",
+    status: "الحالة",
+    complete: "مجدول بالكامل",
+    partial: "مجدول جزئيًا",
+    notScheduled: "غير مجدول",
+    unchanged: "تم الاحتفاظ بالتوقيت المطلوب",
+    movedEarlier: "نُقل إلى وقت أبكر",
+    movedLater: "نُقل إلى وقت لاحق",
+    splitChange: "قُسّم إلى {count} فترات",
+    forecastContext: "سياق التوقعات",
+    technicalSummary: "مقارنة حتمية بين الجداول المرشحة؛ لا يدّعي النظام الوصول إلى أفضل حل عالمي.",
+    noCapacityChange: "تُرك دون جدولة لعدم بقاء سعة صالحة",
   },
 } as const;
 
@@ -294,7 +328,6 @@ export function ResultsPage(props: ResultsPageProps) {
   const outcome = buildPlanOutcome(plan, conditions, result, language);
   const forecastCategory = result.metrics.peakForecastTemperature === null ? null : classifyForecastTemperature(result.metrics.peakForecastTemperature).category;
   const selectionSummary = t.selectionSummary.replace("{count}", String(result.optimizationSummary.candidatesEvaluated));
-  const recoveryNote = conditions.twlZone === "none" ? t.noTwlRecovery : conditions.twlZone === "low" ? t.lowRecovery : t.cycleRecovery;
 
   if (result.optimizationSummary.hardConstraintViolations.length > 0) {
     return <div className="results-report"><div role="alert" className="operational-alert critical"><AlertOctagon aria-hidden="true" /><div><strong>{t.invalidSchedule}</strong><ul>{result.optimizationSummary.hardConstraintViolations.map((violation) => <li key={violation}>{violation.replaceAll("_", " ")}</li>)}</ul></div></div><div className="report-actions"><button className="button-secondary" onClick={props.onEditPlan}>{t.edit}</button><button className="button-secondary" onClick={props.onChangeConditions}>{t.change}</button></div></div>;
@@ -311,7 +344,6 @@ export function ResultsPage(props: ResultsPageProps) {
           <div><dt><Users aria-hidden="true" />{language === "ar" ? "الفريق" : "Crew"}</dt><dd>{plan.crewSize}</dd></div>
         </dl>
         <p className="result-disclaimer">{t.disclaimer}</p>
-        <p className="result-selection">{selectionSummary}</p>
         <div className="result-context"><p><strong>{t.forecastCategory}:</strong> {forecastCategory ? `${displayForecastCategory(forecastCategory, language)} — ${t.forecastContextOnly}` : props.forecastSource === "none" ? t.forecastNone : "—"}</p><p><strong>{t.appliedTwl}:</strong> {displayAppliedTwl(conditions.twlZone, language)}</p><p>{props.planSource === "sample" ? t.sample : props.planSource === "ai" ? t.extracted : t.manual} · {props.forecastSource === "live" ? t.forecastLive : props.forecastSource === "sample" ? t.forecastSample : t.forecastNone}</p></div>
       </header>
 
@@ -319,19 +351,9 @@ export function ResultsPage(props: ResultsPageProps) {
       {result.metrics.unscheduledMinutes > 0 && <div role="alert" className="operational-alert critical"><AlertOctagon aria-hidden="true" /><div><strong>{t.capacity}</strong><span>{formatDuration(result.metrics.unscheduledMinutes, language)} · {t.unscheduled}</span></div></div>}
       {highNewWorkers && <div role="alert" className="operational-alert critical"><ShieldAlert aria-hidden="true" /><div><strong>{t.workers}</strong><span>{plan.nonAcclimatizedWorkers} / {plan.crewSize}</span></div></div>}
 
-      <section aria-label={language === "ar" ? "ملخص التخطيط" : "Planning summary"} className="summary-bar optimization-metrics">
-        <SummaryItem label={t.mustComplete} value={`${formatDuration(scheduledMustMinutes(plan, result), language)} / ${formatDuration(requestedMustMinutes(plan), language)}`} />
-        <SummaryItem label={t.otherWork} value={formatDuration(result.metrics.scheduledWorkMinutes - scheduledMustMinutes(plan, result), language)} />
-        <SummaryItem label={t.recovery} value={formatDuration(blockMinutes(result.blocks.filter((block) => block.type === "rest")), language)} note={recoveryNote} />
-        <SummaryItem label={t.breakMeal} value={formatDuration(blockMinutes(result.blocks.filter((block) => block.type === "break" || block.type === "meal")), language)} />
-        <SummaryItem label={t.unscheduled} value={formatDuration(result.metrics.unscheduledMinutes, language)} critical={result.metrics.unscheduledMinutes > 0} />
-        <SummaryItem label={t.movement} value={formatDuration(result.optimizationSummary.movementMinutes, language)} />
-        <SummaryItem label={t.splits} value={String(result.optimizationSummary.splitCount)} />
-      </section>
-
-      <section className="plan-outcome" aria-labelledby="plan-outcome-title"><h2 id="plan-outcome-title">{t.planOutcome}</h2><div><OutcomeList title={t.whatChanged} items={outcome.changed} /><OutcomeList title={t.whatIncomplete} items={outcome.incomplete} /><OutcomeList title={t.why} items={outcome.reasons} /><OutcomeList title={t.nextActions} items={outcome.nextActions} /></div></section>
-
-      <details className="selection-details"><summary>{t.howSelected}</summary><p>{selectionSummary}</p><dl><div><dt>{t.candidates}</dt><dd>{result.optimizationSummary.candidatesEvaluated}</dd></div><div><dt>{t.strategy}</dt><dd>{displayStrategy(result.optimizationSummary.selectedStrategy, language)}</dd></div><div><dt>{t.hardViolations}</dt><dd>{result.optimizationSummary.hardConstraintViolations.length}</dd></div><div><dt>{t.movement}</dt><dd>{formatDuration(result.optimizationSummary.movementMinutes, language)}</dd></div><div><dt>{t.splits}</dt><dd>{result.optimizationSummary.splitCount}</dd></div></dl><p>{result.explanationSummary}</p></details>
+      <section className="plan-outcome" aria-labelledby="plan-outcome-title"><h2 id="plan-outcome-title">{t.planOutcome}</h2><div><OutcomeList title={t.whatChanged} items={outcome.changed} /><OutcomeList title={t.whatIncomplete} items={outcome.incomplete} /><OutcomeList title={t.why} items={outcome.reasons} /></div></section>
+      <section className="supervisor-actions" aria-labelledby="supervisor-actions-title"><ShieldAlert aria-hidden="true" /><div><h2 id="supervisor-actions-title">{t.supervisorActions}</h2><ul>{outcome.nextActions.map((item) => <li key={item}>{item}</li>)}</ul></div></section>
+      <ChangeTable plan={plan} result={result} language={language} />
 
       <section className="timeline-section" aria-labelledby="comparison-title">
         <div className="timeline-heading"><div><p className="eyebrow">{language === "ar" ? "مقارنة زمنية" : "Time comparison"}</p><h2 id="comparison-title">{t.requestedPlan} / {t.saferPlan}</h2><span>{t.selectBlock}</span></div>{restriction && <div className="restriction-key"><i />{language === "ar" ? <span>تقييد الشمس المباشرة <bdi dir="ltr">12:00–15:00</bdi></span> : t.restriction}</div>}</div>
@@ -347,6 +369,7 @@ export function ResultsPage(props: ResultsPageProps) {
 
       <section className="report-panel briefing-panel"><h2>{t.briefing}</h2><ol lang={language} dir={language === "ar" ? "rtl" : "ltr"}>{currentBriefing.map((line, index) => <li key={index}>{line}</li>)}</ol></section>
       <section className="report-panel sources-panel"><h2>{t.sources}</h2><p>{t.noEndorsement}</p><ul>{OFFICIAL_SOURCES.map((source) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a><span>{source.publisher} — {source.supports}</span></li>)}</ul></section>
+      <details className="selection-details"><summary>{t.howSelected}</summary><p>{selectionSummary}</p><dl><div><dt>{t.candidates}</dt><dd>{result.optimizationSummary.candidatesEvaluated}</dd></div><div><dt>{t.strategy}</dt><dd>{displayStrategy(result.optimizationSummary.selectedStrategy, language)}</dd></div><div><dt>{t.hardViolations}</dt><dd>{result.optimizationSummary.hardConstraintViolations.length}</dd></div><div><dt>{t.movement}</dt><dd>{formatDuration(result.optimizationSummary.movementMinutes, language)}</dd></div><div><dt>{t.splits}</dt><dd>{result.optimizationSummary.splitCount}</dd></div></dl><p>{language === "ar" ? t.technicalSummary : result.explanationSummary}</p></details>
       <div className="report-actions"><button className="button-secondary" onClick={props.onEditPlan}><ArrowLeft aria-hidden="true" />{t.edit}</button><button className="button-secondary" onClick={props.onChangeConditions}>{t.change}</button><button className="button-secondary" onClick={props.onRecalculate}><RefreshCw aria-hidden="true" />{t.recalculate}</button><button className="button-tertiary" onClick={props.onStartOver}><RotateCcw aria-hidden="true" />{t.startOver}</button><button className="button-primary print-action" onClick={() => window.print()}><Printer aria-hidden="true" />{t.print}</button></div>
     </div>
   );
@@ -392,7 +415,7 @@ function ShiftBoard({ plan, result, forecast, originalConflicts, language, selec
   const plotWidth = scale === "fit" ? "calc(100% - 220px)" : `${Math.ceil(hours * (scale === "hour" ? 140 : 260))}px`;
   const conflictTaskIds = new Set(originalConflicts.filter((finding) => finding.severity !== "info").flatMap((finding) => finding.taskIds));
   const blockTypeLabel=(type:ScheduleBlock["type"])=>type==="rest"?t.rest:type==="break"?t.breakActivity:type==="meal"?t.meal:t.work;
-  const typeCode = (block: ScheduleBlock) => block.id.startsWith("idle-") ? "I" : block.type === "rest" ? "R" : block.type === "break" ? "B" : block.type === "meal" ? "M" : "W";
+  const typeCode = (block: ScheduleBlock) => block.id.startsWith("idle-") ? "··" : block.type === "rest" ? "↻" : block.type === "break" ? "Ⅱ" : block.type === "meal" ? "◇" : "●";
   const categoryLabel = (category: "low" | "intermediate" | "high" | "high_risk") => category === "low" ? t.lower : category === "intermediate" ? t.intermediate : category === "high" ? t.high : t.highRisk;
   return (
     <>
@@ -414,15 +437,31 @@ function ShiftBoard({ plan, result, forecast, originalConflicts, language, selec
           {restriction && <RestrictionBand style={styleFor(restriction.start, restriction.end)} />}
           {chronologicalBlocks.map((block) => { const idle = block.id.startsWith("idle-"); const selected = Boolean(linkedTaskId && block.taskId === linkedTaskId) || selection?.kind === "scheduled" && selection.id === block.id; return <button key={block.id} data-block-type={idle ? "idle" : block.type} data-start={block.start} data-end={block.end} data-task-id={block.taskId} className={`scheduled-block ${idle ? "idle" : block.type} ${block.environment === "conditioned_indoor" ? "indoor" : ""} ${selected ? "selected linked" : ""}`} style={styleFor(block.start, block.end)} onClick={() => onSelect({ kind: "scheduled", id: block.id })} aria-label={`${idle ? t.idle : blockTypeLabel(block.type)}: ${language === "ar" ? block.labelAr : block.labelEn}, ${block.start}–${block.end}`} title={`${language === "ar" ? block.labelAr : block.labelEn} · ${block.start}–${block.end}`}><b aria-hidden="true">{typeCode(block)}</b><span>{idle ? t.idle : block.type === "rest" ? t.rest : language === "ar" ? block.labelAr : block.labelEn}</span><time>{block.start}–{block.end}</time></button>})}</div>
         </div>
-        <div className="lane-label compact-label heat-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.heat}</strong><span>{language === "ar" ? "توقع نموذجي" : "Model forecast"}</span></div>
+        <div className="lane-label compact-label heat-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.forecastContext}</strong><span>{language === "ar" ? "توقع نموذجي أولي" : "Preliminary model forecast"}</span></div>
         <div className="heat-ribbon" data-testid="heat-ribbon" role="img" aria-label={`${t.heat}. ${heatPoints.map((point) => `${point.time}: ${point.temperature}°C, ${categoryLabel(point.category)}`).join("; ")}`}><div className="timeline-canvas">{heatPoints.map((point, index) => { const from = timeToMinutes(point.time) < start ? plan.shiftStart : point.time; const to = heatPoints[index + 1]?.time ?? plan.shiftEnd; return <div key={`${point.time}-${index}`} className={`heat-period heat-${point.category}`} style={styleFor(from, to)} title={`${point.time} · ${point.temperature}°C · ${t.apparent} ${point.apparentTemperature}°C · ${categoryLabel(point.category)}`}><strong>{point.temperature}°</strong><span>{categoryLabel(point.category)}</span></div>})}</div></div>
         {untimedTasks.length > 0 && <><div className="lane-label capacity-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.noRequestedTime}</strong></div><div className="capacity-lane">{untimedTasks.map((task) => <button type="button" key={task.id} onClick={() => onSelect({ kind: "requested", id: task.id })}>{language === "ar" ? task.nameAr : task.nameEn} · {t.notSpecified} · {formatDuration(task.durationMinutes, language)}</button>)}</div></>}
       </div>
     </div>
     {result.unscheduled.length > 0 && <section className="unscheduled-section" aria-labelledby="unscheduled-title"><h3 id="unscheduled-title">{t.couldNotSchedule}</h3><div className="unscheduled-table-wrap"><table><thead><tr><th>{language === "ar" ? "النشاط" : "Activity"}</th><th>{t.requestedWork}</th><th>{t.scheduled}</th><th>{t.remaining}</th><th>{t.reason}</th></tr></thead><tbody>{result.unscheduled.map((item) => { const task=plan.tasks.find((candidate)=>candidate.id===item.taskId); const scheduled=Math.max(0,(task?.durationMinutes??item.unscheduledMinutes)-item.unscheduledMinutes); return <tr key={item.taskId}><th><button type="button" onClick={()=>onSelect({kind:"requested",id:item.taskId})}>{task ? (language === "ar" ? task.nameAr : task.nameEn) : item.taskName}</button></th><td>{formatDuration(task?.durationMinutes??item.unscheduledMinutes,language)}</td><td>{formatDuration(scheduled,language)}</td><td>{formatDuration(item.unscheduledMinutes,language)}</td><td>{displayUnscheduledReason(item.reasonCode,language)}</td></tr>; })}</tbody></table></div></section>}
-    <div className="timeline-legend" aria-label={language === "ar" ? "مفتاح المخطط" : "Timeline legend"}><span><b>W</b>{t.work}</span><span><b>R</b>{t.rest}</span><span><b>B</b>{t.breakActivity}</span><span><b>M</b>{t.meal}</span><span><b>I</b>{t.idle}</span><span className="heat-low">{t.lower}</span><span className="heat-intermediate">{t.intermediate}</span><span className="heat-high">{t.high}</span><span className="heat-high_risk">{t.highRisk}</span></div>
+    <TimelineLegend blocks={chronologicalBlocks} heatCategories={new Set(heatPoints.map((point) => point.category))} hasUnscheduled={result.unscheduled.length > 0} hasRestriction={Boolean(restriction)} language={language} />
     </>
   );
+}
+
+function TimelineLegend({ blocks, heatCategories, hasUnscheduled, hasRestriction, language }: { blocks: ScheduleBlock[]; heatCategories: Set<"low" | "intermediate" | "high" | "high_risk">; hasUnscheduled: boolean; hasRestriction: boolean; language: Language }) {
+  const t = copy[language];
+  const types = new Set(blocks.map((block) => block.id.startsWith("idle-") ? "idle" : block.type));
+  const items = [
+    types.has("work") ? ["work", t.work] : null,
+    types.has("rest") ? ["rest", t.rest] : null,
+    types.has("break") ? ["break", t.breakActivity] : null,
+    types.has("meal") ? ["meal", t.meal] : null,
+    types.has("idle") ? ["idle", t.idle] : null,
+    hasUnscheduled ? ["unscheduled", t.unscheduled] : null,
+    hasRestriction ? ["restriction", t.restriction] : null,
+  ].filter((item): item is string[] => Boolean(item));
+  const categories = (["low", "intermediate", "high", "high_risk"] as const).filter((category) => heatCategories.has(category));
+  return <div className="timeline-legend" aria-label={language === "ar" ? "مفتاح المخطط" : "Timeline legend"}>{items.map(([type, label]) => <span key={type}><i className={`legend-swatch ${type}`} aria-hidden="true" />{label}</span>)}{categories.map((category) => <span key={category}><i className={`legend-swatch heat-${category}`} aria-hidden="true" />{category === "low" ? t.lower : category === "intermediate" ? t.intermediate : category === "high" ? t.high : t.highRisk}</span>)}</div>;
 }
 
 function RequestedRow({ task, language, conflict, selected, onSelect, ticks, start, duration, restriction, styleFor }: { task: ScheduleActivity; language: Language; conflict: boolean; selected: boolean; onSelect: () => void; ticks: number[]; start: number; duration: number; restriction?: ScheduleBlock; styleFor: (from: string, to: string) => React.CSSProperties }) {
@@ -470,12 +509,19 @@ function optimizationConsequence(task: ScheduleActivity | undefined, unscheduled
   return task?.mustSchedule ? (language === "ar" ? "أُعطيت الأولوية لإكمال هذا النشاط الإلزامي." : "Completion of this must-schedule activity was prioritized.") : (language === "ar" ? "تم اختياره ضمن أقل نتيجة مقارنة حتمية." : "Included in the selected lowest lexicographic candidate score.");
 }
 
-const blockMinutes = (blocks: ScheduleBlock[]) => blocks.reduce((sum, block) => sum + toMinutes(block.end) - toMinutes(block.start), 0);
-const requestedMustMinutes = (plan: ShiftPlan) => plan.tasks.filter((task) => isWorkActivity(task) && task.mustSchedule).reduce((sum, task) => sum + task.durationMinutes, 0);
-const scheduledMustMinutes = (plan: ShiftPlan, result: ScheduleResult) => { const ids = new Set(plan.tasks.filter((task) => isWorkActivity(task) && task.mustSchedule).map((task) => task.id)); return blockMinutes(result.blocks.filter((block) => block.type === "work" && block.taskId && ids.has(block.taskId))); };
-
-function SummaryItem({ label, value, critical = false, note }: { label: string; value: string; critical?: boolean; note?: string }) {
-  return <div className={critical ? "critical" : ""}><span>{label}</span><strong className="tabular-nums" dir="ltr">{value}</strong>{note && <small>{note}</small>}</div>;
+function ChangeTable({ plan, result, language }: { plan: ShiftPlan; result: ScheduleResult; language: Language }) {
+  const t = copy[language];
+  return <section className="change-table-section" aria-labelledby="change-table-title"><h2 id="change-table-title">{t.changeTable}</h2><div className="change-table-wrap"><table><thead><tr><th>{t.activity}</th><th>{t.requested}</th><th>{t.selected}</th><th>{t.changeSummary}</th><th>{t.status}</th></tr></thead><tbody>{plan.tasks.map((task) => {
+    const kind = activityType(task);
+    const blocks = result.blocks.filter((block) => block.taskId === task.id && block.type === kind);
+    const selected = blocks.map((block) => `${block.start}–${block.end}`);
+    const scheduledMinutes = blocks.reduce((sum, block) => sum + toMinutes(block.end) - toMinutes(block.start), 0);
+    const unscheduled = result.unscheduled.find((item) => item.taskId === task.id)?.unscheduledMinutes ?? Math.max(0, task.durationMinutes - scheduledMinutes);
+    const firstDelta = task.requestedStart && blocks[0] ? toMinutes(blocks[0].start) - toMinutes(task.requestedStart) : 0;
+    const changes = scheduledMinutes === 0 ? [t.noCapacityChange] : [firstDelta < 0 ? `${t.movedEarlier} ${formatDuration(Math.abs(firstDelta), language)}` : firstDelta > 0 ? `${t.movedLater} ${formatDuration(firstDelta, language)}` : null, blocks.length > 1 ? t.splitChange.replace("{count}", String(blocks.length)) : null].filter(Boolean);
+    const status = scheduledMinutes === 0 ? t.notScheduled : unscheduled > 0 ? t.partial : t.complete;
+    return <tr key={task.id}><th>{language === "ar" ? task.nameAr : task.nameEn}</th><td dir="ltr">{task.requestedStart && task.requestedEnd ? `${task.requestedStart}–${task.requestedEnd}` : t.notSpecified}</td><td dir="ltr">{selected.length ? selected.join(" + ") : `— (${formatDuration(unscheduled, language)})`}</td><td>{changes.length ? changes.join(language === "ar" ? "، " : "; ") : t.unchanged}</td><td><span className={`change-status ${scheduledMinutes === 0 ? "critical" : unscheduled > 0 ? "warning" : "complete"}`}>{status}</span></td></tr>;
+  })}</tbody></table></div></section>;
 }
 
 function OutcomeList({title,items}:{title:string;items:string[]}){return <section><h3>{title}</h3><ul>{items.map((item)=><li key={item}>{item}</li>)}</ul></section>;}

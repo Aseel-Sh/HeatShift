@@ -30,7 +30,11 @@ export function buildPlanOutcome(plan: ShiftPlan, conditions: SiteConditions, re
   if (mustComplete.length) changed.push(language === "ar" ? `${mustComplete.map((task) => task.nameAr).join("، ")} محدد كعمل يجب إكماله وأُعطي الأولوية قبل العمل العادي.` : `${mustComplete.map((task) => task.nameEn).join(", ")} is marked must-complete and was prioritized before normal-priority work.`);
   if (!changed.length) changed.push(language === "ar" ? "حُفظت الأنشطة المجدولة ضمن توقيتها المطلوب حيث أمكن." : "Scheduled activities were kept at their requested times where capacity allowed.");
 
-  const incomplete = result.unscheduled.map((item) => language === "ar" ? `${item.taskName}: يتبقى ${formatDuration(item.unscheduledMinutes, "ar")} دون جدولة.` : `${item.taskName}: ${formatDuration(item.unscheduledMinutes)} remains unscheduled.`);
+  const incomplete = result.unscheduled.map((item) => {
+    const task = plan.tasks.find((candidate) => candidate.id === item.taskId);
+    const name = language === "ar" ? task?.nameAr ?? item.taskName : task?.nameEn ?? item.taskName;
+    return language === "ar" ? `${name}: يتبقى ${formatDuration(item.unscheduledMinutes, "ar")} دون جدولة.` : `${name}: ${formatDuration(item.unscheduledMinutes)} remains unscheduled.`;
+  });
   if (!incomplete.length) incomplete.push(language === "ar" ? "لم يتبق عمل غير مجدول." : "No work remains unscheduled.");
 
   const reasons: string[] = [];

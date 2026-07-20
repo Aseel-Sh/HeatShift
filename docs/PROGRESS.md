@@ -1,5 +1,17 @@
 # Progress
 
+## Final product-design and usability iteration — 2026-07-19
+
+- Added an original reusable sun-and-shift-bar SVG mark, language-specific horizontal wordmarks, and an SVG app icon.
+- Rebuilt task review around compact alternating primary rows and expandable secondary details with actionable status controls and Apply/Dismiss suggestion chips.
+- Consolidated indoor/work-area guidance into one page-level help panel.
+- Converted extraction assumptions and missing-information output to validated bilingual records.
+- Added the requested-versus-selected change table and reordered results around outcome, required supervisor actions, and operational explanations.
+- Replaced the static letter key with conditional block-matching swatches and reduced the Forecast context ribbon height.
+- Moved candidate count, strategy, movement, and splits to the final collapsed technical section.
+- Audited the English and Arabic production flows, including singular wordmarks, RTL result content, translated operational copy, mobile containment, and print behavior.
+- Updated unit and E2E coverage to exercise the intentional expand/collapse interaction instead of assuming all secondary controls are always visible.
+
 ## Operational validity and result comprehension repair
 
 Status: implemented and production-browser verified on 2026-07-19.

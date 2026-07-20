@@ -1,5 +1,53 @@
 # HeatShift Manual Release QA Report
 
+## Final product-design and comprehension review — 2026-07-19
+
+### Before
+
+- The header displayed both English and Arabic product names simultaneously and used a generic stock-style construction icon.
+- Secondary task fields, evidence, notes, helper copy, and suggestions made primary task rows uneven and slow to scan.
+- The results page exposed candidate and movement details before answering what changed and what the supervisor must decide.
+- A letter-only timeline legend did not visually match the blocks.
+- Extraction assumptions were unstructured strings, so provider-generated English could leak into Arabic mode.
+
+### After
+
+- The original sun-and-shift-bar mark is paired with exactly one language-specific wordmark.
+- Task rows are compact and alternating; expandable details contain secondary controls, evidence, dependencies, and Apply/Dismiss suggestion chips. Blank manual tasks open automatically.
+- Results lead with Plan outcome, required supervisor actions, and an activity-by-activity requested-versus-selected table. Technical candidate details are last and collapsed.
+- The legend is conditional and reuses the exact work, recovery, break, meal, idle, unscheduled, restriction, and heat styles.
+- Assumptions and missing information now use bilingual `{code, messageEn, messageAr}` records, with local validation after extraction.
+
+### Ten-second comprehension check
+
+Persona: a first-time construction supervisor with no knowledge of the optimization implementation.
+
+From the first result viewport, the persona could identify what moved from **What changed?**, incomplete work from **What could not be completed?**, the rules from **Why?**, and required decisions from the dedicated yellow action panel. The change table showed the exact requested and selected intervals without requiring timeline interpretation. Construction-order and recovery explanations were expressed in operational language; candidate strategy and scoring were not needed to answer any of the six comprehension questions.
+
+### Visual observations
+
+- English and Arabic wordmarks are singular and correctly oriented.
+- The document does not horizontally overflow; dense tables own their horizontal scrolling at narrower widths.
+- Work, recovery, meal, break, idle, unscheduled work, restriction, and heat categories remain distinguishable without color alone.
+- Arabic interface copy, status labels, recommendations, and result explanations rendered in Arabic. Dates, times, coordinates, `TWL`, temperatures, and model identifiers remain left-to-right where appropriate.
+- Full-page browser captures may repeat the sticky header at page-segment boundaries; this is a capture-tool artifact and does not occur during normal scrolling or print.
+
+### Evidence
+
+- `artifacts/regression-work-plan/01-import-review.png` — English header, expanded work/break rows, suggestions, and source evidence
+- `artifacts/regression-work-plan/02-supervisor-confirmed.png` — confirmed compact task review
+- `artifacts/regression-work-plan/03-selected-schedule.png` — plan outcome, required actions, change table, timeline, forecast context, and unscheduled work
+- `artifacts/regression-work-plan/06-mobile.png` — mobile result containment
+- `artifacts/regression-work-plan/07-arabic.png` — Arabic wordmark and complete Arabic result
+- `artifacts/regression-work-plan/08-print.png`
+
+### Intentionally untranslated strings
+
+- User-entered site names and original plan text.
+- Official source titles and publisher names in their published language.
+- Product/provider proper names: `HeatShift`, `Open-Meteo`, and configured AI model identifiers.
+- Standards and scientific notation: `TWL`, `°C`, coordinates, dates, and clock times.
+
 ## 2026-07-19 operational-sequence regression addendum
 
 The exact North utility site plan was run through the optimized production UI with Riyadh coordinates, 2026-07-20, 06:00–16:00, crew 8, two non-acclimatized workers, supervisor-confirmed work classifications, the work-only predecessor chain, and Low site-entered TWL.
