@@ -4,7 +4,7 @@ async function verifySaudiOperationalClock(page: Page) {
   await page.goto("/");
   await expect(page.getByText("All schedule times use Saudi Arabia Standard Time (Asia/Riyadh, UTC+3).", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "View sample shift" }).click();
-  await expect(page.getByLabel("Requested start").first()).toHaveValue("11:30");
+  await expect(page.getByTestId("task-row-0")).toContainText("11:30–13:30");
   await page.getByRole("button", { name: "Continue to conditions" }).click();
   const forecast = page.getByRole("region", { name: "Hourly forecast" });
   await expect(forecast.getByRole("columnheader", { name: "06:30" })).toBeVisible();
@@ -14,10 +14,10 @@ async function verifySaudiOperationalClock(page: Page) {
 
   await expect(page.locator(".result-status-header")).toContainText("06:30–16:30");
   await expect(page.locator(".result-timezone")).toContainText("Asia/Riyadh, UTC+3");
-  await expect(page.getByTestId("requested-shift-board")).toContainText("11:30–13:30");
-  await expect(page.getByTestId("requested-plan-section").locator(".restriction-top-label")).toHaveText("12:00–15:00");
-  await expect(page.getByTestId("generated-execution-list")).toContainText("06:30–06:50");
-  await expect(page.getByTestId("generated-execution-list")).toContainText("06:50–07:30");
+  await expect(page.getByTestId("requested-crew-board")).toContainText("11:30–13:30");
+  await expect(page.getByTestId("requested-crew-board").locator(".restriction-top-label")).toHaveText("12:00–15:00");
+  await expect(page.getByTestId("generated-crew-board")).toContainText("06:30–06:50");
+  await expect(page.getByTestId("generated-crew-board")).toContainText("06:50–07:30");
 
   await page.emulateMedia({ media: "print" });
   const printed = page.locator(".print-comparison");

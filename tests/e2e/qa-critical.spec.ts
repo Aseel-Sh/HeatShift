@@ -17,8 +17,9 @@ async function addManualTask(page: import("@playwright/test").Page, name = "Manu
   await page.getByLabel("Arabic name").fill("فحص يدوي طويل للاختبار");
   await page.getByLabel("Duration (minutes)").fill("30");
   await page.getByLabel("Workload").selectOption("light");
-  await page.getByLabel("Environment").selectOption("shaded_outdoor");
-  await page.getByLabel("May this task be split?").selectOption("false");
+  await page.getByLabel("Work area").selectOption("shaded_outdoor");
+  await page.getByLabel("Can split?").selectOption("false");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
 }
 
 test("AI can extract a text-first plan without duplicate requests", async ({ page }) => {
@@ -43,7 +44,7 @@ test("AI can extract a text-first plan without duplicate requests", async ({ pag
   await page.getByRole("button", { name: "Structure task list" }).dblclick();
 
   await expect(page.getByRole("heading", { name: "Task plan" })).toBeVisible();
-  await page.getByRole("button", { name: /Expand details: Inspection/ }).click();
+  await page.getByTestId("task-row-0").getByRole("button", { name: "Edit", exact: true }).click();
   await expect(page.getByLabel("English name")).toHaveValue("Inspection");
   await expect(page.getByText("Plan structured using google/gemma-test:free. Review required.")).toBeVisible();
   expect(requests).toBe(1);
@@ -115,7 +116,7 @@ test("abusive form values and task data are announced and block progress", async
   await expect(page.getByText("Add at least one task before continuing.")).toBeVisible();
   await page.getByRole("button", { name: "Add task" }).click();
   await page.getByLabel("English name").fill("Too much work"); await page.getByLabel("Arabic name").fill("عمل كثير"); await page.getByLabel("Duration (minutes)").fill("0");
-  await page.getByRole("button", { name: "Continue to conditions" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Duration must be a positive multiple of five minutes.")).toBeVisible();
   await expect(page.getByLabel(/^Duration \(minutes\)/)).toHaveAttribute("aria-invalid", "true");
 });
@@ -126,7 +127,7 @@ test("responsive layouts, long bilingual names, headings, and keyboard focus rem
   const headingLevels = await page.locator("h1,h2,h3,h4").evaluateAll(elements => elements.map(element => Number(element.tagName.slice(1))));
   expect(headingLevels[0]).toBe(1); expect(headingLevels.some((level, index) => index > 0 && level - headingLevels[index - 1] > 1)).toBe(false);
   await page.getByRole("button", { name: "View sample shift" }).click();
-  await page.getByRole("button", { name: /^Expand details:/ }).first().click();
+  await page.getByTestId("task-row-0").getByRole("button", { name: "Edit", exact: true }).click();
   await page.getByLabel("English name").first().fill("L".repeat(240)); await page.getByLabel("Arabic name").first().fill("م".repeat(240));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.setViewportSize({ width: 768, height: 1024 }); expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

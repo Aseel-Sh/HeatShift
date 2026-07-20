@@ -112,7 +112,7 @@ export const extractedPlanJsonSchema = {
         required: ["nameEn", "nameAr"],
         properties: {
           nameEn: { type: "string" },
-          nameAr: { type: "string" },
+          nameAr: { type: "string", description: "Concise Arabic translation of the activity name." },
           activityKind: { type: "string", enum: ["work", "break", "meal"] },
           durationMinutes: { type: "integer", minimum: 1, description: "Task duration explicitly stated in minutes; independent of any requested time window." },
           workload: { type: "string", enum: ["light", "heavy"] },

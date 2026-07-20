@@ -163,11 +163,19 @@ export function parseStructuredPlanRows(text: string, context: StructuredPlanCon
     });
   }
 
-  const concrete = activities.find((activity) => /concrete|\u062e\u0631\u0633\u0627\u0646/u.test(activity.nameEn.toLowerCase()));
-  if (concrete && /need\s+concrete\s+completed\s+today/i.test(text)) {
-    concrete.mustSchedule = true;
-    concrete.evidence.mustSchedule = { value: true, evidence: "Need concrete completed today.", source: "deterministic_parser" };
+  const requirementLines=text.split(/\r?\n|(?<=[.!?])\s+/).map(line=>line.trim()).filter(line=>/(?:\bneed\b|\bmust\b|\brequired\b).*(?:\btoday\b|\bcomplete(?:d)?\b|\bfinish(?:ed)?\b|\bdone\b)/i.test(line));
+  for(const requirementLine of requirementLines){
+    const normalized=requirementLine.toLowerCase();
+    const ranked=activities.map(activity=>{
+      const tokens=activity.nameEn.toLowerCase().match(/[a-z0-9]{3,}/g)?.filter(token=>!["work","heavy","light","task","today"].includes(token))??[];
+      return {activity,score:tokens.filter(token=>normalized.includes(token)).length};
+    }).sort((left,right)=>right.score-left.score);
+    const target=ranked[0];
+    if(!target||target.score===0)continue;
+    target.activity.mustSchedule=true;
+    target.activity.evidence.mustSchedule={value:true,evidence:requirementLine,source:"deterministic_parser"};
   }
+  const concrete = activities.find((activity) => /concrete|\u062e\u0631\u0633\u0627\u0646/u.test(activity.nameEn.toLowerCase()));
   const pumpNote = text.match(/Pump booked only today\.?/i)?.[0];
   if (concrete && pumpNote) {
     const note = pumpNote.endsWith(".") ? pumpNote : `${pumpNote}.`;

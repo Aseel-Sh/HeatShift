@@ -14,7 +14,7 @@ test("captures the requested-versus-safer timeline at required viewports", async
   await page.setViewportSize({ width: 1440, height: 900 });
   await openDemoResults(page);
   await page.screenshot({ path: `${root}/desktop-1440x900.png` });
-  await page.locator('[data-requested-id="demo-trenching"]').click();
+  await page.getByTestId("requested-crew-board").locator('[data-requested-id="demo-trenching"]').click();
 
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.screenshot({ path: `${root}/tablet-768x1024.png`, fullPage: true });
@@ -34,9 +34,9 @@ test("captures Arabic chronology and print output", async ({ page }) => {
   await page.getByRole("button", { name: "عرض وردية نموذجية" }).click();
   await page.getByRole("button", { name: "متابعة إلى الظروف" }).click();
   await page.getByRole("button", { name: "إنشاء وردية أكثر أمانًا" }).click();
-  await expect(page.getByTestId("requested-shift-board").locator(".requested-row-label").getByText("حفر خندق ثقيل", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("requested-crew-board").getByText("حفر خندق ثقيل", { exact: true })).toBeVisible();
   await page.locator(".timeline-section").screenshot({ path: `${root}/arabic-result.png` });
-  await expect(page.getByTestId("requested-shift-board")).toHaveAttribute("dir", "ltr");
+  await expect(page.getByTestId("requested-crew-board")).toHaveAttribute("dir", "ltr");
 
   await page.emulateMedia({ media: "print" });
   await page.screenshot({ path: `${root}/print-output.png`, fullPage: true });

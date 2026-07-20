@@ -41,12 +41,8 @@ async function enterExactPlan(page: Page) {
 async function confirmClassifications(page: Page) {
   const rows = page.getByTestId(/^task-row-/);
   await expect(rows).toHaveCount(8);
-  await expect(rows.nth(0).locator(".task-main-row").getByText("Normal", { exact: true })).toBeVisible();
-  await expect(rows.nth(5).locator(".task-main-row").getByText("Required today", { exact: true })).toBeVisible();
-  for (let index = 0; index < 8; index += 1) {
-    const expand = rows.nth(index).getByRole("button", { name: /^Expand details:/ });
-    if (await expand.isVisible()) await expand.click();
-  }
+  await expect(rows.nth(0).getByText("Normal", { exact: true })).toBeVisible();
+  await expect(rows.nth(5).getByText("Required today", { exact: true })).toBeVisible();
   const choices = [
     ["light", "conditioned_indoor", "false"],
     ["heavy", "direct_sun", "true"],
@@ -59,16 +55,17 @@ async function confirmClassifications(page: Page) {
   ] as const;
   for (let index = 0; index < choices.length; index += 1) {
     const choice = choices[index];
-    if (!choice) continue;
-    await rows.nth(index).getByLabel("Workload").selectOption(choice[0]);
-    await rows.nth(index).getByLabel("Environment").selectOption(choice[1]);
-    await rows.nth(index).getByLabel("May this task be split?").selectOption(choice[2]);
-  }
-  await rows.nth(2).getByLabel("Recovery eligibility").selectOption("eligible");
-  await rows.nth(4).getByLabel("Recovery eligibility").selectOption("eligible");
-  for (const index of [1, 3, 5, 6, 7]) {
-    const apply = rows.nth(index).getByRole("button", { name: "Apply" }).first();
-    if (await apply.isVisible()) await apply.click();
+    await rows.nth(index).getByRole("button", { name: "Edit", exact: true }).click();
+    if (choice) {
+      await page.getByLabel("Workload").selectOption(choice[0]);
+      await page.getByLabel("Work area").selectOption(choice[1]);
+      await page.getByLabel("Can split?").selectOption(choice[2]);
+    } else {
+      await page.getByLabel("Recovery eligibility").selectOption("eligible");
+    }
+    const dependency = new Map([[1,"Toolbox talk + prep"],[3,"Excavation"],[5,"Rebar + forms"],[6,"Concrete pour"],[7,"Finish + curing"]]).get(index);
+    if (dependency) await page.getByRole("checkbox", { name: `After ${dependency}` }).check();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
   }
 }
 
@@ -98,28 +95,31 @@ test("exact supervisor plan imports, confirms, and schedules in the production w
 
   const rows = page.getByTestId(/^task-row-/);
   await expect(rows).toHaveCount(8);
-  for (let index = 0; index < 8; index += 1) await rows.nth(index).getByRole("button", { name: /^Expand details:/ }).click();
   await expect(page.getByText("Shift details need attention")).toHaveCount(0);
   await expect(page.getByText("Crew size not stated")).toHaveCount(0);
   await expect(page.getByText("Shift start not stated")).toHaveCount(0);
   await expect(page.getByText("Shift end not stated")).toHaveCount(0);
-  await expect(rows.nth(2).getByLabel("Activity")).toHaveValue("break");
-  await expect(rows.nth(4).getByLabel("Activity")).toHaveValue("meal");
-  await expect(rows.nth(5).getByRole("checkbox", { name: "Required today" })).toBeChecked();
-  await expect(rows.nth(5).getByLabel("Operational notes 6")).toHaveValue("Pump booked only today.");
-  await rows.nth(5).getByText("Source evidence").click();
-  await expect(rows.nth(5).getByText("Need concrete completed today.", { exact: false })).toBeVisible();
-  await expect(rows.nth(5).getByLabel("Requested start")).toHaveValue("12:00");
-  await expect(rows.nth(5).getByLabel("Requested end")).toHaveValue("14:30");
-  await expect(page.getByText(/^Suggested:/)).toHaveCount(6);
+  await expect(rows.nth(2)).toContainText("Break");
+  await expect(rows.nth(4)).toContainText("Meal");
+  await expect(rows.nth(5)).toContainText("Required today");
+  await expect(rows.nth(5)).toContainText("12:00–14:30");
+  await rows.nth(5).getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByLabel("Operational notes")).toHaveValue("Pump booked only today.");
+  await page.getByText("Source evidence").click();
+  await expect(page.getByText("Need concrete completed today.", { exact: false })).toBeVisible();
+  await expect(page.getByLabel("Requested start")).toHaveValue("12:00");
+  await expect(page.getByLabel("Requested end")).toHaveValue("14:30");
+  expect(await page.getByRole("dialog").getByText(/suggestion:/i).count()).toBeGreaterThan(0);
+  await expect(page.getByRole("dialog").locator('[data-suggestion-field="dependency"]')).toHaveCSS("grid-row-start","10");
+  await page.getByRole("button", { name: "Cancel", exact: true }).last().click();
   await page.screenshot({ path: "artifacts/regression-work-plan/01-import-review.png", fullPage: true });
 
   await confirmClassifications(page);
-  await expect(rows.nth(1).getByRole("checkbox", { name: "After Toolbox talk + prep" })).toBeChecked();
-  await expect(rows.nth(3).getByRole("checkbox", { name: "After Excavation" })).toBeChecked();
-  await expect(rows.nth(5).getByRole("checkbox", { name: "After Rebar + forms" })).toBeChecked();
-  await expect(rows.nth(6).getByRole("checkbox", { name: "After Concrete pour" })).toBeChecked();
-  await expect(rows.nth(7).getByRole("checkbox", { name: "After Finish + curing" })).toBeChecked();
+  for (const [index, dependency] of [[1,"Toolbox talk + prep"],[3,"Excavation"],[5,"Rebar + forms"],[6,"Concrete pour"],[7,"Finish + curing"]] as const) {
+    await rows.nth(index).getByRole("button", { name: "Edit", exact: true }).click();
+    await expect(page.getByRole("checkbox", { name: `After ${dependency}` })).toBeChecked();
+    await page.getByRole("button", { name: "Cancel", exact: true }).last().click();
+  }
   await page.screenshot({ path: "artifacts/regression-work-plan/02-supervisor-confirmed-plan-views.png", fullPage: true });
   await page.getByRole("button", { name: "Continue to conditions" }).click();
   expect(weatherUrl).toContain("latitude=24.6877");
@@ -132,18 +132,20 @@ test("exact supervisor plan imports, confirms, and schedules in the production w
   await page.getByRole("button", { name: "Generate safer shift" }).click();
   await expect(page.locator("h1")).toHaveText("Generated safer schedule");
   await expect(page.locator(".result-timezone")).toContainText("All schedule times use Saudi Arabia Standard Time (Asia/Riyadh, UTC+3).");
-  await expect(page.getByTestId("generated-execution-list").getByText("Required today", { exact: true })).not.toHaveCount(0);
+  await expect(
+    page.getByTestId("generated-plan-section").getByRole("row", { name: /Concrete pour.*Required today/ }),
+  ).toBeVisible();
   await expect(page.getByText("high priority", { exact: false })).toHaveCount(0);
   await page.locator(".selection-details").getByText("How this schedule was selected", { exact: true }).click();
   await expect(page.locator(".selection-details")).toContainText("Required-today activities are prioritized before normal activities, but HeatShift will not violate restrictions, recovery rules, fixed timing, or dependencies to force them into the shift.");
 
   for (const name of ["Excavation", "Concrete pour", "Cleanup"]) {
-    const taskId = await page.locator("[data-requested-id]", { hasText: name }).getAttribute("data-requested-id");
-    const directSun = page.locator(`[data-block-type="work"][data-task-id="${taskId}"]`);
+    const taskId = await page.getByTestId("requested-crew-board").locator("[data-requested-id]", { hasText: name }).getAttribute("data-requested-id");
+    const directSun = page.getByTestId("generated-crew-board").locator(`[data-block-type="work"][data-task-id="${taskId}"]`);
     for (let index = 0; index < await directSun.count(); index += 1) {
       const start = await directSun.nth(index).getAttribute("data-start");
       const end = await directSun.nth(index).getAttribute("data-end");
-      expect(end! <= "12:00" || start! >= "15:00").toBe(true);
+      expect(end! <= "12:00" || start! >= "15:00", `${name} ${start}–${end}`).toBe(true);
     }
   }
   await expect(page.getByText("globally optimal", { exact: false })).toHaveCount(0);
@@ -158,18 +160,19 @@ test("exact supervisor plan imports, confirms, and schedules in the production w
   await expect(page.getByRole("heading", { name: "Could not be scheduled" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Original requested versus generated" })).toBeVisible();
   await expect(page.getByRole("row", { name: /Concrete pour.*2 hr 30 min.*1 hr 30 min.*1 hr/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Concrete pour.*Partially scheduled/ })).toBeVisible();
   await page.screenshot({ path: "artifacts/regression-work-plan/03-selected-schedule.png", fullPage: true });
 
-  const excavationRequested = page.locator("[data-requested-id]", { hasText: "Excavation" });
+  const excavationRequested = page.getByTestId("requested-crew-board").locator("[data-requested-id]", { hasText: "Excavation" });
   const excavationId = await excavationRequested.getAttribute("data-requested-id");
   await excavationRequested.click();
   expect(await page.locator(`.scheduled-block.linked[data-task-id="${excavationId}"]`).count()).toBeGreaterThan(0);
   const excavationDetails = page.locator(".block-drawer");
   await expect(excavationDetails.getByRole("heading", { name: "Excavation" })).toBeVisible();
-  await expect(excavationDetails.getByText("—", { exact: true })).toHaveCount(0);
+  await expect(excavationDetails.getByText("Generated work times", { exact: true }).locator("xpath=following-sibling::dd")).not.toHaveText("—");
   await page.screenshot({ path: "artifacts/regression-work-plan/04-excavation-linked.png", fullPage: true });
 
-  await page.locator("[data-requested-id]", { hasText: "Concrete pour" }).click();
+  await page.getByTestId("requested-crew-board").locator("[data-requested-id]", { hasText: "Concrete pour" }).click();
   await expect(page.locator(".block-drawer").getByText("Required today", { exact: true })).toBeVisible();
   await expect(page.locator(".block-drawer").getByText("Pump booked only today.")).toBeVisible();
   await page.screenshot({ path: "artifacts/regression-work-plan/05-concrete-details.png", fullPage: true });

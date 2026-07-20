@@ -9,13 +9,13 @@ import {
   Check,
   ClipboardList,
   CloudSun,
-  ChevronDown,
-  ChevronUp,
+  Pencil,
   FileInput,
   LoaderCircle,
   Plus,
   ShieldCheck,
   Trash2,
+  X,
 } from "lucide-react";
 import { BrandHeader } from "@/components/layout/brand-header";
 import { ResultsPage } from "@/components/report/results-page";
@@ -40,6 +40,7 @@ import { filterForecastForShift } from "@/lib/weather/forecast-display";
 import {
   createInitialWorkflowState,
   validatePlanDetails,
+  validateDraftTask,
   validateVerifiedPlan,
   workflowReducer,
   type Language,
@@ -115,15 +116,17 @@ const copy = {
     canSplit: "Can split?",
     validation: "Validation",
     status: "Status",
-    expand: "Expand details",
-    collapse: "Collapse details",
+    editTask: "Edit",
     ready: "Ready",
-    needsDecisions: "Needs {count} decisions",
+    needsDecision: "Needs 1 input",
+    needsDecisions: "Needs {count} inputs",
+    needsArabicName: "Needs Arabic name",
     needsDependencyReview: "Needs dependency review",
     conflictStatus: "Conflict",
     taskHelp: "Work-area guidance",
     taskHelpText: "Indoor / cooled area means a genuinely conditioned recovery or work location. Heat-exposed indoor work requires a separate site assessment.",
-    suggestionsTitle: "Suggestions to review",
+    suggestionsTitle: "Review suggestions",
+    unresolvedFields: "Unresolved fields",
     dismiss: "Dismiss",
     delete: "Delete",
     enName: "English name",
@@ -137,6 +140,20 @@ const copy = {
     no: "No",
     complete: "Complete",
     incomplete: "Needs input",
+    normalPriority: "Normal",
+    cancel: "Cancel",
+    save: "Save",
+    saveNext: "Save and next",
+    saveFinish: "Save and finish",
+    previousTask: "Previous",
+    nextTask: "Next",
+    taskProgress: "Task {current} of {total}",
+    tasksNeedReview: "{count} tasks still need review",
+    discardTitle: "Discard unsaved changes?",
+    discardText: "This task has changes that have not been saved.",
+    discard: "Discard changes",
+    keepEditing: "Keep editing",
+    sourceEvidence: "Source evidence",
     indoorNote: "Indoor means a cooled area. Heat-exposed indoor work needs a separate site assessment.",
     conditionsTitle: "Conditions",
     forecastContext: "A. Forecast context",
@@ -172,6 +189,23 @@ const copy = {
     guidance: "Planning guidance only. Verify conditions using qualified on-site safety procedures.",
   },
   ar: {
+    editTask: "تعديل",
+    needsArabicName: "يحتاج اسمًا عربيًا",
+    unresolvedFields: "الحقول غير المحسومة",
+    normalPriority: "عادي",
+    cancel: "إلغاء",
+    save: "حفظ",
+    saveNext: "حفظ والتالي",
+    saveFinish: "حفظ وإنهاء",
+    previousTask: "السابق",
+    nextTask: "التالي",
+    taskProgress: "المهمة {current} من {total}",
+    tasksNeedReview: "{count} مهام ما زالت تحتاج مراجعة",
+    discardTitle: "هل تريد تجاهل التغييرات غير المحفوظة؟",
+    discardText: "تحتوي هذه المهمة على تغييرات لم تُحفظ.",
+    discard: "تجاهل التغييرات",
+    keepEditing: "متابعة التعديل",
+    sourceEvidence: "أدلة المصدر",
     steps: ["إعداد الوردية", "خطة المهام", "الظروف", "الوردية الأكثر أمانًا"],
     setupTitle: "إعداد الوردية",
     setupIntro: "حوّل خطة العمل الخارجي إلى وردية أكثر أمانًا. أدخل التفاصيل يدويًا أو استورد خطة، ثم تحقق من كل حقل.",
@@ -241,7 +275,8 @@ const copy = {
     expand: "توسيع التفاصيل",
     collapse: "طي التفاصيل",
     ready: "جاهز",
-    needsDecisions: "يحتاج إلى {count} قرارات",
+    needsDecision: "يحتاج إلى إدخال واحد",
+    needsDecisions: "يحتاج إلى {count} إدخالات",
     needsDependencyReview: "يحتاج إلى مراجعة التبعية",
     conflictStatus: "تعارض",
     taskHelp: "إرشادات منطقة العمل",
@@ -499,6 +534,7 @@ function ShiftSetup({ state, t, dispatch, analyze, manual }: { state: WorkflowSt
 }
 
 function TaskPlan({ state, t, dispatch, next }: { state: WorkflowState; t: UiCopy; dispatch: WorkflowDispatch; next: () => void }) {
+  const [editingTaskId,setEditingTaskId]=useState<string|null>(null);
   const notice = state.planSource === "ai" ? `${state.tasks.length} ${t.structured}` : state.planSource === "sample" ? t.sampleNotice : t.manualNotice;
   const shiftFields: Array<[keyof PlanForm, string]> = [["siteName", t.site], ["location", t.location], ["shiftDate", t.date], ["shiftStart", t.start], ["shiftEnd", t.end], ["crewSize", t.crew], ["nonAcclimatizedWorkers", t.newWorkers]];
   const shiftErrors = {...validatePlanDetails(state.plan), ...state.errors};
@@ -521,70 +557,97 @@ function TaskPlan({ state, t, dispatch, next }: { state: WorkflowState; t: UiCop
       <ErrorText state={state} name="tasks" />
       <details className="task-page-help"><summary>{t.taskHelp}</summary><p>{t.taskHelpText}</p></details>
       <div className="task-table-wrap">
-        <table className="task-table">
+        <table className="task-table task-review-table">
           <caption className="sr-only">{t.taskPlan}</caption>
-          <thead><tr><th>{t.task}</th><th>{t.activity}</th><th>{t.requestedTime}</th><th>{t.duration}</th><th>{t.workload} / {t.recovery}</th><th>{t.area}</th><th>{t.status}</th><th>{t.expand}</th></tr></thead>
-          {state.tasks.map((task, index) => <TaskRow key={task.id} state={state} task={task} index={index} t={t} dispatch={dispatch} />)}
+          <thead><tr><th>{t.task}</th><th>{t.activity}</th><th>{t.requestedTime}</th><th>{t.duration}</th><th>{t.workload} / {t.recovery}</th><th>{t.area}</th><th>{t.status}</th><th>{t.editTask}</th></tr></thead>
+          {state.tasks.map((task,index)=><TaskSummary key={task.id} state={state} task={task} index={index} t={t} onEdit={()=>setEditingTaskId(task.id)} onDelete={()=>dispatch({type:"removeTask",id:task.id})}/>)}
         </table>
       </div>
-      <button className="add-task-row" onClick={() => dispatch({ type: "addTask" })}><Plus aria-hidden="true" />{t.add}</button>
+      <button className="add-task-row" onClick={() => {const id=`manual-task-${state.nextTaskId}`;dispatch({ type: "addTask" });setEditingTaskId(id);}}><Plus aria-hidden="true" />{t.add}</button>
       <div className="footer-actions"><button className="button-tertiary" onClick={() => dispatch({ type: "setStep", step: "describe" })}><ArrowLeft aria-hidden="true" />{t.back}</button><button className="button-primary" onClick={next}>{t.next}<ArrowRight aria-hidden="true" /></button></div>
+      {editingTaskId&&<TaskEditModal key={editingTaskId} state={state} taskId={editingTaskId} t={t} dispatch={dispatch} onNavigate={setEditingTaskId} onClose={()=>{const id=editingTaskId;setEditingTaskId(null);requestAnimationFrame(()=>document.getElementById(`edit-${id}`)?.focus());}}/>}
     </section>
   );
 }
 
 function Info({ title, items, language }: { title: string; items: ExtractionMessage[]; language: Language }) {
-  return <details className="compact-details"><summary>{title} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item.code}>{language === "ar" ? item.messageAr : item.messageEn}</li>)}</ul></details>;
+  return <details className="compact-details"><summary>{title} <span>{items.length}</span></summary><ul>{items.map((item,index) => <li key={`${item.code}-${index}`}>{language === "ar" ? item.messageAr : item.messageEn}</li>)}</ul></details>;
 }
 
-function TaskRow({ state, task, index, t, dispatch }: { state: WorkflowState; task: DraftWorkTask; index: number; t: UiCopy; dispatch: WorkflowDispatch }) {
-  const [expanded,setExpanded]=useState(!task.nameEn && !task.nameAr);
-  const [dismissed,setDismissed]=useState<Set<string>>(()=>new Set());
-  const update = (field: keyof Omit<DraftWorkTask, "id">, value: DraftWorkTask[keyof Omit<DraftWorkTask, "id">]) => dispatch({ type: "updateTask", id: task.id, field, value });
-  const error = (field: string) => state.errors[`task-${task.id}-${field}`];
-  const kind = task.activityKind ?? "work";
-  const fieldError = (field: string) => error(field) ? <p role="alert" className="field-error">{displayError(error(field), state.language)}</p> : null;
-  const evidence = Object.entries(task.evidence ?? {});
-  const predecessorOptions = state.tasks.filter((candidate) => candidate.id !== task.id && (candidate.activityKind ?? "work") === "work");
-  const suggestedPredecessors = predecessorOptions.filter((candidate) => (task.suggestedPredecessorTaskIds ?? []).includes(candidate.id));
-  const togglePredecessor = (id: string, checked: boolean) => update("predecessorTaskIds", checked ? [...new Set([...(task.predecessorTaskIds ?? []), id])] : (task.predecessorTaskIds ?? []).filter((candidate) => candidate !== id));
-  const decisionFields=[!task.nameEn?"nameEn":null,!task.nameAr?"nameAr":null,!task.durationMinutes?"durationMinutes":null,kind==="work"&&!task.workload?"workload":null,kind==="work"&&!task.environment?"environment":null,kind==="work"&&task.splittable===null?"splittable":null,(task.requestedStart&&!task.requestedEnd)||(!task.requestedStart&&task.requestedEnd)?"requestedTime":null].filter((field):field is string=>Boolean(field));
-  const errorFields=["nameEn","nameAr","durationMinutes","workload","environment","splittable","requestedTime","dependencies"].filter((field)=>Boolean(error(field)));
-  const dependencyReview=kind==="work"&&suggestedPredecessors.some((candidate)=>!(task.predecessorTaskIds??[]).includes(candidate.id))&&!dismissed.has("dependency");
-  const status=errorFields.length?t.conflictStatus:decisionFields.length?t.needsDecisions.replace("{count}",String(decisionFields.length)):dependencyReview?t.needsDependencyReview:t.ready;
-  const statusClass=errorFields.length?"conflict":decisionFields.length||dependencyReview?"attention":"ready";
-  const openAndFocus=()=>{setExpanded(true);requestAnimationFrame(()=>{const field=errorFields[0]??decisionFields[0]??(dependencyReview?"dependencies":"nameEn");document.getElementById(`task-row-${task.id}`)?.querySelector<HTMLElement>(`[data-field="${field}"]`)?.focus();});};
-  const dismiss=(key:string)=>setDismissed((current)=>new Set([...current,key]));
-  const suggestions=[
-    task.suggestedWorkload&&task.suggestedWorkload!==task.workload&&!dismissed.has("workload")?{key:"workload",label:`${t.suggested}: ${displayWorkload(task.suggestedWorkload,state.language)}`,apply:()=>update("workload",task.suggestedWorkload!)}:null,
-    task.suggestedEnvironment&&task.suggestedEnvironment!==task.environment&&!dismissed.has("environment")?{key:"environment",label:`${t.suggested}: ${displayEnvironment(task.suggestedEnvironment,state.language)}`,apply:()=>update("environment",task.suggestedEnvironment!)}:null,
-    task.suggestedSplittable!==undefined&&task.suggestedSplittable!==task.splittable&&!dismissed.has("splittable")?{key:"splittable",label:`${t.suggested}: ${task.suggestedSplittable?t.yes:t.no}`,apply:()=>update("splittable",task.suggestedSplittable!)}:null,
-    dependencyReview?{key:"dependency",label:`${state.language==="ar"?"التبعية المقترحة":"Suggested dependency"}: ${suggestedPredecessors.map((candidate)=>state.language==="ar"?candidate.nameAr:candidate.nameEn).join(", ")}`,apply:()=>update("predecessorTaskIds",[...new Set([...(task.predecessorTaskIds??[]),...suggestedPredecessors.map((candidate)=>candidate.id)])])}:null,
-  ].filter((item):item is {key:string;label:string;apply:()=>void}=>Boolean(item));
-  return (
-    <tbody id={`task-row-${task.id}`} data-testid={`task-row-${index}`} className={expanded?"is-expanded":""}>
-      <tr className="task-main-row">
-        <td data-label={t.task} className="task-summary"><span className="row-number">{String(index+1).padStart(2,"0")}</span><strong>{state.language==="ar"?task.nameAr:task.nameEn||t.incomplete}</strong><small>{state.language==="ar"?task.nameEn:task.nameAr}</small>{kind==="work"&&<span className={`priority-badge ${task.mustSchedule?"required":"normal"}`}>{task.mustSchedule?t.mustComplete:(state.language==="ar"?"عادي":"Normal")}</span>}</td>
-        <td data-label={t.activity}><label><span className="sr-only">{t.activity}</span><select aria-label={t.activity} className="table-control" value={kind} onChange={(event)=>update("activityKind",event.target.value as DraftWorkTask["activityKind"])}><option value="work">{t.work}</option><option value="break">{t.breakActivity}</option><option value="meal">{t.meal}</option></select></label></td>
-        <td data-label={t.requestedTime}><div className="time-pair compact"><label><span className="sr-only">{t.startOptional}</span><input data-field="requestedTime" aria-label={t.startOptional} className="table-control" type="time" step="300" dir="ltr" value={task.requestedStart??""} onChange={(event)=>update("requestedStart",event.target.value)} /></label><label><span className="sr-only">{t.endOptional}</span><input aria-label={t.endOptional} className="table-control" type="time" step="300" dir="ltr" value={task.requestedEnd??""} onChange={(event)=>update("requestedEnd",event.target.value)} /></label></div>{fieldError("requestedTime")}</td>
-        <td data-label={t.duration}><label><span className="sr-only">{t.durationMinutes}</span><input data-field="durationMinutes" aria-label={t.durationMinutes} className="table-control numeric" type="number" min="5" step="5" dir="ltr" value={task.durationMinutes??""} onChange={(event)=>update("durationMinutes",event.target.value===""?null:Number(event.target.value))} aria-invalid={Boolean(error("durationMinutes"))} /></label>{task.durationMinutes&&<small>{formatDuration(task.durationMinutes,state.language)}</small>}{fieldError("durationMinutes")}</td>
-        <td data-label={kind==="work"?t.workload:t.recovery}>{kind==="work"?<><label><span className="sr-only">{t.workload}</span><select data-field="workload" aria-label={t.workload} className="table-control" value={task.workload} onChange={(event)=>update("workload",event.target.value as DraftWorkTask["workload"])} aria-invalid={Boolean(error("workload"))}><option value="">{t.incomplete}</option><option value="heavy">{displayWorkload("heavy",state.language)}</option><option value="light">{displayWorkload("light",state.language)}</option></select></label><span className="split-summary">{t.canSplit}: {task.splittable===null?t.incomplete:task.splittable?t.yes:t.no}</span>{fieldError("workload")}</>:<label><span className="sr-only">{t.recovery}</span><select aria-label={t.recovery} className="table-control" value={task.recoveryEligibility??"unknown"} onChange={(event)=>update("recoveryEligibility",event.target.value as DraftWorkTask["recoveryEligibility"])}><option value="unknown">{t.recoveryUnknown}</option><option value="eligible">{t.recoveryEligible}</option><option value="not_eligible">{t.recoveryNotEligible}</option></select></label>}</td>
-        <td data-label={t.area}>{kind==="work"?<><label><span className="sr-only">{t.environment}</span><select data-field="environment" aria-label={t.environment} className="table-control" value={task.environment} onChange={(event)=>update("environment",event.target.value as DraftWorkTask["environment"])} aria-invalid={Boolean(error("environment"))}><option value="">{t.incomplete}</option><option value="direct_sun">{displayEnvironment("direct_sun",state.language)}</option><option value="shaded_outdoor">{displayEnvironment("shaded_outdoor",state.language)}</option><option value="conditioned_indoor">{displayEnvironment("conditioned_indoor",state.language)}</option></select></label>{fieldError("environment")}</>:<span className="sr-only">{state.language==="ar"?"لا ينطبق":"Not applicable"}</span>}</td>
-        <td data-label={t.status}><button type="button" className={`task-status ${statusClass}`} onClick={openAndFocus}>{status}</button></td>
-        <td data-label={t.expand}><button type="button" className="expand-task" aria-expanded={expanded} aria-controls={`task-details-${task.id}`} aria-label={`${expanded?t.collapse:t.expand}: ${state.language==="ar"?task.nameAr:task.nameEn}`} onClick={()=>setExpanded((value)=>!value)}>{expanded?<ChevronUp aria-hidden="true"/>:<ChevronDown aria-hidden="true"/>}</button></td>
-      </tr>
-      {expanded&&<tr className="task-details-row"><td colSpan={8}><div id={`task-details-${task.id}`} className="task-details-grid">
-        <section className="detail-names"><label><span>{t.enName}</span><input data-field="nameEn" className="table-control" value={task.nameEn} onChange={(event)=>update("nameEn",event.target.value)} aria-invalid={Boolean(error("nameEn"))}/>{fieldError("nameEn")}</label><label><span>{t.arName}</span><input data-field="nameAr" className="table-control" lang="ar" dir="rtl" value={task.nameAr} onChange={(event)=>update("nameAr",event.target.value)} aria-invalid={Boolean(error("nameAr"))}/>{fieldError("nameAr")}</label></section>
-        <section><label><span>{t.timing}</span><select className="table-control" aria-label={t.timing} value={task.timingPreference??"flexible"} onChange={(event)=>update("timingPreference",event.target.value as DraftWorkTask["timingPreference"])}><option value="flexible">{t.flexible}</option><option value="preferred">{t.preferred}</option><option value="fixed">{t.fixed}</option></select></label>{kind==="work"&&<><label className="check-line"><input type="checkbox" checked={task.mustSchedule??false} onChange={(event)=>update("mustSchedule",event.target.checked)}/>{t.mustComplete}</label><label><span>{t.canSplit}</span><select data-field="splittable" aria-label={t.splitQuestion} className="table-control" value={task.splittable===null?"":String(task.splittable)} onChange={(event)=>update("splittable",event.target.value===""?null:event.target.value==="true")} aria-invalid={Boolean(error("splittable"))}><option value="">{t.incomplete}</option><option value="true">{t.yes}</option><option value="false">{t.no}</option></select></label>{fieldError("splittable")}</>}</section>
-        {kind==="work"&&<section><label><span>{t.operationalNotes}</span><textarea aria-label={`${t.operationalNotes} ${index+1}`} className="table-control" rows={3} value={(task.operationalNotes??[]).join("\n")} onChange={(event)=>update("operationalNotes",event.target.value.split(/\n/).map((value)=>value.trim()).filter(Boolean))}/></label>{predecessorOptions.length>0&&<fieldset className="dependency-selector" aria-invalid={Boolean(error("dependencies"))}><legend>{t.dependencies}</legend>{predecessorOptions.map((candidate)=><label key={candidate.id}><input data-field="dependencies" type="checkbox" checked={(task.predecessorTaskIds??[]).includes(candidate.id)} onChange={(event)=>togglePredecessor(candidate.id,event.target.checked)}/>{t.afterActivity} {state.language==="ar"?candidate.nameAr:candidate.nameEn}</label>)}{fieldError("dependencies")}</fieldset>}</section>}
-        <section className="detail-review">{suggestions.length>0&&<div className="suggestion-list"><strong>{t.suggestionsTitle}</strong>{suggestions.map((suggestion)=><Suggestion key={suggestion.key} label={suggestion.label} apply={t.useSuggestion} dismiss={t.dismiss} onApply={suggestion.apply} onDismiss={()=>dismiss(suggestion.key)}/>)}</div>}{evidence.length>0&&<details className="task-evidence"><summary>{state.language==="ar"?"أدلة المصدر":"Source evidence"}</summary><ul>{evidence.map(([field,item])=><li key={field}><strong>{displayEvidenceField(field,state.language)}:</strong> {item.evidence}<em>{displayEvidenceSource(item.source,state.language)}</em></li>)}</ul></details>}<button className="icon-button danger" aria-label={`${t.delete} ${index+1}`} onClick={()=>dispatch({type:"removeTask",id:task.id})}><Trash2 aria-hidden="true"/>{t.delete}</button></section>
-      </div></td></tr>}
-    </tbody>
-  );
+function reviewModel(task:DraftWorkTask,tasks:DraftWorkTask[],language:Language,t:UiCopy){
+  const kind=task.activityKind??"work";
+  const errors=validateDraftTask(task,tasks);
+  const missing:Array<[string,string]>=[];
+  if(!task.nameEn.trim())missing.push(["nameEn",t.enName]);
+  if(task.durationMinutes===null||task.durationMinutes<=0||task.durationMinutes%5!==0)missing.push(["durationMinutes",t.duration]);
+  if(kind==="work"&&!task.workload)missing.push(["workload",t.workload]);
+  if(kind==="work"&&!task.environment)missing.push(["environment",t.area]);
+  if(kind==="work"&&task.splittable===null)missing.push(["splittable",t.canSplit]);
+  const arabicInvalid=false;
+  const conflict=Boolean(errors[`task-${task.id}-requestedTime`]||errors[`task-${task.id}-dependencies`]);
+  const predecessorOptions=tasks.filter(candidate=>candidate.id!==task.id&&(candidate.activityKind??"work")==="work");
+  const dismissed=new Set(task.dismissedSuggestionKeys??[]);
+  const suggestedPredecessors=predecessorOptions.filter(candidate=>(task.suggestedPredecessorTaskIds??[]).includes(candidate.id));
+  const dependencyReview=kind==="work"&&!dismissed.has("dependency")&&suggestedPredecessors.some(candidate=>!(task.predecessorTaskIds??[]).includes(candidate.id));
+  const status=conflict?t.conflictStatus:arabicInvalid?t.needsArabicName:missing.length===1?t.needsDecision:missing.length?t.needsDecisions.replace("{count}",String(missing.length)):dependencyReview?t.needsDependencyReview:t.ready;
+  const statusClass=conflict?"conflict":arabicInvalid||missing.length||dependencyReview?"attention":"ready";
+  const unresolved=[...missing.map(([,label])=>label),...(arabicInvalid?[t.arName]:[]),...(conflict?[displayError(Object.values(errors)[0],language)]:[]),...(dependencyReview?[t.dependencies]:[])];
+  return {kind,errors,missing,arabicInvalid,dependencyReview,status,statusClass,unresolved,predecessorOptions,suggestedPredecessors};
+}
+
+function suggestionModels(task:DraftWorkTask,tasks:DraftWorkTask[],language:Language,t:UiCopy){
+  const model=reviewModel(task,tasks,language,t);const dismissed=new Set(task.dismissedSuggestionKeys??[]);
+  return [
+    task.suggestedWorkload&&task.suggestedWorkload!==task.workload&&!dismissed.has("workload")?{key:"workload",label:`${language==="ar"?"اقتراح عبء العمل":"Workload suggestion"}: ${displayWorkload(task.suggestedWorkload,language)}`,field:"workload" as const,value:task.suggestedWorkload}:null,
+    task.suggestedEnvironment&&task.suggestedEnvironment!==task.environment&&!dismissed.has("environment")?{key:"environment",label:`${language==="ar"?"اقتراح منطقة العمل":"Work-area suggestion"}: ${displayEnvironment(task.suggestedEnvironment,language)}`,field:"environment" as const,value:task.suggestedEnvironment}:null,
+    task.suggestedSplittable!==undefined&&task.suggestedSplittable!==task.splittable&&!dismissed.has("splittable")?{key:"splittable",label:`${language==="ar"?"اقتراح إعداد التقسيم":"Split-setting suggestion"}: ${task.suggestedSplittable?t.yes:t.no}`,field:"splittable" as const,value:task.suggestedSplittable}:null,
+    model.dependencyReview?{key:"dependency",label:`${language==="ar"?"اقتراح التبعية":"Dependency suggestion"}: ${language==="ar"?"بعد":"After"} ${model.suggestedPredecessors.map(candidate=>language==="ar"?candidate.nameAr:candidate.nameEn).join(", ")}`,field:"predecessorTaskIds" as const,value:[...new Set([...(task.predecessorTaskIds??[]),...model.suggestedPredecessors.map(candidate=>candidate.id)])]}:null,
+  ].filter((item):item is NonNullable<typeof item>=>Boolean(item));
+}
+
+function TaskSummary({state,task,index,t,onEdit,onDelete}:{state:WorkflowState;task:DraftWorkTask;index:number;t:UiCopy;onEdit:()=>void;onDelete:()=>void}){
+  const model=reviewModel(task,state.tasks,state.language,t);
+  const primary=state.language==="ar"?task.nameAr:task.nameEn;
+  const secondary=state.language==="ar"?task.nameEn:task.nameAr;
+  const kindLabel=model.kind==="work"?t.work:model.kind==="break"?t.breakActivity:t.meal;
+  const requested=task.requestedStart&&task.requestedEnd?`${task.requestedStart}–${task.requestedEnd}`:state.language==="ar"?"الوقت غير محدد":"Time not specified";
+  const workOrRecovery=model.kind==="work"
+    ? task.workload?displayWorkload(task.workload,state.language):t.incomplete
+    : task.recoveryEligibility==="eligible"?t.recoveryEligible:task.recoveryEligibility==="not_eligible"?t.recoveryNotEligible:t.recoveryUnknown;
+  return <tbody data-testid={`task-row-${index}`}>
+    <tr className="task-main-row">
+      <td data-label={t.task} className="task-summary"><span className="row-number">{String(index+1).padStart(2,"0")}</span><strong title={primary||t.incomplete}>{primary||t.incomplete}</strong><small title={secondary||undefined}>{secondary||t.incomplete}</small><span className={`priority-badge ${task.mustSchedule?"required":"normal"}`}>{task.mustSchedule?t.mustComplete:t.normalPriority}</span></td>
+      <td data-label={t.activity}><strong>{kindLabel}</strong></td>
+      <td data-label={t.requestedTime} dir="ltr">{requested}</td>
+      <td data-label={t.duration}>{task.durationMinutes?formatDuration(task.durationMinutes,state.language):t.incomplete}</td>
+      <td data-label={model.kind==="work"?t.workload:t.recovery}><strong>{workOrRecovery}</strong>{model.kind==="work"&&<small>{t.canSplit}: {task.splittable===null?t.incomplete:task.splittable?t.yes:t.no}</small>}</td>
+      <td data-label={t.area}>{model.kind==="work"?(task.environment?displayEnvironment(task.environment,state.language):t.incomplete):"—"}</td>
+      <td data-label={t.status}><span className={`task-status ${model.statusClass}`}>{model.status}</span></td>
+      <td data-label={t.editTask}><div className="task-review-actions"><button id={`edit-${task.id}`} type="button" className="button-secondary" onClick={onEdit}><Pencil aria-hidden="true"/>{t.editTask}</button><button type="button" className="icon-button danger" aria-label={`${t.delete} ${index+1}`} onClick={onDelete}><Trash2 aria-hidden="true"/><span className="sr-only">{t.delete}</span></button></div></td>
+    </tr>
+  </tbody>;
+}
+
+function TaskEditModal({state,taskId,t,dispatch,onNavigate,onClose}:{state:WorkflowState;taskId:string;t:UiCopy;dispatch:WorkflowDispatch;onNavigate:(id:string)=>void;onClose:()=>void}){
+  const source=state.tasks.find(task=>task.id===taskId)!;const index=state.tasks.findIndex(task=>task.id===taskId);
+  const [draft,setDraft]=useState<DraftWorkTask>(()=>structuredClone(source));const [errors,setErrors]=useState<Record<string,string>>({});const [pending,setPending]=useState<{kind:"close"}|{kind:"navigate";id:string}|null>(null);const dialogRef=useRef<HTMLDivElement>(null);
+  const suggestions=suggestionModels(draft,state.tasks.map(task=>task.id===draft.id?draft:task),state.language,t);const dirty=JSON.stringify(draft)!==JSON.stringify(source);const kind=draft.activityKind??"work";
+  const [initialFocusField]=useState(()=>{const initial=reviewModel(source,state.tasks,state.language,t);return initial.missing[0]?.[0]??(initial.dependencyReview?"dependencies":"nameEn");});
+  const set=<K extends keyof Omit<DraftWorkTask,"id">>(field:K,value:DraftWorkTask[K])=>{setDraft(current=>({...current,[field]:value,...(field==="activityKind"&&value!=="work"?{predecessorTaskIds:[]}: {})}));setErrors(current=>({...current,[`task-${draft.id}-${String(field)}`]:""}));};
+  const error=(field:string)=>errors[`task-${draft.id}-${field}`];const fieldError=(field:string)=>error(field)?<p id={`modal-${field}-error`} role="alert" className="field-error">{displayError(error(field),state.language)}</p>:null;
+  const closeOrConfirm=()=>dirty?setPending({kind:"close"}):onClose();const navigateOrConfirm=(id:string)=>dirty?setPending({kind:"navigate",id}):onNavigate(id);
+  useEffect(()=>{const previous=document.body.style.overflow;document.body.style.overflow="hidden";const timer=window.setTimeout(()=>{dialogRef.current?.querySelector<HTMLElement>(`[data-field="${initialFocusField}"]`)?.focus();},0);return()=>{window.clearTimeout(timer);document.body.style.overflow=previous;};},[initialFocusField]);
+  const onKeyDown=(event:React.KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();closeOrConfirm();return;}if(event.key!=="Tab")return;const focusable=[...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),summary')??[])].filter(item=>item.offsetParent!==null);if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1)!;if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}};
+  const save=(advance:boolean)=>{const tasks=state.tasks.map(task=>task.id===draft.id?draft:task);const nextErrors=validateDraftTask(draft,tasks);if(Object.keys(nextErrors).length){setErrors(nextErrors);requestAnimationFrame(()=>{const field=Object.keys(nextErrors)[0].split(`task-${draft.id}-`)[1];dialogRef.current?.querySelector<HTMLElement>(`[data-field="${field}"]`)?.focus();});return;}dispatch({type:"saveTask",task:draft});if(!advance){onClose();return;}const later=tasks.slice(index+1).find(task=>Object.keys(validateDraftTask(task,tasks)).length>0||reviewModel(task,tasks,state.language,t).dependencyReview);const target=later??tasks[index+1];if(target)onNavigate(target.id);else onClose();};
+  const predecessorOptions=state.tasks.filter(candidate=>candidate.id!==draft.id&&(candidate.activityKind??"work")==="work");const evidence=Object.entries(draft.evidence??{});
+  const progress=t.taskProgress.replace("{current}",String(index+1)).replace("{total}",String(state.tasks.length));const needCount=state.tasks.filter(task=>{const tasks=state.tasks.map(candidate=>candidate.id===draft.id?draft:candidate);return Object.keys(validateDraftTask(task,tasks)).length>0||reviewModel(task,tasks,state.language,t).dependencyReview;}).length;
+  return <div className="task-modal-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)closeOrConfirm();}}><div ref={dialogRef} className="task-edit-modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title" onKeyDown={onKeyDown}><header><div><p>{progress} · {t.tasksNeedReview.replace("{count}",String(needCount))}</p><h2 id="task-modal-title">{t.editTask}: {state.language==="ar"?draft.nameAr||draft.nameEn:draft.nameEn||draft.nameAr}</h2></div><button type="button" className="modal-close" aria-label={t.cancel} onClick={closeOrConfirm}><X aria-hidden="true"/></button></header><div className="task-modal-body"><section className="modal-field-grid"><label><span>{t.enName}</span><input data-field="nameEn" className="form-control" value={draft.nameEn} onChange={event=>set("nameEn",event.target.value)} aria-invalid={Boolean(error("nameEn"))} aria-describedby={error("nameEn")?"modal-nameEn-error":undefined}/>{fieldError("nameEn")}</label><label><span>{t.arName}</span><input data-field="nameAr" className="form-control" lang="ar" dir="rtl" value={draft.nameAr} onChange={event=>set("nameAr",event.target.value)} aria-invalid={Boolean(error("nameAr"))} aria-describedby={error("nameAr")?"modal-nameAr-error":undefined}/>{fieldError("nameAr")}</label><label><span>{t.activity}</span><select data-field="activityKind" className="form-control" value={kind} onChange={event=>set("activityKind",event.target.value as DraftWorkTask["activityKind"])}><option value="work">{t.work}</option><option value="break">{t.breakActivity}</option><option value="meal">{t.meal}</option></select></label><label><span>{t.timing}</span><select className="form-control" value={draft.timingPreference??"flexible"} onChange={event=>set("timingPreference",event.target.value as DraftWorkTask["timingPreference"])}><option value="fixed">{t.fixed}</option><option value="preferred">{t.preferred}</option><option value="flexible">{t.flexible}</option></select></label><label><span>{t.startOptional}</span><input data-field="requestedTime" className="form-control" type="time" step="300" dir="ltr" value={draft.requestedStart??""} onChange={event=>set("requestedStart",event.target.value)}/>{fieldError("requestedTime")}</label><label><span>{t.endOptional}</span><input className="form-control" type="time" step="300" dir="ltr" value={draft.requestedEnd??""} onChange={event=>set("requestedEnd",event.target.value)}/></label><label><span>{t.durationMinutes}</span><input data-field="durationMinutes" className="form-control" type="number" min="5" step="5" dir="ltr" value={draft.durationMinutes??""} onChange={event=>set("durationMinutes",event.target.value===""?null:Number(event.target.value))} aria-invalid={Boolean(error("durationMinutes"))}/>{fieldError("durationMinutes")}</label><label><span>{state.language==="ar"?"الأولوية":"Priority"}</span><select className="form-control" value={draft.mustSchedule?"required":"normal"} onChange={event=>set("mustSchedule",event.target.value==="required")}><option value="required">{t.mustComplete}</option><option value="normal">{t.normalPriority}</option></select></label>{kind==="work"?<><label><span>{t.workload}</span><select data-field="workload" className="form-control" value={draft.workload} onChange={event=>set("workload",event.target.value as DraftWorkTask["workload"])} aria-invalid={Boolean(error("workload"))}><option value="">{t.incomplete}</option><option value="heavy">{displayWorkload("heavy",state.language)}</option><option value="light">{displayWorkload("light",state.language)}</option></select>{fieldError("workload")}</label><label><span>{t.area}</span><select data-field="environment" className="form-control" value={draft.environment} onChange={event=>set("environment",event.target.value as DraftWorkTask["environment"])} aria-invalid={Boolean(error("environment"))}><option value="">{t.incomplete}</option><option value="direct_sun">{displayEnvironment("direct_sun",state.language)}</option><option value="shaded_outdoor">{displayEnvironment("shaded_outdoor",state.language)}</option><option value="conditioned_indoor">{displayEnvironment("conditioned_indoor",state.language)}</option></select>{fieldError("environment")}</label><label><span>{t.canSplit}</span><select data-field="splittable" className="form-control" value={draft.splittable===null?"":String(draft.splittable)} onChange={event=>set("splittable",event.target.value===""?null:event.target.value==="true")} aria-invalid={Boolean(error("splittable"))}><option value="">{t.incomplete}</option><option value="true">{t.yes}</option><option value="false">{t.no}</option></select>{fieldError("splittable")}</label></>:<label><span>{t.recovery}</span><select className="form-control" value={draft.recoveryEligibility??"unknown"} onChange={event=>set("recoveryEligibility",event.target.value as DraftWorkTask["recoveryEligibility"])}><option value="unknown">{t.recoveryUnknown}</option><option value="eligible">{t.recoveryEligible}</option><option value="not_eligible">{t.recoveryNotEligible}</option></select></label>}</section>{kind==="work"&&predecessorOptions.length>0&&<fieldset className="dependency-selector" aria-invalid={Boolean(error("dependencies"))}><legend>{t.dependencies}</legend>{predecessorOptions.map(candidate=><label key={candidate.id}><input data-field="dependencies" type="checkbox" checked={(draft.predecessorTaskIds??[]).includes(candidate.id)} onChange={event=>set("predecessorTaskIds",event.target.checked?[...new Set([...(draft.predecessorTaskIds??[]),candidate.id])]:(draft.predecessorTaskIds??[]).filter(id=>id!==candidate.id))}/>{t.afterActivity} {state.language==="ar"?candidate.nameAr:candidate.nameEn}</label>)}{fieldError("dependencies")}</fieldset>}<label className="modal-notes"><span>{t.operationalNotes}</span><textarea className="form-control" rows={3} value={(draft.operationalNotes??[]).join("\n")} onChange={event=>set("operationalNotes",event.target.value.split(/\n/).map(value=>value.trim()).filter(Boolean))}/></label>{suggestions.length>0&&<section className="modal-suggestions"><h3>{t.suggestionsTitle}</h3>{suggestions.map(suggestion=><Suggestion key={suggestion.key} label={suggestion.label} apply={t.useSuggestion} dismiss={t.dismiss} onApply={()=>set(suggestion.field,suggestion.value as never)} onDismiss={()=>set("dismissedSuggestionKeys",[...new Set([...(draft.dismissedSuggestionKeys??[]),suggestion.key])])}/>)}</section>}{evidence.length>0&&<details className="task-evidence"><summary>{t.sourceEvidence}</summary><ul>{evidence.map(([field,item])=><li key={field}><strong>{displayEvidenceField(field,state.language)}:</strong> {item.evidence}<em>{displayEvidenceSource(item.source,state.language)}</em></li>)}</ul></details>}</div><footer><div className="modal-navigation"><button type="button" className="button-tertiary" disabled={index===0} onClick={()=>navigateOrConfirm(state.tasks[index-1].id)}>{t.previousTask}</button><button type="button" className="button-tertiary" disabled={index===state.tasks.length-1} onClick={()=>navigateOrConfirm(state.tasks[index+1].id)}>{t.nextTask}</button></div><div className="modal-save-actions"><button type="button" className="button-tertiary" onClick={closeOrConfirm}>{t.cancel}</button><button type="button" className="button-secondary" onClick={()=>save(false)}>{t.save}</button><button type="button" className="button-primary" onClick={()=>save(true)}>{index===state.tasks.length-1?t.saveFinish:t.saveNext}</button></div></footer>{pending&&<div className="unsaved-confirmation" role="alertdialog" aria-modal="true" aria-labelledby="discard-title"><h3 id="discard-title">{t.discardTitle}</h3><p>{t.discardText}</p><div><button type="button" className="button-tertiary" onClick={()=>setPending(null)}>{t.keepEditing}</button><button type="button" className="button-secondary" autoFocus onClick={()=>{const action=pending;setPending(null);if(action.kind==="close")onClose();else onNavigate(action.id);}}>{t.discard}</button></div></div>}</div></div>;
 }
 
 function Suggestion({label,apply,dismiss,onApply,onDismiss}:{label:string;apply:string;dismiss:string;onApply:()=>void;onDismiss:()=>void}){
-  return <div className="suggestion-chip"><span>{label}</span><button type="button" onClick={onApply}>{apply}</button><button type="button" onClick={onDismiss}>{dismiss}</button></div>;
+  const normalized=label.toLowerCase();
+  const field=normalized.includes("workload")||label.includes("عبء")?"workload":normalized.includes("work-area")||label.includes("منطقة")?"environment":normalized.includes("split-setting")||label.includes("تقسيم")?"splittable":"dependency";
+  return <div className="suggestion-chip" data-suggestion-field={field}><span>{label}</span><button type="button" onClick={onApply}>{apply}</button><button type="button" onClick={onDismiss}>{dismiss}</button></div>;
 }
 
 function displayEvidenceField(field:string,language:Language){const labels:Record<string,{en:string;ar:string}>={durationMinutes:{en:"Duration",ar:"المدة"},mustSchedule:{en:"Required today",ar:"مطلوب اليوم"},operationalNotes:{en:"Operational notes",ar:"ملاحظات تشغيلية"},requestedStart:{en:"Requested start",ar:"البداية المطلوبة"},requestedEnd:{en:"Requested end",ar:"النهاية المطلوبة"}};return labels[field]?.[language]??(language==="ar"?"حقل مستخرج":"Extracted field");}

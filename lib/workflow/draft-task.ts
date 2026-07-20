@@ -21,6 +21,7 @@ export interface DraftWorkTask {
   suggestedWorkload?: Workload;
   suggestedEnvironment?: WorkEnvironment;
   suggestedSplittable?: boolean;
+  dismissedSuggestionKeys?: string[];
   evidence?: Record<string, FieldEvidence>;
 }
 
@@ -29,7 +30,7 @@ export function toScheduleActivities(tasks:readonly DraftWorkTask[]):ScheduleAct
     if(task.durationMinutes===null)throw new Error(`Draft task ${task.id} is incomplete.`);
     const activityKind=task.activityKind??"work";
     if(activityKind!=="work")return {
-      id:task.id,nameEn:task.nameEn,nameAr:task.nameAr,durationMinutes:task.durationMinutes,
+      id:task.id,nameEn:task.nameEn,nameAr:task.nameAr.trim()||task.nameEn,durationMinutes:task.durationMinutes,
       activityKind,recoveryEligibility:task.recoveryEligibility??"unknown",
       timingPreference:task.timingPreference??"flexible",requestedStart:task.requestedStart||undefined,
       requestedEnd:task.requestedEnd||undefined,mustSchedule:task.mustSchedule,
@@ -44,6 +45,7 @@ export function toScheduleActivities(tasks:readonly DraftWorkTask[]):ScheduleAct
     }
     return {
       ...task,
+      nameAr: task.nameAr.trim() || task.nameEn,
       durationMinutes: task.durationMinutes,
       workload: task.workload,
       environment: task.environment,

@@ -16,6 +16,8 @@ async function fillPlan(page: Page, overrides: { start?: string; end?: string; c
   await page.getByLabel("Non-acclimatized workers").fill(overrides.newWorkers ?? "2");
 }
 
+async function editTask(page:Page,index=0){await page.getByTestId(`task-row-${index}`).getByRole("button",{name:"Edit",exact:true}).click();await expect(page.getByRole("dialog")).toBeVisible();}
+
 test.beforeEach(async ({ page }) => { await mockIntegrations(page); await page.goto("/"); });
 
 test("searches an English neighborhood and selects it with the keyboard", async ({ page }) => {
@@ -62,9 +64,10 @@ test("manually creates a task without AI", async ({ page }) => {
 
 test("edits a demo task", async ({ page }) => {
   await page.getByRole("button", { name: "View sample shift" }).click();
-  await page.getByRole("button", { name: /^Expand details:/ }).first().click();
-  await page.getByLabel("English name").first().fill("Edited heavy trenching");
-  await expect(page.getByLabel("English name").first()).toHaveValue("Edited heavy trenching");
+  await editTask(page);
+  await page.getByLabel("English name").fill("Edited heavy trenching");
+  await page.getByRole("button",{name:"Save",exact:true}).click();
+  await expect(page.getByTestId("task-row-0")).toContainText("Edited heavy trenching");
 });
 
 test("blocks invalid shift times", async ({ page }) => {
@@ -87,7 +90,7 @@ test("Arabic toggle changes direction and labels", async ({ page }) => {
 test("weather failure exposes the manual preliminary path", async ({ page }) => {
   await page.unroute("**/api/weather?*"); await page.route("**/api/weather?*", route => route.fulfill({status:502,contentType:"application/json",body:JSON.stringify({error:{code:"WEATHER_UNAVAILABLE",message:"Forecast service unavailable for test."}})}));
   await fillPlan(page); await page.getByRole("button", { name: "Enter tasks manually" }).click(); await page.getByRole("button", { name: "Add task" }).click();
-  await page.getByLabel("English name").fill("Inspection"); await page.getByLabel("Arabic name").fill("فحص"); await page.getByLabel("Duration (minutes)").fill("30"); await page.getByLabel("Workload").selectOption("light"); await page.getByLabel("Environment").selectOption("shaded_outdoor"); await page.getByLabel("May this task be split?").selectOption("false"); await page.getByRole("button", { name: "Continue to conditions" }).click();
+  await page.getByLabel("English name").fill("Inspection"); await page.getByLabel("Arabic name").fill("فحص"); await page.getByLabel("Duration (minutes)").fill("30"); await page.getByLabel("Workload").selectOption("light"); await page.getByLabel("Work area").selectOption("shaded_outdoor"); await page.getByLabel("Can split?").selectOption("false"); await page.getByRole("button",{name:"Save",exact:true}).click();await page.getByRole("button", { name: "Continue to conditions" }).click();
   await expect(page.getByText("Forecast unavailable")).toBeVisible(); await expect(page.getByText(/No weather values were invented/)).toBeVisible();
   await expect(page.getByText("Preliminary only — no exact recovery cycle claimed")).toBeVisible();
 });
@@ -97,12 +100,13 @@ test("missing AI safety fields remain blank and block scheduling", async ({ page
   await page.route("**/api/parse-plan", route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({data:{siteName:"AI Site",city:"riyadh",shiftDate:"2026-07-20",shiftStart:"06:30",shiftEnd:"16:30",crewSize:8,nonAcclimatizedWorkers:0,tasks:[{nameEn:"Unknown",nameAr:"غير محدد"}],assumptions:[],missingInformation:["Task details missing"]}})}));
   await page.getByLabel("Import work plan").fill("Eight workers have an unspecified task tomorrow morning.");
   await page.getByRole("button",{name:"Structure task list"}).click();
-  await page.getByRole("button", { name: /^Expand details:/ }).first().click();
+  await editTask(page);
   await expect(page.getByLabel("Duration (minutes)")).toHaveValue("");
   await expect(page.getByLabel("Workload")).toHaveValue("");
-  await expect(page.getByLabel("Environment")).toHaveValue("");
+  await expect(page.getByLabel("Work area")).toHaveValue("");
+  await page.locator(".modal-save-actions").getByRole("button",{name:"Cancel",exact:true}).click();
   await page.getByRole("button",{name:"Continue to conditions"}).click();
-  await expect(page.getByText("Select a workload.")).toBeVisible();
+  await expect(page.getByTestId("task-row-0")).toContainText("Needs 4 inputs");
 });
 
 test("editing a sample invalidates it and requests weather for the selected coordinates", async ({ page }) => {
@@ -174,20 +178,20 @@ Need concrete completed today. Pump booked only today.`;
 
   expect(posted).toMatchObject({ context: { siteName:"North utility site", locationName:"Riyadh", shiftDate:"2026-07-20", shiftStart:"06:00", shiftEnd:"16:30", crewSize:8, nonAcclimatizedWorkers:2 } });
   await expect(page.getByTestId(/^task-row-/)).toHaveCount(8);
-  await expect(page.getByLabel("Activity").nth(2)).toHaveValue("break");
-  await expect(page.getByLabel("Activity").nth(4)).toHaveValue("meal");
+  await expect(page.getByTestId("task-row-2")).toContainText("Break");
+  await expect(page.getByTestId("task-row-4")).toContainText("Meal");
   await expect(page.getByText("2 hr 30 min")).toHaveCount(2);
   await expect(page.getByText("1 hr")).toBeVisible();
-  await page.getByRole("button", { name: /Expand details: Concrete pour/ }).click();
+  await editTask(page,5);
   await expect(page.getByText("Pump booked only today.")).toBeVisible();
+  await page.locator(".modal-save-actions").getByRole("button",{name:"Cancel",exact:true}).click();
   await expect(page.getByText("Shift details need attention")).toHaveCount(0);
   await expect(page.getByText("Crew size not stated")).toHaveCount(0);
   await expect(page.getByText("Shift end not stated")).toHaveCount(0);
-  const excavation = page.getByTestId("task-row-1");
-  await excavation.getByRole("button", { name: /Expand details:/ }).click();
-  await expect(excavation.getByText(/Suggested: Heavy/)).toBeVisible();
-  await excavation.getByRole("button", { name: "Apply" }).first().click();
-  await expect(excavation.getByLabel("Workload")).toHaveValue("heavy");
+  await editTask(page,1);
+  await expect(page.getByRole("dialog").getByText(/Suggested workload: Heavy|Workload suggestion: Heavy/)).toBeVisible();
+  await page.getByRole("button", { name: "Apply" }).first().click();
+  await expect(page.getByLabel("Workload")).toHaveValue("heavy");
 });
 
 test("shows all missing shift details and returns focus to the first invalid setup field", async ({ page }) => {

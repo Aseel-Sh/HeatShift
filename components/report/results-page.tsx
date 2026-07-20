@@ -139,6 +139,10 @@ const copy = {
     notes: "Operational notes",
     consequence: "Optimization consequence",
     plannedTimes: "Planned times",
+    generatedWorkTimes: "Generated work times",
+    associatedRecoveryTimes: "Associated recovery times",
+    scheduledDuration: "Scheduled duration",
+    remainingDuration: "Remaining duration",
     unscheduledRemaining: "Not scheduled",
     untimedActivities: "Genuinely untimed activities",
     noRequestedTime: "No requested time",
@@ -157,7 +161,7 @@ const copy = {
     selectionSummary: "HeatShift compared {count} deterministic schedule options and selected the valid option that best preserved required work, dependencies, and requested timing.",
     howSelected: "How this schedule was selected",
     hardViolations: "Hard-constraint violations",
-    invalidSchedule: "No operationally valid schedule can be displayed. Review the plan constraints and recalculate.",
+    invalidSchedule: "Schedule generated with validation warnings. Review these warnings before using the plan.",
     lowRecovery: "0 min because the supervisor-entered Low TWL zone uses continuous-work guidance.",
     noTwlRecovery: "No site TWL: exact recovery cycles were not applied.",
     cycleRecovery: "Recovery blocks reflect the selected site-entered TWL cycle.",
@@ -179,8 +183,8 @@ const copy = {
     forecastContext: "Forecast context",
     technicalSummary: "Deterministic candidate comparison; no global-optimality claim is made.",
     noCapacityChange: "Left unscheduled because no valid capacity remained",
-    timelineView: "Timeline",
-    executionList: "Execution list",
+    timelineView: "Activity schedule",
+    executionList: "Crew sequence",
     requestedView: "Original requested plan view",
     generatedView: "Generated safer schedule view",
     priorityExplanation: "Required-today activities are prioritized before normal activities, but HeatShift will not violate restrictions, recovery rules, fixed timing, or dependencies to force them into the shift.",
@@ -194,6 +198,10 @@ const copy = {
     timeZone: "Operational time zone",
   },
   ar: {
+    generatedWorkTimes: "أوقات العمل المُنشأة",
+    associatedRecoveryTimes: "أوقات التعافي المرتبطة",
+    scheduledDuration: "المدة المجدولة",
+    remainingDuration: "المدة المتبقية",
     title: "الجدول المُنشأ لوردية أكثر أمانًا",
     preliminary: "أولية",
     twlEntered: "نطاق TWL أدخله المشرف",
@@ -300,7 +308,7 @@ const copy = {
     selectionSummary: "قارن HeatShift بين {count} خيارات جدولة حتمية واختار الخيار الصالح الذي حافظ بأفضل شكل على العمل المطلوب والتبعيات والتوقيت المطلوب.",
     howSelected: "كيف تم اختيار هذا الجدول",
     hardViolations: "مخالفات القيود الصلبة",
-    invalidSchedule: "لا يمكن عرض جدول صالح تشغيليًا. راجع قيود الخطة وأعد الحساب.",
+    invalidSchedule: "تم إنشاء الجدول مع تحذيرات تحقق. راجع هذه التحذيرات قبل استخدام الخطة.",
     lowRecovery: "TWL منخفض: إرشاد عمل متواصل؛ لم تُطبق فترات تعافٍ دورية.",
     noTwlRecovery: "لا يوجد TWL من الموقع: لم تُطبق دورات تعافٍ دقيقة.",
     cycleRecovery: "تعكس فترات التعافي دورة TWL التي أدخلها المشرف من الموقع.",
@@ -358,10 +366,6 @@ export function ResultsPage(props: ResultsPageProps) {
   const forecastCategory = result.metrics.peakForecastTemperature === null ? null : classifyForecastTemperature(result.metrics.peakForecastTemperature).category;
   const selectionSummary = t.selectionSummary.replace("{count}", String(result.optimizationSummary.candidatesEvaluated));
 
-  if (result.optimizationSummary.hardConstraintViolations.length > 0) {
-    return <div className="results-report"><div role="alert" className="operational-alert critical"><AlertOctagon aria-hidden="true" /><div><strong>{t.invalidSchedule}</strong><ul>{result.optimizationSummary.hardConstraintViolations.map((violation) => <li key={violation}>{violation.replaceAll("_", " ")}</li>)}</ul></div></div><div className="report-actions"><button className="button-secondary" onClick={props.onEditPlan}>{t.edit}</button><button className="button-secondary" onClick={props.onChangeConditions}>{t.change}</button></div></div>;
-  }
-
   return (
     <div className="results-report">
       <header className="result-status-header">
@@ -377,6 +381,7 @@ export function ResultsPage(props: ResultsPageProps) {
         <div className="result-context"><p><strong>{t.forecastCategory}:</strong> {forecastCategory ? `${displayForecastCategory(forecastCategory, language)} — ${t.forecastContextOnly}` : props.forecastSource === "none" ? t.forecastNone : "—"}</p><p><strong>{t.appliedTwl}:</strong> {displayAppliedTwl(conditions.twlZone, language)}</p><p>{props.planSource === "sample" ? t.sample : props.planSource === "ai" ? t.extracted : t.manual} · {props.forecastSource === "live" ? t.forecastLive : props.forecastSource === "sample" ? t.forecastSample : t.forecastNone}</p></div>
       </header>
 
+      {result.optimizationSummary.hardConstraintViolations.length > 0 && <div role="alert" className="operational-alert warning"><AlertOctagon aria-hidden="true" /><div><strong>{t.invalidSchedule}</strong><ul>{result.optimizationSummary.hardConstraintViolations.map((violation) => <li key={violation}>{violation.replaceAll("_", " ")}</li>)}</ul></div></div>}
       {!result.regulatoryGuidanceAvailable && <div role="status" className="operational-alert warning"><AlertOctagon aria-hidden="true" /><strong>{t.noRegulation}</strong></div>}
       {result.metrics.unscheduledMinutes > 0 && <div role="alert" className="operational-alert critical"><AlertOctagon aria-hidden="true" /><div><strong>{t.capacity}</strong><span>{formatDuration(result.metrics.unscheduledMinutes, language)} · {t.unscheduled}</span></div></div>}
       {requiredWorkIncomplete && <div role="alert" className="operational-alert critical required-incomplete"><AlertOctagon aria-hidden="true" /><strong>{t.requiredIncomplete}</strong></div>}
@@ -402,85 +407,30 @@ export function ResultsPage(props: ResultsPageProps) {
 }
 
 type TimelineScale = "fit" | "hour" | "half-hour";
-type PlanView = "timeline" | "execution";
-type TimelineMode = "requested" | "generated" | "comparison";
+type PlanView = "activity" | "crew";
+type TimelineMode = "requested" | "generated";
 
 function PlanComparison({ plan, result, forecast, originalConflicts, language, selection, onSelect, selectedTask, selectedBlock, restriction }: { plan: ShiftPlan; result: ScheduleResult; forecast: ForecastHour[]; originalConflicts: OriginalPlanConflict[]; language: Language; selection: Selection; onSelect: (selection: Selection) => void; selectedTask?: ScheduleActivity; selectedBlock?: ScheduleBlock; restriction?: ScheduleBlock }) {
   const t = copy[language];
-  const [requestedView, setRequestedView] = useState<PlanView>("timeline");
-  const [generatedView, setGeneratedView] = useState<PlanView>("execution");
-  useEffect(() => {
-    const mobile = window.matchMedia("(max-width: 767px)");
-    const timer = window.setTimeout(() => {
-      if (mobile.matches) {
-        setRequestedView("execution");
-        setGeneratedView("execution");
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
 
   return <section className="timeline-section" aria-labelledby="comparison-title">
     <div className="timeline-heading"><div><p className="eyebrow">{language === "ar" ? "مقارنة الخطتين" : "Plan comparison"}</p><h2 id="comparison-title">{t.requestedPlan} / {t.saferPlan}</h2><span>{t.selectBlock}</span></div>{restriction && <div className="restriction-key"><i />{language === "ar" ? <span>تقييد الشمس المباشرة <bdi dir="ltr">12:00–15:00</bdi></span> : t.restriction}</div>}</div>
     <div className="plan-view-stack print:hidden">
       <section className="plan-view-panel" data-testid="requested-plan-section" aria-labelledby="requested-plan-heading">
-        <header className="plan-view-header"><div><p className="plan-kicker">A</p><h3 id="requested-plan-heading">{t.requestedPlan}</h3></div><ViewSwitch label={t.requestedView} value={requestedView} onChange={setRequestedView} language={language} id="requested" /></header>
-        <div id="requested-timeline-panel" role="tabpanel" aria-labelledby="requested-timeline-tab" hidden={requestedView !== "timeline"}><ShiftBoard mode="requested" plan={plan} result={result} forecast={forecast} originalConflicts={originalConflicts} language={language} selection={selection} onSelect={onSelect} /></div>
-        <div id="requested-execution-panel" role="tabpanel" aria-labelledby="requested-execution-tab" hidden={requestedView !== "execution"}><RequestedExecutionList testId="requested-execution-list" plan={plan} conflicts={originalConflicts} language={language} onSelect={onSelect} /></div>
+        <header className="plan-view-header"><div><p className="plan-kicker">A</p><h3 id="requested-plan-heading">{t.requestedPlan}</h3><span>{language==="ar"?"تسلسل الفريق الأصلي":"Original crew sequence"}</span></div></header>
+        <ShiftBoard mode="requested" view="crew" plan={plan} result={result} forecast={forecast} originalConflicts={originalConflicts} language={language} selection={selection} onSelect={onSelect} />
       </section>
       <section className="plan-view-panel generated-panel" data-testid="generated-plan-section" aria-labelledby="generated-plan-heading">
-        <header className="plan-view-header"><div><p className="plan-kicker">B</p><h3 id="generated-plan-heading">{t.saferPlan}</h3></div><ViewSwitch label={t.generatedView} value={generatedView} onChange={setGeneratedView} language={language} id="generated" /></header>
-        <div id="generated-timeline-panel" role="tabpanel" aria-labelledby="generated-timeline-tab" hidden={generatedView !== "timeline"}><ShiftBoard mode="generated" plan={plan} result={result} forecast={forecast} originalConflicts={originalConflicts} language={language} selection={selection} onSelect={onSelect} /></div>
-        <div id="generated-execution-panel" role="tabpanel" aria-labelledby="generated-execution-tab" hidden={generatedView !== "execution"}><GeneratedExecutionList testId="generated-execution-list" plan={plan} result={result} language={language} onSelect={onSelect} /></div>
+        <header className="plan-view-header"><div><p className="plan-kicker">B</p><h3 id="generated-plan-heading">{t.saferPlan}</h3><span>{language==="ar"?"تسلسل زمني لفريق واحد":"One-crew chronological sequence"}</span></div></header>
+        <ShiftBoard mode="generated" view="crew" plan={plan} result={result} forecast={forecast} originalConflicts={originalConflicts} language={language} selection={selection} onSelect={onSelect} />
       </section>
     </div>
     {(selectedTask || selectedBlock) && <BlockDetails language={language} task={selectedTask} block={selectedBlock} result={result} />}
     <div className="print-comparison" aria-hidden="true">
-      <h3>{t.requestedPlan} — {t.executionList}</h3><RequestedExecutionList plan={plan} conflicts={originalConflicts} language={language} onSelect={onSelect} />
-      <h3>{t.saferPlan} — {t.executionList}</h3><GeneratedExecutionList plan={plan} result={result} language={language} onSelect={onSelect} />
-      <h3>{language === "ar" ? "مقارنة زمنية موجزة" : "Compact timeline comparison"}</h3><ShiftBoard mode="comparison" forceFit plan={plan} result={result} forecast={forecast} originalConflicts={originalConflicts} language={language} selection={null} onSelect={onSelect} />
+      <h3>{t.requestedPlan} — {language === "ar" ? "تسلسل الفريق" : "Crew sequence"}</h3><ShiftBoard mode="requested" view="crew" forceFit plan={plan} result={result} forecast={forecast} originalConflicts={originalConflicts} language={language} selection={null} onSelect={onSelect} />
+      <h3>{t.saferPlan} — {language === "ar" ? "تسلسل الفريق" : "Crew sequence"}</h3><ShiftBoard mode="generated" view="crew" forceFit plan={plan} result={result} forecast={forecast} originalConflicts={originalConflicts} language={language} selection={null} onSelect={onSelect} />
     </div>
   </section>;
-}
-
-function ViewSwitch({ label, value, onChange, language, id }: { label: string; value: PlanView; onChange: (view: PlanView) => void; language: Language; id: "requested" | "generated" }) {
-  const t = copy[language];
-  const options: Array<[PlanView, string]> = [["timeline", t.timelineView], ["execution", t.executionList]];
-  const chooseWithKeyboard = (event: React.KeyboardEvent<HTMLButtonElement>, next: PlanView) => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    event.preventDefault();
-    onChange(next);
-    window.setTimeout(() => document.getElementById(`${id}-${next}-tab`)?.focus(), 0);
-  };
-  return <div className="plan-view-switch" role="tablist" aria-label={label}>{options.map(([option, text], index) => {
-    const selected = value === option;
-    const other = options[index === 0 ? 1 : 0][0];
-    return <button id={`${id}-${option}-tab`} key={option} type="button" role="tab" aria-selected={selected} aria-controls={`${id}-${option}-panel`} tabIndex={selected ? 0 : -1} onKeyDown={(event) => chooseWithKeyboard(event, other)} onClick={() => onChange(option)}>{text}</button>;
-  })}</div>;
-}
-
-function RequestedExecutionList({ testId, plan, conflicts, language, onSelect }: { testId?: string; plan: ShiftPlan; conflicts: OriginalPlanConflict[]; language: Language; onSelect: (selection: Selection) => void }) {
-  const t = copy[language];
-  const ordered = [...plan.tasks].sort((left, right) => (left.requestedStart ?? "99:99").localeCompare(right.requestedStart ?? "99:99"));
-  return <div className="execution-list requested-execution-list" data-testid={testId}><ol>{ordered.map((task) => {
-    const kind = activityType(task);
-    const findings = conflicts.filter((finding) => finding.taskIds.includes(task.id));
-    return <li key={task.id} data-activity-type={kind}><button type="button" onClick={() => onSelect({kind:"requested", id:task.id})}><span className="execution-time" dir="ltr">{task.requestedStart && task.requestedEnd ? `${task.requestedStart}–${task.requestedEnd}` : t.notSpecified}</span><strong>{language === "ar" ? task.nameAr : task.nameEn}</strong></button><dl><div><dt>{t.activityType}</dt><dd>{activityLabel(kind, language)}</dd></div><div><dt>{t.timing}</dt><dd>{timingLabel(task, language)}</dd></div><div><dt>{t.mustStatus}</dt><dd><PriorityBadge required={Boolean(task.mustSchedule)} language={language} /></dd></div><div><dt>{t.originalConflict}</dt><dd>{findings.length ? findings.map((finding) => displayOriginalFinding(finding.code, language).title).join(language === "ar" ? "، " : "; ") : t.noOriginalConflict}</dd></div></dl></li>;
-  })}</ol></div>;
-}
-
-function GeneratedExecutionList({ testId, plan, result, language, onSelect }: { testId?: string; plan: ShiftPlan; result: ScheduleResult; language: Language; onSelect: (selection: Selection) => void }) {
-  const t = copy[language];
-  const blocks = [...result.blocks.filter((block) => block.type !== "restriction"), ...idleBlocks(plan, result)].sort((left, right) => toMinutes(left.start) - toMinutes(right.start));
-  return <div className="execution-list generated-execution-list" data-testid={testId}><ol>{blocks.map((block) => {
-    const idle = block.id.startsWith("idle-");
-    const task = block.taskId ? plan.tasks.find((candidate) => candidate.id === block.taskId) : undefined;
-    const type = idle ? "idle" : block.type;
-    const dependencyNames = task?.predecessorTaskIds?.map((id) => plan.tasks.find((candidate) => candidate.id === id)).filter((candidate): candidate is ScheduleActivity => Boolean(candidate)).map((candidate) => language === "ar" ? candidate.nameAr : candidate.nameEn) ?? [];
-    const differs = task?.requestedStart && task.requestedEnd ? block.start !== task.requestedStart || block.end !== task.requestedEnd : false;
-    const why = idle ? (language === "ar" ? "سعة فريق متاحة داخل الوردية." : "Available crew capacity within the shift.") : block.type === "work" && task ? movementExplanation(task, [block], undefined, language) : displayReason(block.reasonCodes[0], language);
-    return <li key={block.id} data-block-type={type}><button type="button" onClick={() => onSelect({kind:"scheduled", id:block.id})}><span className="execution-time" dir="ltr">{block.start}–{block.end}</span><strong>{idle ? t.idle : language === "ar" ? block.labelAr : block.labelEn}</strong></button><dl><div><dt>{t.activityType}</dt><dd>{type === "idle" ? t.idle : activityLabel(block.type, language)}</dd></div>{block.workload && <div><dt>{t.workload}</dt><dd>{displayWorkload(block.workload, language)}</dd></div>}{block.environment && <div><dt>{t.environment}</dt><dd>{displayEnvironment(block.environment, language)}</dd></div>}<div><dt>{t.mustStatus}</dt><dd><PriorityBadge required={Boolean(task?.mustSchedule)} language={language} /></dd></div><div><dt>{t.reason}</dt><dd>{why}</dd></div><div><dt>{t.dependency}</dt><dd>{dependencyNames.length ? `${language === "ar" ? "بعد" : "After"} ${dependencyNames.join(language === "ar" ? "، " : ", ")}` : t.noDependency}</dd></div><div><dt>{t.changeSummary}</dt><dd>{differs ? t.differs : task ? t.retained : "—"}</dd></div></dl></li>;
-  })}</ol>{result.unscheduled.length > 0 && <UnscheduledWork plan={plan} result={result} language={language} onSelect={onSelect} />}</div>;
 }
 
 function PriorityBadge({ required, language }: { required: boolean; language: Language }) {
@@ -493,85 +443,41 @@ function activityLabel(type: ScheduleBlock["type"] | "idle", language: Language)
   return type === "rest" ? t.rest : type === "break" ? t.breakActivity : type === "meal" ? t.meal : type === "idle" ? t.idle : t.work;
 }
 
-function timingLabel(task: ScheduleActivity, language: Language): string {
-  const t = copy[language];
-  return task.timingPreference === "fixed" ? t.fixed : task.timingPreference === "preferred" ? t.preferred : t.flexible;
+function ShiftBoard({ mode, view, forceFit = false, plan, result, forecast, originalConflicts, language, selection, onSelect }: { mode: TimelineMode; view:PlanView; forceFit?: boolean; plan: ShiftPlan; result: ScheduleResult; forecast: ForecastHour[]; originalConflicts: OriginalPlanConflict[]; language: Language; selection: Selection; onSelect: (selection: Selection) => void }) {
+  const t=copy[language];const start=toMinutes(plan.shiftStart);const end=toMinutes(plan.shiftEnd);const duration=end-start;
+  const [scale,setScale]=useState<TimelineScale>(forceFit?"fit":"hour");const scrollRegion=useRef<HTMLDivElement>(null);
+  useEffect(()=>{scrollRegion.current?.scrollTo({left:0});},[language,scale]);
+  const restriction=result.blocks.find(block=>block.type==="restriction");
+  const linkedTaskId=selection?.kind==="requested"?selection.id:selection?.kind==="scheduled"?result.blocks.find(block=>block.id===selection.id)?.taskId:undefined;
+  const generatedBlocks=result.blocks.filter(block=>block.type!=="restriction");const gaps=idleBlocks(plan,result);const chronologicalBlocks=[...generatedBlocks,...gaps].sort((a,b)=>toMinutes(a.start)-toMinutes(b.start));
+  const heatPoints=forecastRibbonPoints(forecast,plan.shiftStart,plan.shiftEnd);const ticks:number[]=[];const tickStep=scale==="half-hour"?30:60;for(let minute=start;minute<=end;minute+=tickStep)ticks.push(minute);if(ticks.at(-1)!==end)ticks.push(end);
+  const styleFor=(from:string,to:string)=>{const boundedStart=Math.max(start,toMinutes(from));const boundedEnd=Math.min(end,toMinutes(to));return{left:`${((boundedStart-start)/duration)*100}%`,width:`${Math.max(0,((boundedEnd-boundedStart)/duration)*100)}%`};};
+  const hours=duration/60;const plotWidth=scale==="fit"?"calc(100% - 220px)":`${Math.ceil(hours*(scale==="hour"?140:260))}px`;const conflicts=new Set(originalConflicts.filter(finding=>finding.severity!=="info").flatMap(finding=>finding.taskIds));
+  const typeLabel=(block:ScheduleBlock)=>block.id.startsWith("idle-")?t.idle:block.type==="rest"?t.rest:block.type==="break"?t.breakActivity:block.type==="meal"?t.meal:t.work;const typeCode=(block:ScheduleBlock)=>block.id.startsWith("idle-")?"··":block.type==="rest"?"↻":block.type==="break"?"Ⅱ":block.type==="meal"?"◇":"●";
+  const categoryLabel=(category:"low"|"intermediate"|"high"|"high_risk")=>category==="low"?t.lower:category==="intermediate"?t.intermediate:category==="high"?t.high:t.highRisk;
+  const boardId=forceFit?`print-${mode}-activity-board`:`${mode}-${view}-board`;
+  return <>{!forceFit&&<div className="timeline-scale-row print:hidden"><div className="timeline-controls" role="group" aria-label={t.zoom}>{([['fit',t.fitShift],['hour',t.oneHour],['half-hour',t.thirtyMinutes]] as const).map(([value,label])=><button key={value} type="button" aria-pressed={scale===value} onClick={()=>setScale(value)}>{label}</button>)}</div><p className="timeline-scale-help">{t.scaleHelp}</p></div>}{!forceFit&&<p className="timeline-scroll-hint print:hidden">↔ {t.scrollHint}</p>}<p className="sr-only">{t.restrictionA11y}</p><div ref={scrollRegion} className="shift-board-scroll" role="region" aria-label={`${mode==="requested"?t.requestedPlan:t.saferPlan} — ${view==="activity"?(language==="ar"?"جدول الأنشطة":"Activity schedule"):(language==="ar"?"تسلسل الفريق":"Crew sequence")}`} tabIndex={0}><div className={`shift-board scale-${scale}`} dir="ltr" data-testid={boardId} style={{"--timeline-width":plotWidth} as React.CSSProperties}><div className="board-ruler-label"/><div className="time-ruler"><div className="timeline-canvas">{ticks.map(minute=><time key={minute} style={{left:`${((minute-start)/duration)*100}%`}}>{String(Math.floor(minute/60)).padStart(2,"0")}:{String(minute%60).padStart(2,"0")}</time>)}{restriction&&<span className="restriction-top-label" style={styleFor(restriction.start,restriction.end)}>{restriction.start}–{restriction.end}</span>}</div></div>
+  {mode==="requested"&&view==="activity"&&<><div className="lane-label section-label" dir={language==="ar"?"rtl":"ltr"}><strong>{t.requestedPlan}</strong><span>{language==="ar"?"صف واحد لكل نشاط":"One row per activity"}</span></div><div className="section-spacer"/>{plan.tasks.map(task=><RequestedRow key={task.id} task={task} language={language} conflict={conflicts.has(task.id)} selected={linkedTaskId===task.id} onSelect={()=>onSelect({kind:"requested",id:task.id})} ticks={ticks} start={start} duration={duration} restriction={restriction} styleFor={styleFor} testHooks={!forceFit}/>)}</>}
+  {mode==="generated"&&view==="activity"&&<><div className="lane-label section-label" dir={language==="ar"?"rtl":"ltr"}><strong>{t.saferPlan}</strong><span>{language==="ar"?"صف مطابق لكل نشاط أصلي":"Matching row for every original activity"}</span></div><div className="section-spacer"/>{plan.tasks.map(task=><GeneratedActivityRow key={task.id} task={task} result={result} language={language} selected={linkedTaskId===task.id} onSelect={onSelect} ticks={ticks} start={start} duration={duration} restriction={restriction} styleFor={styleFor}/>) }<SystemRow label={t.rest} testId="crew-recovery-row" blocks={generatedBlocks.filter(block=>block.type==="rest")} language={language} selection={selection} onSelect={onSelect} ticks={ticks} start={start} duration={duration} restriction={restriction} styleFor={styleFor}/>{gaps.length>0&&<SystemRow label={t.idle} testId="idle-capacity-row" blocks={gaps} language={language} selection={selection} onSelect={onSelect} ticks={ticks} start={start} duration={duration} restriction={restriction} styleFor={styleFor}/>}</>}
+  {mode==="requested"&&view==="crew"&&<RequestedCrewSequence plan={plan} language={language} selection={selection} linkedTaskId={linkedTaskId} conflicts={conflicts} onSelect={onSelect} ticks={ticks} start={start} duration={duration} restriction={restriction} styleFor={styleFor}/>}
+  {mode==="generated"&&view==="crew"&&<><div className="lane-label section-label" dir={language==="ar"?"rtl":"ltr"}><strong>{t.saferPlan}</strong><span>{language==="ar"?"تسلسل زمني لفريق واحد":"One-crew chronological sequence"}</span></div><div className="section-spacer"/><div className="lane-label compact-label" dir={language==="ar"?"rtl":"ltr"}><strong>{language==="ar"?"تسلسل الفريق":"Crew sequence"}</strong></div><div className="timeline-plot safer-plot"><div className="timeline-canvas"><GridLines ticks={ticks} start={start} duration={duration}/>{restriction&&<RestrictionBand style={styleFor(restriction.start,restriction.end)}/>} {chronologicalBlocks.map(block=>{const idle=block.id.startsWith("idle-");const selected=Boolean(linkedTaskId&&block.taskId===linkedTaskId)||(selection?.kind==="scheduled"&&selection.id===block.id);return <button key={block.id} data-block-type={forceFit?undefined:idle?"idle":block.type} data-start={forceFit?undefined:block.start} data-end={forceFit?undefined:block.end} data-task-id={forceFit?undefined:block.taskId} className={`scheduled-block ${idle?"idle":block.type} ${block.environment==="conditioned_indoor"?"indoor":""} ${selected?"selected linked":""}`} style={styleFor(block.start,block.end)} onClick={()=>onSelect({kind:"scheduled",id:block.id})} aria-label={`${typeLabel(block)}: ${language==="ar"?block.labelAr:block.labelEn}, ${block.start}–${block.end}`}><b aria-hidden="true">{typeCode(block)}</b><span>{idle?t.idle:block.type==="rest"?t.rest:language==="ar"?block.labelAr:block.labelEn}</span><time>{block.start}–{block.end}</time></button>})}</div></div><div className="lane-label compact-label heat-label" dir={language==="ar"?"rtl":"ltr"}><strong>{t.forecastContext}</strong><span>{language==="ar"?"توقع نموذجي أولي":"Preliminary model forecast"}</span></div><div className="heat-ribbon" data-testid={forceFit?"print-heat-ribbon":"heat-ribbon"} role="img" aria-label={`${t.heat}. ${heatPoints.map(point=>`${point.time}: ${point.temperature}°C, ${categoryLabel(point.category)}`).join("; ")}`}><div className="timeline-canvas">{heatPoints.map((point,index)=>{const from=timeToMinutes(point.time)<start?plan.shiftStart:point.time;const to=heatPoints[index+1]?.time??plan.shiftEnd;return <div key={`${point.time}-${index}`} className={`heat-period heat-${point.category}`} style={styleFor(from,to)} title={`${point.time} · ${point.temperature}°C · ${t.apparent} ${point.apparentTemperature}°C · ${categoryLabel(point.category)}`}><strong>{point.temperature}°</strong><span>{categoryLabel(point.category)}</span></div>})}</div></div></>}
+  </div></div>{mode==="generated"&&result.unscheduled.length>0&&<UnscheduledWork plan={plan} result={result} language={language} onSelect={onSelect}/>}<TimelineLegend blocks={mode==="generated"?chronologicalBlocks:[]} heatCategories={mode==="generated"&&view==="crew"?new Set(heatPoints.map(point=>point.category)):new Set()} hasUnscheduled={mode==="generated"&&result.unscheduled.length>0} hasRestriction={Boolean(restriction)} language={language}/></>;
 }
 
-function ShiftBoard({ mode, forceFit = false, plan, result, forecast, originalConflicts, language, selection, onSelect }: { mode: TimelineMode; forceFit?: boolean; plan: ShiftPlan; result: ScheduleResult; forecast: ForecastHour[]; originalConflicts: OriginalPlanConflict[]; language: Language; selection: Selection; onSelect: (selection: Selection) => void }) {
-  const t = copy[language];
-  const showRequested = mode === "requested" || mode === "comparison";
-  const showGenerated = mode === "generated" || mode === "comparison";
-  const start = toMinutes(plan.shiftStart);
-  const end = toMinutes(plan.shiftEnd);
-  const duration = end - start;
-  const [scale, setScale] = useState<TimelineScale>(forceFit ? "fit" : "hour");
-  const scrollRegion = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
-    const applyMobileDefault = () => { if (!forceFit && media.matches) setScale((current) => current === "hour" ? "fit" : current); };
-    const timer = window.setTimeout(applyMobileDefault, 0);
-    return () => window.clearTimeout(timer);
-  }, [forceFit]);
-  useEffect(() => { scrollRegion.current?.scrollTo({ left: 0 }); }, [language, scale]);
-  const timedTasks = plan.tasks.filter((task) => task.requestedStart && task.requestedEnd);
-  const untimedTasks = plan.tasks.filter((task) => !task.requestedStart || !task.requestedEnd);
-  const restriction = result.blocks.find((block) => block.type === "restriction");
-  const linkedTaskId = selection?.kind === "requested"
-    ? selection.id
-    : selection?.kind === "scheduled"
-      ? result.blocks.find((block) => block.id === selection.id)?.taskId
-      : undefined;
-  const chronologicalBlocks = [...result.blocks.filter((block) => block.type !== "restriction"), ...idleBlocks(plan, result)]
-    .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
-  const heatPoints = forecastRibbonPoints(forecast, plan.shiftStart, plan.shiftEnd);
-  const ticks: number[] = [];
-  const tickStep = scale === "half-hour" ? 30 : 60;
-  for (let minute = start; minute <= end; minute += tickStep) ticks.push(minute);
-  if (ticks.at(-1) !== end) ticks.push(end);
-  const styleFor = (from: string, to: string) => {
-    const boundedStart = Math.max(start, toMinutes(from));
-    const boundedEnd = Math.min(end, toMinutes(to));
-    return { left: `${((boundedStart - start) / duration) * 100}%`, width: `${Math.max(0, ((boundedEnd - boundedStart) / duration) * 100)}%` };
-  };
-  const hours = duration / 60;
-  const plotWidth = scale === "fit" ? "calc(100% - 220px)" : `${Math.ceil(hours * (scale === "hour" ? 140 : 260))}px`;
-  const conflictTaskIds = new Set(originalConflicts.filter((finding) => finding.severity !== "info").flatMap((finding) => finding.taskIds));
-  const blockTypeLabel=(type:ScheduleBlock["type"])=>type==="rest"?t.rest:type==="break"?t.breakActivity:type==="meal"?t.meal:t.work;
-  const typeCode = (block: ScheduleBlock) => block.id.startsWith("idle-") ? "··" : block.type === "rest" ? "↻" : block.type === "break" ? "Ⅱ" : block.type === "meal" ? "◇" : "●";
-  const categoryLabel = (category: "low" | "intermediate" | "high" | "high_risk") => category === "low" ? t.lower : category === "intermediate" ? t.intermediate : category === "high" ? t.high : t.highRisk;
-  return (
-    <>
-      {!forceFit && <div className="timeline-scale-row print:hidden">
-        <div className="timeline-controls" role="group" aria-label={t.zoom}>
-          {([['fit', t.fitShift], ['hour', t.oneHour], ['half-hour', t.thirtyMinutes]] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={scale === value} onClick={() => setScale(value)}>{label}</button>)}
-        </div>
-        <p className="timeline-scale-help">{t.scaleHelp}</p>
-      </div>}
-      {!forceFit && <p className="timeline-scroll-hint print:hidden">↔ {t.scrollHint}</p>}
-      <p className="sr-only">{t.restrictionA11y}</p>
-      <div ref={scrollRegion} className="shift-board-scroll" role="region" aria-label={mode === "requested" ? t.requestedPlan : mode === "generated" ? t.saferPlan : `${t.requestedPlan} / ${t.saferPlan}`} tabIndex={0}>
-      <div className={`shift-board scale-${scale}`} dir="ltr" data-testid={forceFit ? "print-shift-board" : mode === "requested" ? "requested-shift-board" : "shift-board"} style={{ "--timeline-width": plotWidth } as React.CSSProperties}>
-        <div className="board-ruler-label" />
-        <div className="time-ruler"><div className="timeline-canvas">{ticks.map((minute) => <time key={minute} style={{ left: `${((minute - start) / duration) * 100}%` }}>{String(Math.floor(minute / 60)).padStart(2, "0")}:{String(minute % 60).padStart(2, "0")}</time>)}{restriction && <span className="restriction-top-label" style={styleFor(restriction.start, restriction.end)}>{restriction.start}–{restriction.end}</span>}</div></div>
-        {showRequested && <><div className="lane-label section-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.requestedPlan}</strong><span>{timedTasks.length} {language === "ar" ? "أنشطة مؤقتة" : "timed activities"}</span></div><div className="section-spacer" />
-        {timedTasks.map((task) => <RequestedRow key={task.id} task={task} language={language} conflict={conflictTaskIds.has(task.id)} selected={linkedTaskId === task.id} onSelect={() => onSelect({ kind: "requested", id: task.id })} ticks={ticks} start={start} duration={duration} restriction={restriction} styleFor={styleFor} testHooks={!forceFit} />)}
-        {untimedTasks.length > 0 && <><div className="lane-label capacity-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.noRequestedTime}</strong></div><div className="capacity-lane">{untimedTasks.map((task) => <button type="button" key={task.id} onClick={() => onSelect({ kind: "requested", id: task.id })}>{language === "ar" ? task.nameAr : task.nameEn} · {t.notSpecified} · {formatDuration(task.durationMinutes, language)}</button>)}</div></>}</>}
-        {showGenerated && <><div className="lane-label section-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.saferPlan}</strong><span>{language === "ar" ? "مسار تنفيذ لفريق واحد" : "One-crew execution lane"}</span></div><div className="section-spacer" />
-        <div className="lane-label compact-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{language === "ar" ? "التسلسل الزمني" : "Chronological execution"}</strong></div>
-        <div className="timeline-plot safer-plot">
-          <div className="timeline-canvas"><GridLines ticks={ticks} start={start} duration={duration} />
-          {restriction && <RestrictionBand style={styleFor(restriction.start, restriction.end)} />}
-          {chronologicalBlocks.map((block) => { const idle = block.id.startsWith("idle-"); const selected = Boolean(linkedTaskId && block.taskId === linkedTaskId) || selection?.kind === "scheduled" && selection.id === block.id; return <button key={block.id} data-block-type={forceFit ? undefined : idle ? "idle" : block.type} data-start={forceFit ? undefined : block.start} data-end={forceFit ? undefined : block.end} data-task-id={forceFit ? undefined : block.taskId} className={`scheduled-block ${idle ? "idle" : block.type} ${block.environment === "conditioned_indoor" ? "indoor" : ""} ${selected ? "selected linked" : ""}`} style={styleFor(block.start, block.end)} onClick={() => onSelect({ kind: "scheduled", id: block.id })} aria-label={`${idle ? t.idle : blockTypeLabel(block.type)}: ${language === "ar" ? block.labelAr : block.labelEn}, ${block.start}–${block.end}`} title={`${language === "ar" ? block.labelAr : block.labelEn} · ${block.start}–${block.end}`}><b aria-hidden="true">{typeCode(block)}</b><span>{idle ? t.idle : block.type === "rest" ? t.rest : language === "ar" ? block.labelAr : block.labelEn}</span><time>{block.start}–{block.end}</time></button>})}</div>
-        </div>
-        <div className="lane-label compact-label heat-label" dir={language === "ar" ? "rtl" : "ltr"}><strong>{t.forecastContext}</strong><span>{language === "ar" ? "توقع نموذجي أولي" : "Preliminary model forecast"}</span></div>
-        <div className="heat-ribbon" data-testid={forceFit ? "print-heat-ribbon" : "heat-ribbon"} role="img" aria-label={`${t.heat}. ${heatPoints.map((point) => `${point.time}: ${point.temperature}°C, ${categoryLabel(point.category)}`).join("; ")}`}><div className="timeline-canvas">{heatPoints.map((point, index) => { const from = timeToMinutes(point.time) < start ? plan.shiftStart : point.time; const to = heatPoints[index + 1]?.time ?? plan.shiftEnd; return <div key={`${point.time}-${index}`} className={`heat-period heat-${point.category}`} style={styleFor(from, to)} title={`${point.time} · ${point.temperature}°C · ${t.apparent} ${point.apparentTemperature}°C · ${categoryLabel(point.category)}`}><strong>{point.temperature}°</strong><span>{categoryLabel(point.category)}</span></div>})}</div></div></>}
-      </div>
-    </div>
-    {showGenerated && result.unscheduled.length > 0 && <UnscheduledWork plan={plan} result={result} language={language} onSelect={onSelect} />}
-    <TimelineLegend blocks={showGenerated ? chronologicalBlocks : []} heatCategories={showGenerated ? new Set(heatPoints.map((point) => point.category)) : new Set()} hasUnscheduled={showGenerated && result.unscheduled.length > 0} hasRestriction={Boolean(restriction)} language={language} />
-    </>
-  );
+type TimelineLayoutProps={ticks:number[];start:number;duration:number;restriction?:ScheduleBlock;styleFor:(from:string,to:string)=>React.CSSProperties};
+
+function GeneratedActivityRow({task,result,language,selected,onSelect,ticks,start,duration,restriction,styleFor}:{task:ScheduleActivity;result:ScheduleResult;language:Language;selected:boolean;onSelect:(selection:Selection)=>void}&TimelineLayoutProps){
+  const t=copy[language];const kind=activityType(task);const blocks=result.blocks.filter(block=>block.taskId===task.id&&block.type===kind);const scheduled=blocks.reduce((sum,block)=>sum+toMinutes(block.end)-toMinutes(block.start),0);const unscheduled=result.unscheduled.find(item=>item.taskId===task.id);const remaining=unscheduled?.unscheduledMinutes??Math.max(0,task.durationMinutes-scheduled);const dependencyBlocked=unscheduled?.reasonCode.includes("DEPENDENCY");const status=remaining===0?(language==="ar"?"مجدول":"Scheduled"):scheduled===0?t.notScheduled:(language==="ar"?"مجدول جزئيًا":"Partially scheduled");
+  return <><div className={`requested-row-label generated-row-label ${selected?"selected":""}`} data-generated-task-row={task.id} dir={language==="ar"?"rtl":"ltr"}><strong>{language==="ar"?task.nameAr:task.nameEn}</strong><span>{activityLabel(kind,language)} · {task.mustSchedule?t.required:t.normal} · {status}</span><span dir="ltr">{task.requestedStart&&task.requestedEnd?`${task.requestedStart}–${task.requestedEnd}`:t.notSpecified}</span><small>{t.scheduled}: {formatDuration(scheduled,language)} · {t.remaining}: {formatDuration(remaining,language)}{dependencyBlocked?` · ${language==="ar"?"محجوب بالتبعية":"Dependency blocked"}`:""}{unscheduled?` · ${displayUnscheduledReason(unscheduled.reasonCode,language)}`:""}</small></div><div className="timeline-plot requested-row-plot"><div className="timeline-canvas"><GridLines ticks={ticks} start={start} duration={duration}/>{restriction&&<RestrictionBand style={styleFor(restriction.start,restriction.end)}/>} {blocks.map(block=><button key={block.id} type="button" data-task-id={task.id} data-block-type={block.type} data-start={block.start} data-end={block.end} className={`scheduled-block generated-activity-block ${block.environment==="conditioned_indoor"?"indoor":""} ${selected?"selected linked":""}`} style={styleFor(block.start,block.end)} onClick={()=>onSelect({kind:"scheduled",id:block.id})} aria-label={`${language==="ar"?task.nameAr:task.nameEn}, ${block.start}–${block.end}`}><b aria-hidden="true">{kind==="work"?"W":kind==="break"?"B":"M"}</b><span>{language==="ar"?task.nameAr:task.nameEn}</span><time>{block.start}–{block.end}</time></button>)}{blocks.length===0&&<button type="button" className="unscheduled-row-control" onClick={()=>onSelect({kind:"requested",id:task.id})}>{t.notScheduled} · {formatDuration(remaining,language)}{unscheduled?` · ${displayUnscheduledReason(unscheduled.reasonCode,language)}`:""}</button>}</div></div></>;
+}
+
+function SystemRow({label,testId,blocks,language,selection,onSelect,ticks,start,duration,restriction,styleFor}:{label:string;testId:string;blocks:ScheduleBlock[];language:Language;selection:Selection;onSelect:(selection:Selection)=>void}&TimelineLayoutProps){
+  return <><div className="requested-row-label system-row-label" data-testid={testId} dir={language==="ar"?"rtl":"ltr"}><strong>{label}</strong><span>{blocks.length} {language==="ar"?"فترات":"intervals"}</span></div><div className="timeline-plot requested-row-plot"><div className="timeline-canvas"><GridLines ticks={ticks} start={start} duration={duration}/>{restriction&&<RestrictionBand style={styleFor(restriction.start,restriction.end)}/>} {blocks.map(block=>{const idle=block.id.startsWith("idle-");return <button key={block.id} type="button" data-block-type={idle?"idle":"rest"} className={`scheduled-block ${idle?"idle":"rest"} ${selection?.kind==="scheduled"&&selection.id===block.id?"selected":""}`} style={styleFor(block.start,block.end)} onClick={()=>onSelect({kind:"scheduled",id:block.id})} aria-label={`${label}, ${block.start}–${block.end}`}><b aria-hidden="true">{idle?"··":"↻"}</b><span>{label}</span><time>{block.start}–{block.end}</time></button>})}</div></div></>;
+}
+
+function RequestedCrewSequence({plan,language,selection,linkedTaskId,conflicts,onSelect,ticks,start,duration,restriction,styleFor}:{plan:ShiftPlan;language:Language;selection:Selection;linkedTaskId?:string;conflicts:Set<string>;onSelect:(selection:Selection)=>void}&TimelineLayoutProps){
+  const t=copy[language];const timed=plan.tasks.filter(task=>task.requestedStart&&task.requestedEnd).map((task,index)=>({task,index,start:toMinutes(task.requestedStart!),end:toMinutes(task.requestedEnd!)})).sort((a,b)=>a.start-b.start||a.index-b.index);const trackEnds:number[]=[];const placed=timed.map(item=>{let track=trackEnds.findIndex(end=>end<=item.start);if(track<0){track=trackEnds.length;trackEnds.push(item.end);}else trackEnds[track]=item.end;const overlap=timed.some(other=>other.task.id!==item.task.id&&other.start<item.end&&other.end>item.start);return{...item,track,overlap};});const height=Math.max(64,trackEnds.length*54+14);const untimed=plan.tasks.filter(task=>!task.requestedStart||!task.requestedEnd);
+  return <><div className="lane-label section-label" dir={language==="ar"?"rtl":"ltr"}><strong>{t.requestedPlan}</strong><span>{language==="ar"?"تسلسل الفريق الأصلي":"Original crew sequence"}</span></div><div className="section-spacer"/><div className="lane-label compact-label" style={{height}} dir={language==="ar"?"rtl":"ltr"}><strong>{language==="ar"?"تسلسل الفريق":"Crew sequence"}</strong><span>{placed.some(item=>item.overlap)?language==="ar"?"توجد أنشطة متداخلة":"Overlapping activities are stacked":""}</span></div><div className="timeline-plot crew-sequence-plot" style={{height}}><div className="timeline-canvas"><GridLines ticks={ticks} start={start} duration={duration}/>{restriction&&<RestrictionBand style={styleFor(restriction.start,restriction.end)}/>} {placed.map(({task,track,overlap})=>{const kind=activityType(task);const selected=linkedTaskId===task.id||selection?.kind==="requested"&&selection.id===task.id;return <button key={task.id} type="button" data-requested-id={task.id} className={`requested-block crew-requested-block ${overlap||conflicts.has(task.id)?"has-conflict":""} ${selected?"selected":""}`} style={{...styleFor(task.requestedStart!,task.requestedEnd!),top:7+track*54}} onClick={()=>onSelect({kind:"requested",id:task.id})} aria-label={`${language==="ar"?task.nameAr:task.nameEn}, ${task.requestedStart}–${task.requestedEnd}${overlap?`, ${language==="ar"?"متداخل":"overlap"}`:""}`}><b aria-hidden="true">{kind==="work"?"W":kind==="break"?"B":"M"}</b><span>{language==="ar"?task.nameAr:task.nameEn}</span><time>{task.requestedStart}–{task.requestedEnd}</time>{overlap&&<i aria-label={language==="ar"?"تداخل":"Overlap"}>!</i>}</button>})}</div></div>{untimed.length>0&&<><div className="lane-label capacity-label" dir={language==="ar"?"rtl":"ltr"}><strong>{t.noRequestedTime}</strong></div><div className="capacity-lane">{untimed.map(task=><button type="button" key={task.id} onClick={()=>onSelect({kind:"requested",id:task.id})}>{language==="ar"?task.nameAr:task.nameEn} · {t.notSpecified}</button>)}</div></>}</>;
 }
 
 function UnscheduledWork({ plan, result, language, onSelect }: { plan: ShiftPlan; result: ScheduleResult; language: Language; onSelect: (selection: Selection) => void }) {
@@ -600,7 +506,8 @@ function RequestedRow({ task, language, conflict, selected, onSelect, ticks, sta
   const t = copy[language];
   const kind = activityType(task);
   const timing = task.timingPreference ?? "flexible";
-  return <><div className={`requested-row-label ${selected ? "selected" : ""}`} dir={language === "ar" ? "rtl" : "ltr"}><strong>{language === "ar" ? task.nameAr : task.nameEn}</strong><span>{kind === "work" ? t.work : kind === "break" ? t.breakActivity : t.meal} · {formatDuration(task.durationMinutes, language)}</span><span dir="ltr">{task.requestedStart}–{task.requestedEnd}</span><small>{timing === "fixed" ? t.fixed : timing === "preferred" ? t.preferred : t.flexible} · {task.mustSchedule ? t.required : t.normal}{conflict ? ` · ! ${t.warning}` : ""}</small></div><div className="timeline-plot requested-row-plot"><div className="timeline-canvas"><GridLines ticks={ticks} start={start} duration={duration} />{restriction && <RestrictionBand style={styleFor(restriction.start, restriction.end)} />}<button type="button" data-requested-id={testHooks ? task.id : undefined} className={`requested-block ${conflict ? "has-conflict" : ""} ${selected ? "selected" : ""}`} style={styleFor(task.requestedStart!, task.requestedEnd!)} onClick={onSelect} aria-pressed={selected} aria-label={`${language === "ar" ? task.nameAr : task.nameEn}, ${task.requestedStart}–${task.requestedEnd}, ${formatDuration(task.durationMinutes, language)}, ${task.mustSchedule ? t.required : t.normal}`}><b aria-hidden="true">{kind === "work" ? "W" : kind === "break" ? "B" : "M"}</b><span>{language === "ar" ? task.nameAr : task.nameEn}</span><time>{task.requestedStart}–{task.requestedEnd}</time>{conflict && <i aria-label={language === "ar" ? "تعارض" : "Conflict"}>!</i>}</button></div></div></>;
+  const timed=Boolean(task.requestedStart&&task.requestedEnd);
+  return <><div className={`requested-row-label ${selected ? "selected" : ""}`} data-requested-task-row={task.id} dir={language === "ar" ? "rtl" : "ltr"}><strong>{language === "ar" ? task.nameAr : task.nameEn}</strong><span>{kind === "work" ? t.work : kind === "break" ? t.breakActivity : t.meal} · {formatDuration(task.durationMinutes, language)}</span><span dir="ltr">{timed?`${task.requestedStart}–${task.requestedEnd}`:t.notSpecified}</span><small>{timing === "fixed" ? t.fixed : timing === "preferred" ? t.preferred : t.flexible} · {task.mustSchedule ? t.required : t.normal}{conflict ? ` · ! ${t.warning}` : ""}</small></div><div className="timeline-plot requested-row-plot"><div className="timeline-canvas"><GridLines ticks={ticks} start={start} duration={duration} />{restriction && <RestrictionBand style={styleFor(restriction.start, restriction.end)} />}{timed?<button type="button" data-requested-id={testHooks ? task.id : undefined} className={`requested-block ${conflict ? "has-conflict" : ""} ${selected ? "selected" : ""}`} style={styleFor(task.requestedStart!, task.requestedEnd!)} onClick={onSelect} aria-pressed={selected} aria-label={`${language === "ar" ? task.nameAr : task.nameEn}, ${task.requestedStart}–${task.requestedEnd}, ${formatDuration(task.durationMinutes, language)}, ${task.mustSchedule ? t.required : t.normal}`}><b aria-hidden="true">{kind === "work" ? "W" : kind === "break" ? "B" : "M"}</b><span>{language === "ar" ? task.nameAr : task.nameEn}</span><time>{task.requestedStart}–{task.requestedEnd}</time>{conflict && <i aria-label={language === "ar" ? "تعارض" : "Conflict"}>!</i>}</button>:<button type="button" className="untimed-row-control" onClick={onSelect}>{t.notSpecified}</button>}</div></div></>;
 }
 
 function GridLines({ ticks, start, duration }: { ticks: number[]; start: number; duration: number }) {
@@ -615,13 +522,17 @@ function BlockDetails({ language, task, block, result }: { language: Language; t
   const t = copy[language];
   const original = task?.requestedStart && task.requestedEnd ? `${task.requestedStart}–${task.requestedEnd}` : t.notSpecified;
   const linked = task ? associatedBlocks(result, task.id) : block ? [block] : [];
-  const planned = linked.map((item) => `${item.start}–${item.end}`);
+  const generatedActivity = linked.filter((item) => item.type !== "rest");
+  const recovery = linked.filter((item) => item.type === "rest");
   const unscheduled = task ? result.unscheduled.find((item) => item.taskId === task.id) : undefined;
+  const scheduledMinutes=generatedActivity.reduce((sum,item)=>sum+toMinutes(item.end)-toMinutes(item.start),0);
+  const remainingMinutes=unscheduled?.unscheduledMinutes??(task?Math.max(0,task.durationMinutes-scheduledMinutes):0);
   const sourceIds = new Set<string>();
   for (const item of linked) { if (item.reasonCodes.some((code) => code.includes("MIDDAY"))) sourceIds.add(SOURCE_IDS.middayRestriction); if (item.reasonCodes.some((code) => code.startsWith("TWL_"))) sourceIds.add(SOURCE_IDS.twlGuidance); }
   const consequence = movementExplanation(task, linked, unscheduled?.unscheduledMinutes, language);
   const kind = task ? activityType(task) : block?.type;
-  return <aside className="block-drawer" aria-live="polite"><div><p className="eyebrow">{t.blockDetails}</p><h3>{task ? (language === "ar" ? task.nameAr : task.nameEn) : block ? (language === "ar" ? block.labelAr : block.labelEn) : ""}</h3></div><dl><div><dt>{t.activityType}</dt><dd>{kind === "work" ? t.work : kind === "break" ? t.breakActivity : kind === "meal" ? t.meal : kind === "rest" ? t.rest : t.idle}</dd></div><div><dt>{t.originalTime}</dt><dd dir="ltr">{original}</dd></div><div><dt>{t.plannedTimes}</dt><dd dir="ltr">{planned.length ? planned.join(", ") : unscheduled ? `${t.unscheduledRemaining} — ${formatDuration(unscheduled.unscheduledMinutes, language)} ${language === "ar" ? "متبقية" : "remain"}.` : "—"}</dd></div>{task && <><div><dt>{t.duration}</dt><dd>{formatDuration(task.durationMinutes, language)}</dd></div><div><dt>{t.timing}</dt><dd>{task.timingPreference === "fixed" ? t.fixed : task.timingPreference === "preferred" ? t.preferred : t.flexible}</dd></div><div><dt>{t.mustStatus}</dt><dd><PriorityBadge required={Boolean(task.mustSchedule)} language={language} /></dd></div></>}{task && isWorkActivity(task) && <><div><dt>{t.workload}</dt><dd>{displayWorkload(task.workload, language)}</dd></div><div><dt>{t.environment}</dt><dd>{displayEnvironment(task.environment, language)}</dd></div></>}</dl>{task?.operationalNotes?.length ? <div><strong>{t.notes}</strong><ul>{task.operationalNotes.map((note) => <li key={note}>{note}</li>)}</ul></div> : null}{linked.length > 0 && <div className="drawer-rules"><strong>{t.ruleApplied}</strong><ul>{[...new Set(linked.flatMap((item) => item.reasonCodes))].map((code) => <li key={code}>{displayReason(code, language)}</li>)}</ul></div>}<p><strong>{t.movedBecause}:</strong> {consequence}</p><p><strong>{t.consequence}:</strong> {optimizationConsequence(task, unscheduled?.unscheduledMinutes, language)}</p>{sourceIds.size > 0 && <div><strong>{t.source}</strong>{[...sourceIds].map((sourceId) => <SourceReference key={sourceId} sourceId={sourceId} language={language} />)}</div>}</aside>;
+  const dependencies=task?.predecessorTaskIds?.map(id=>result.blocks.find(candidate=>candidate.taskId===id)?.labelEn??id)??[];
+  return <aside className="block-drawer" aria-live="polite"><div><p className="eyebrow">{t.blockDetails}</p><h3>{task ? (language === "ar" ? task.nameAr : task.nameEn) : block ? (language === "ar" ? block.labelAr : block.labelEn) : ""}</h3></div><dl><div><dt>{t.activityType}</dt><dd>{kind === "work" ? t.work : kind === "break" ? t.breakActivity : kind === "meal" ? t.meal : kind === "rest" ? t.rest : t.idle}</dd></div><div><dt>{t.originalTime}</dt><dd dir="ltr">{original}</dd></div><div><dt>{t.generatedWorkTimes}</dt><dd dir="ltr">{generatedActivity.length?generatedActivity.map(item=>`${item.start}–${item.end}`).join(", "):"—"}</dd></div><div><dt>{t.associatedRecoveryTimes}</dt><dd dir="ltr">{recovery.length?recovery.map(item=>`${item.start}–${item.end}`).join(", "):"—"}</dd></div>{task&&<><div><dt>{t.scheduledDuration}</dt><dd>{formatDuration(scheduledMinutes,language)}</dd></div><div><dt>{t.remainingDuration}</dt><dd>{formatDuration(remainingMinutes,language)}</dd></div><div><dt>{t.duration}</dt><dd>{formatDuration(task.durationMinutes, language)}</dd></div><div><dt>{t.timing}</dt><dd>{task.timingPreference === "fixed" ? t.fixed : task.timingPreference === "preferred" ? t.preferred : t.flexible}</dd></div><div><dt>{t.mustStatus}</dt><dd><PriorityBadge required={Boolean(task.mustSchedule)} language={language} /></dd></div><div><dt>{t.dependency}</dt><dd>{dependencies.length?dependencies.join(", "):t.noDependency}</dd></div></>}{task && isWorkActivity(task) && <><div><dt>{t.workload}</dt><dd>{displayWorkload(task.workload, language)}</dd></div><div><dt>{t.environment}</dt><dd>{displayEnvironment(task.environment, language)}</dd></div></>}</dl>{task?.operationalNotes?.length ? <div><strong>{t.notes}</strong><ul>{task.operationalNotes.map((note) => <li key={note}>{note}</li>)}</ul></div> : null}{linked.length > 0 && <div className="drawer-rules"><strong>{t.ruleApplied}</strong><ul>{[...new Set(linked.flatMap((item) => item.reasonCodes))].map((code) => <li key={code}>{displayReason(code, language)}</li>)}</ul></div>}<p><strong>{t.movedBecause}:</strong> {consequence}</p><p><strong>{t.consequence}:</strong> {optimizationConsequence(task, unscheduled?.unscheduledMinutes, language)}</p>{sourceIds.size > 0 && <div><strong>{t.source}</strong>{[...sourceIds].map((sourceId) => <SourceReference key={sourceId} sourceId={sourceId} language={language} />)}</div>}</aside>;
 }
 
 function movementExplanation(task: ScheduleActivity | undefined, blocks: ScheduleBlock[], unscheduledMinutes: number | undefined, language: Language) {

@@ -5,6 +5,7 @@ import { generateSchedule } from "../../lib/domain/scheduler";
 import { toWorkTasks } from "../../lib/workflow/draft-task";
 import {
   createInitialWorkflowState,
+  validateDraftTask,
   validatePlanDetails,
   validateVerifiedPlan,
   workflowReducer,
@@ -173,5 +174,19 @@ describe("workflow state", () => {
     state={...state,tasks:state.tasks.map(task=>({...task,nameEn:task.nameEn||task.id,nameAr:task.nameAr||task.id,durationMinutes:5,workload:"light",environment:"shaded_outdoor",splittable:false}))};
     const result=generateSchedule({siteName:"Site",location:SAUDI_LOCATION_PRESETS.riyadh,shiftDate:"2026-10-01",shiftStart:"06:30",shiftEnd:"07:00",crewSize:2,nonAcclimatizedWorkers:0,tasks:toWorkTasks(state.tasks)},{measurementMode:"forecast",twlZone:"none"},[]);
     expect(new Set(result.blocks.filter(block=>block.type==="work").map(block=>block.taskId))).toEqual(new Set(state.tasks.map(task=>task.id)));
+  });
+
+  it("does not require Arabic script in the translation field",()=>{
+    const task={id:"task",nameEn:"Excavation",nameAr:"English only",activityKind:"work" as const,durationMinutes:30,workload:"heavy" as const,environment:"direct_sun" as const,splittable:false};
+    expect(validateDraftTask(task,[task])).toEqual({});
+    expect(validateDraftTask({...task,nameAr:""},[{...task,nameAr:""}])).toEqual({});
+  });
+
+  it("saves a modal task atomically without changing its identity",()=>{
+    let state=workflowReducer(createInitialWorkflowState(),{type:"addTask"});
+    const saved={...state.tasks[0],nameEn:"Inspection",nameAr:"فحص",durationMinutes:30,workload:"light" as const,environment:"shaded_outdoor" as const,splittable:false,dismissedSuggestionKeys:["workload"]};
+    state=workflowReducer(state,{type:"saveTask",task:saved});
+    expect(state.tasks).toEqual([saved]);
+    expect(state.nextTaskId).toBe(2);
   });
 });

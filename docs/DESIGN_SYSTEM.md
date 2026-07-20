@@ -38,9 +38,9 @@ The original HeatShift mark combines a sun arc, three shift bars, and one visibl
 
 ## Task review
 
-Task review uses a dense primary row for facts a supervisor compares repeatedly: activity type, requested interval, duration, workload or recovery eligibility, work area, completion status, and expand control. White and warm-neutral rows alternate under a solid ink header. Secondary decisions live in one expandable detail row: bilingual names, timing, must-complete state, splitting, dependencies, notes, source evidence, and clearly labeled suggestions.
+Task review uses the compact operational table established by the earlier design. Each read-only row presents the facts a supervisor compares repeatedly: bilingual activity name, activity type, requested interval, duration, workload or recovery eligibility, work area, priority, and completion status. A visible Edit button opens one accessible modal, so table values cannot be mistaken for editable or confirmed form controls. The modal saves atomically, traps focus, warns before discarding edits, returns focus to the originating row, and becomes a full-height sheet on narrow screens.
 
-Suggestions are never styled as confirmed values. Each suggestion is a compact chip with explicit **Apply** and **Dismiss** actions. Status labels use `Ready`, `Needs N decisions`, `Needs dependency review`, and `Conflict`; activating a status expands the row and moves focus to the first unresolved decision. Work-area guidance appears once above the table rather than inside every task.
+Suggestions are never styled as confirmed values. Each suggestion appears immediately below the input it concerns and provides explicit **Apply** and **Dismiss** actions; applying a suggestion changes only that field. An unresolved suggestion does not prevent continuing when every required safety input is valid. Status labels use `Ready`, `Needs 1 input`, `Needs N inputs`, `Needs dependency review`, and `Conflict`. Opening an incomplete task moves focus to its first unresolved input. The Arabic task-name field is optional and does not require Arabic-script characters. Work-area guidance appears once above the table rather than inside every task.
 
 ## Spacing and shape
 
@@ -66,23 +66,21 @@ Selecting a requested or generated block reveals its original time, planned time
 
 ### Plan identity and views
 
-The two plans always use deliberately distinct headings: **Original requested plan** and **Generated safer schedule** (Arabic: **الخطة الأصلية المطلوبة** and **الجدول المُنشأ لوردية أكثر أمانًا**). Each section has an independent, keyboard-operable Timeline / Execution list tab set; changing one never changes the other or recalculates the schedule. Desktop defaults to requested Timeline and generated Execution list. Mobile defaults both sections to Execution list. Print always includes both execution lists plus one compact timeline comparison regardless of the on-screen choices.
+The two plans always use deliberately distinct headings: **Original requested plan** and **Generated safer schedule** (Arabic: **الخطة الأصلية المطلوبة** and **الجدول المُنشأ لوردية أكثر أمانًا**). Both use the same single-crew chronological sequence so the original request cannot be confused with the generated result. The result has no competing Activity schedule mode. Print retains the same compact Fit-shift crew comparison.
 
-Priority has only two user-facing states: **Required today / مطلوب اليوم** and **Normal / عادي**. Both are text-labeled and appear in review, comparisons, execution lists, block details, and unscheduled work. No color or invented three-level priority model carries this meaning.
+Priority has only two user-facing states: **Required today / مطلوب اليوم** and **Normal / عادي**. Both are text-labeled and appear in review, comparisons, both plan views, block details, and unscheduled work. No color or invented three-level priority model carries this meaning.
 
 ### Scale and containment
 
-- Desktop results default to the **1 hour** detail scale at 140 pixels per hour.
+- Interactive schedule views default to **1 hour** for legibility; compact print views use **Fit shift**.
 - The **30 minutes** scale uses 260 pixels per hour for close inspection.
-- **Fit shift** keeps the full shift inside the timeline region and is the mobile default.
+- **Fit shift** keeps the full shift inside the timeline region and remains available alongside both detailed scales.
 - Detailed scales scroll horizontally inside the timeline region. The document itself must never gain horizontal overflow.
 - Chronology remains left-to-right in Arabic; row labels retain Arabic right-to-left text.
 
 ### Requested and selected schedules
 
-Every genuinely timed requested activity receives its own row. The fixed label column carries the activity name, type, human-readable duration, requested interval, timing preference, and conflict text. Activities without explicit requested times appear in a separate compact list and are never assigned invented times.
-
-The selected schedule uses one chronological crew lane. Work, recovery, break, meal, and idle periods have independent border patterns and text labels. Block width remains proportional to elapsed time. Narrow blocks use a compact visual marker while their exact interval and full name remain available through the accessible name, title, details panel, and timeline text alternative. The legend uses the same fill, border, and hatch as the rendered blocks and only lists types present in the current result.
+Crew sequence gives both plans the same horizontal calendar grammar. The original sequence shows supplied activity intervals without generated recovery. The generated sequence shows the one crew's chronological work, recovery, break, meal, idle, and unscheduled capacity. Block width remains proportional to elapsed time. Taller blocks and larger time labels improve scanning without changing represented duration. Narrow blocks use a compact visual marker while their exact interval and full name remain available through the accessible name, title, details panel, and timeline text alternative. The legend uses the same fill, border, and hatch as the rendered blocks and only lists types present in the current result.
 
 Selecting a requested activity highlights every associated generated interval, including task-linked recovery. The details panel lists all planned intervals and explicitly reports remaining unscheduled minutes when applicable.
 

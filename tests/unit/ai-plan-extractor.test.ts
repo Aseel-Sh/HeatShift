@@ -129,6 +129,20 @@ Need concrete completed today. Pump booked only today.`;
     expect(result.metadata.actualModel).toBe("second");
   });
 
+  it("accepts an English-only translation field without forcing Arabic script", async () => {
+    const englishOnly = { ...validPlan, tasks: validPlan.tasks.map((task) => ({ ...task, nameAr: "Trenching" })) };
+    const complete = vi.fn().mockResolvedValue({ content: JSON.stringify(englishOnly), model: "first" });
+
+    const result = await extractPlan("Riyadh trenching work is planned for the crew.", {
+      apiKey: "key",
+      model: "openrouter/free",
+      client: { complete },
+    });
+
+    expect(complete).toHaveBeenCalledOnce();
+    expect(result.plan.tasks[0].nameAr).toBe("Trenching");
+  });
+
   it("rejects locally invalid provider output", async () => {
     const client: ChatCompletionsClient = { complete: vi.fn().mockResolvedValue({ content: JSON.stringify({ ...validPlan, city: "unsupported" }) }) };
     await expect(extractPlan("A meaningful work plan.", { apiKey: "key", model: "openrouter/free", client })).rejects.toMatchObject({ code: "AI_INVALID_RESPONSE", status: 502 });

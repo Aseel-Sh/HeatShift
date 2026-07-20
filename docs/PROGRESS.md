@@ -1,5 +1,23 @@
 # Progress
 
+## Final focused task-review and plan-comparison correction — 2026-07-19
+
+Status: implemented and production-browser verified.
+
+- Restored the compact operational task table as a read-only review surface and retained one accessible Edit-modal workflow with atomic save, first-error focus, unsaved-change protection, keyboard navigation, and mobile full-height treatment.
+- Made the Arabic task name optional during supervisor review and removed the Arabic-script check. When it is blank, domain conversion falls back to the English task name without blocking progress.
+- Restored explicit `Needs input` labels for unresolved safety fields, moved each unconfirmed suggestion directly below its related input, and kept suggestions non-blocking until the supervisor chooses to apply or dismiss them.
+- Kept the compact read-only task table with a focused Edit action, and reduced the action-column controls so the Delete button remains fully visible inside the table.
+- Generalized `Required today` recognition so explicit statements such as “Heavy trenching is required to be done today” mark the matching activity without inventing a time window.
+- Removed the user-facing Activity schedule view and retained one clearer Crew sequence for the original and generated plans. Detailed views default to the 1-hour scale and use taller, more legible crew blocks.
+- Changed hard-validation handling so the generated schedule remains visible with a prominent warning instead of being replaced by an error-only screen.
+- Preserved scheduler behavior, dependencies, weather handling, Saudi operational time, Arabic, mobile, and print behavior.
+- Added unit and Playwright coverage for optional Arabic names, generic required-today extraction, field-local suggestions, non-blocking suggestions, action containment, crew-only results, and retained recovery/unscheduled visibility.
+
+Manual evidence is stored under `artifacts/final-review/`. Final command results are recorded in the corresponding manual QA section.
+
+Final validation: lint passed; strict typecheck passed; 204 unit tests across 27 files passed; 54 Playwright tests passed; optimized production build passed.
+
 ## Final product-design and usability iteration — 2026-07-19
 
 - Added an original reusable sun-and-shift-bar SVG mark, language-specific horizontal wordmarks, and an SVG app icon.

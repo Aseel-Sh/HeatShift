@@ -297,4 +297,5 @@ describe("deterministic bounded schedule optimization",()=>{
     expect(validateChronologicalRecovery(plan,conditions,result.blocks)).toEqual([]);
     expect(result.optimizationSummary.hardConstraintViolations).toEqual([]);
   });
+
 });

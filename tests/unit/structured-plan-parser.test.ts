@@ -23,6 +23,7 @@ describe("structured work-plan rows", () => {
 
     expect(result.ambiguities).toEqual([]);
     expect(result.activities).toHaveLength(8);
+    expect(result.activities.every((activity) => /\p{Script=Arabic}/u.test(activity.nameAr))).toBe(true);
     expect(result.activities.map(({ requestedStart, requestedEnd, durationMinutes }) => ({ requestedStart, requestedEnd, durationMinutes }))).toEqual([
       { requestedStart: "06:00", requestedEnd: "06:30", durationMinutes: 30 },
       { requestedStart: "06:30", requestedEnd: "09:00", durationMinutes: 150 },
@@ -85,6 +86,12 @@ describe("structured work-plan rows", () => {
     const result = parseStructuredPlanRows("6:00-7:00 Inspection", {});
     expect(result.activities).toEqual([]);
     expect(result.ambiguities[0]).toContain("6:00-7:00 Inspection");
+  });
+
+  it("marks a named activity required today from an explicit completion statement",()=>{
+    const result=parseStructuredPlanRows("06:00-08:00 Heavy trenching\nHeavy trenching is required to be done today.",{shiftStart:"06:00",shiftEnd:"16:30"});
+    expect(result.activities[0].mustSchedule).toBe(true);
+    expect(result.activities[0].evidence.mustSchedule).toMatchObject({evidence:"Heavy trenching is required to be done today."});
   });
 
   it.each([

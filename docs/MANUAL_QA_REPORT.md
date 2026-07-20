@@ -289,3 +289,22 @@ Manual optimized-production observations:
 Automated browser runs under both `America/Chicago` and `Asia/Riyadh` proved identical visible operational schedule values, forecast hours, restriction times, retrieval display, and print content.
 
 Final automated result: lint passed; strict typecheck passed; 200 unit tests across 27 files passed; 48 Playwright tests passed; optimized production build passed.
+
+## Final task-review and matched-plan-view verification — 2026-07-19
+
+Manual optimized-production observations:
+
+- The eight-activity review rendered as a read-only queue with no editable controls in summary rows. Work, break, and meal modal states exposed only relevant fields; required-today, evidence, notes, dependencies, and suggestions remained reviewable.
+- Desktop and 390×844 modal checks confirmed initial focus, focus containment, unsaved-change confirmation, focus return, body scroll lock, readable mobile sheet layout, and no document-level horizontal overflow.
+- The compact table retained its previous scan-friendly layout; Edit opens the focused task form, and the smaller Delete control remains within the table at narrow desktop widths.
+- Blank Arabic names did not block save or progression. Unresolved workload, work-area, splitting, and dependency inputs retained visible `Needs input` states.
+- Suggestions appeared below the field they affect. Leaving suggestions unresolved did not block continuing once required inputs were valid.
+- Both plan sections used the same Crew sequence grammar at the 1-hour scale. The requested view contained no generated recovery; the generated view retained work, recovery, break, meal, idle, and unscheduled periods.
+- Selecting a partially scheduled task exposed generated work intervals separately from associated recovery and reported exact remaining minutes. Fully unscheduled work remained visible with its reason.
+- Arabic review and result headings were RTL-readable while calendar chronology stayed left-to-right. No task text or proportional timeline block overlapped at desktop or mobile widths.
+- Live weather was unavailable during this manual run; the application showed the preliminary/manual path and invented no values. Automated weather coverage remained network-mocked and passing.
+- The browser-control layer did not commit native date/time fields during the visual session, so the deterministic sample shift context was used and the eighth toolbox activity was appended manually. The exact 06:00 regression journey is covered end-to-end by Playwright.
+
+Evidence is under `artifacts/final-review/`, covering the queue, work/break/mobile modals, crew sequences, partial and unscheduled rows, recovery, Arabic, and print layout. Browser console inspection found no application warnings or errors after the duplicate-key repair.
+
+Final automated result: lint passed; strict typecheck passed; 204 unit tests across 27 files passed; 54 Playwright tests passed; optimized production build passed.

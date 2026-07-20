@@ -90,7 +90,6 @@ const errorTranslations: Record<string, string> = {
   "New workers cannot exceed crew size.": "لا يمكن أن يتجاوز عدد العمال غير المتأقلمين حجم الفريق.",
   "Add at least one task before continuing.": "أضف مهمة واحدة على الأقل قبل المتابعة.",
   "English name is required.": "الاسم الإنجليزي مطلوب.",
-  "Arabic name is required.": "الاسم العربي مطلوب.",
   "Duration must be a positive multiple of five minutes.": "يجب أن تكون المدة عددًا موجبًا من مضاعفات خمس دقائق.",
   "Select a workload.": "اختر عبء العمل.",
   "Select an environment.": "اختر منطقة العمل.",
